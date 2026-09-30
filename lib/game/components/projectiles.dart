@@ -38,6 +38,7 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
   void update(double dt) {
     if (!game.playing || _done) return;
     position.addScaled(vel, dt);
+    position.x += game.weather.windX * dt;
     life -= dt;
     if (y > kGround + 8 || y < 0 || x < 0 || x > kWorldW) life = 0;
 
@@ -96,6 +97,7 @@ class EnemyBullet extends PositionComponent with HasGameReference<FederfeuerGame
   void update(double dt) {
     if (!game.playing) return;
     position.addScaled(vel, dt);
+    position.x += game.weather.windX * dt;
     life -= dt;
     final p = game.player;
     if (position.distanceTo(p.position) < radius + p.r - 2) {

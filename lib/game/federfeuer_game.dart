@@ -15,8 +15,10 @@ import 'components/projectiles.dart';
 import 'components/scenery.dart';
 import 'components/transient.dart';
 import 'components/weapon_mount.dart';
+import 'components/weather_layer.dart';
 import 'config.dart';
 import 'run_state.dart';
+import 'weather.dart';
 
 enum Phase { menu, play, levelUp, shop, paused, over }
 
@@ -32,6 +34,10 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   final enemies = <Enemy>[];
   final _mounts = <WeaponMount>[];
   late final Player player;
+  late final Weather weather = Weather(random: rng);
+  late final WeatherLayer _weatherLayer = WeatherLayer(weather, priority: 50);
+  late final RainPuddles _puddles =
+      RainPuddles(weather, arenaWidth: kWorldW, groundY: kGround, priority: -40);
 
   Phase phase = Phase.menu;
   RunState? run;
@@ -62,8 +68,13 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   Future<void> onLoad() async {
     camera.viewfinder.anchor = Anchor.topLeft;
     player = Player();
-    world.addAll([Backdrop(), Ground(), player]);
-    camera.viewport.add(Hud());
+    world.addAll([
+      Backdrop(),
+      Ground(),
+      _puddles,
+      player,
+    ]);
+    camera.viewport.addAll([_weatherLayer, Hud()]);
     overlays.add('menu');
   }
 
@@ -96,6 +107,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     r.hp = r.maxHp;
     player.reset(Vector2(kWorldW / 2, kGround - 140));
     _syncWeapons();
+    // Solange es noch keine Welten/Schwierigkeitsstufen gibt: Standard-Pool, Stufe 1.
+    weather.startWave(difficulty: 1);
     waveTime = r.wave == kMaxWave ? 0 : min(20.0 + (r.wave - 1) * 4, 56.0);
     _spawnT = 1.2;
     banner = 2;
@@ -171,6 +184,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void toMenu() {
     run = null;
     phase = Phase.menu;
+    weather.reset();
+    _weatherLayer.clearInstant();
+    _puddles.clearInstant();
     _clearArena();
     for (final m in _mounts) {
       m.removeFromParent();
@@ -215,6 +231,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void update(double dt) {
     dt = min(dt, 0.05);
     final active = playing;
+    weather.update(active ? dt : 0);
     super.update(active ? dt : 0);
 
     if (run == null) {
@@ -430,6 +447,12 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (event is KeyDownEvent &&
         (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape)) {
       togglePause();
+    }
+    if (kDebugMode && event is KeyDownEvent && playing) {
+      // Debug: Wetter direkt umschalten
+      if (event.logicalKey == LogicalKeyboardKey.digit1) weather.set(WeatherType.clear);
+      if (event.logicalKey == LogicalKeyboardKey.digit2) weather.set(WeatherType.wind);
+      if (event.logicalKey == LogicalKeyboardKey.digit3) weather.set(WeatherType.rain);
     }
     return KeyEventResult.handled;
   }

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../federfeuer_game.dart';
+import '../weather.dart';
 import 'draw.dart';
 import 'pickups.dart';
 import 'projectiles.dart';
@@ -31,6 +32,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   double t = 0, shootT = 0, jumpT = 1, summonT = 5, flash = 0;
   bool dead = false;
   final vel = Vector2.zero();
+
+  /// Wie stark der Wind diesen Gegner verschiebt.
+  double get windFactor => switch (type) {
+        EnemyType.crow => WeatherConfig.windFactorLight,
+        EnemyType.spitter => WeatherConfig.windFactorMedium,
+        EnemyType.beetle => WeatherConfig.windFactorGround,
+        EnemyType.rock => WeatherConfig.windFactorHeavy,
+        EnemyType.boss => WeatherConfig.windFactorBoss,
+      };
 
   static final _legPaint = Paint()
     ..color = const Color(0xFF1D3A26)
@@ -110,7 +120,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         }
     }
 
-    position.x = clampD(x + vel.x * dt, r, kWorldW - r);
+    position.x = clampD(x + (vel.x + game.weather.windX * windFactor) * dt, r, kWorldW - r);
     position.y += vel.y * dt;
     if (y > kGround - r) {
       position.y = kGround - r;

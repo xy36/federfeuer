@@ -61,9 +61,20 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
           size: 30, color: g.waveTime < 5 ? Palette.coral : Palette.sun);
     }
 
+    // Wetteranzeige unter Timer bzw. Boss-Leiste
+    final wt = g.weather;
+    if (!wt.isClear) {
+      final text = wt.isWindy ? (wt.windBase >= 0 ? 'Wind ▶' : '◀ Wind') : wt.label;
+      OutlineText.draw(c, text, Offset(cx, r.wave == kMaxWave ? 72.0 : 84.0), size: 13, color: Palette.cyan);
+    }
+
     if (g.banner > 0 && g.playing) {
       OutlineText.draw(c, r.wave == kMaxWave ? 'Der Geierkönig kommt' : 'Welle ${r.wave}',
           Offset(cx, s.y * 0.42), size: min(46.0, s.x / 12), color: Palette.sun);
+      if (!g.weather.isClear) {
+        OutlineText.draw(c, g.weather.label, Offset(cx, s.y * 0.42 + min(46.0, s.x / 12)),
+            size: min(24.0, s.x / 22), color: Palette.cyan);
+      }
     }
 
     // Pfeile für Gegner außerhalb des Bildes
