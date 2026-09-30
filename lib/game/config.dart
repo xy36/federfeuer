@@ -33,6 +33,13 @@ const double kSpawnAheadChance = 0.65;
 /// Timer-Wellen spawnen im Bild: Abstand der Gruppe zum Bildrand.
 const double kSpawnScreenMargin = 40;
 
+/// Einblendung „Welle geschafft“, bevor Level-up/Shop erscheinen (Sekunden).
+const double kWaveClearDelay = 1.2;
+
+/// So lange nach dem Öffnen eines Menüs wird Controller-A ignoriert, damit
+/// ein Tippen zum Fliegen nicht versehentlich etwas auswählt (Millisekunden).
+const int kMenuConfirmGraceMs = 500;
+
 bool isBossWave(int wave) => wave == kMaxWave;
 
 /// Dauer einer Timer-Welle in Sekunden.
@@ -48,6 +55,10 @@ String fmtNum(double v) {
   if (v.abs() >= 10 || v == v.roundToDouble()) return v.round().toString();
   return v.toStringAsFixed(1);
 }
+
+/// Faktor mit deutschem Komma und ohne überflüssige Nullen (1,25 / 1,1 / 1).
+String fmtFactor(double v) =>
+    v.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '').replaceAll('.', ',');
 
 class Palette {
   static const ink = Color(0xFF2A1D3A);
@@ -224,6 +235,31 @@ const Map<EnemyType, EnemyDef> enemyDefs = {
   EnemyType.rock: EnemyDef(hp: 45, speed: 42, dmg: 5, radius: 27, flying: true, drop: 3),
   EnemyType.boss: EnemyDef(hp: 4500, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0),
 };
+
+// ---------------- Schwierigkeitsstufen ----------------
+
+class DifficultyDef {
+  const DifficultyDef(this.level, this.name, this.hp, this.dmg, this.spawn);
+
+  /// 1–[kDifficultyCount]; steuert auch die Schlechtwetter-Chance (+15 % pro Stufe).
+  final int level;
+  final String name;
+
+  /// Faktoren auf Gegner-HP und -Schaden (auch Boss) und auf die Spawnrate.
+  final double hp, dmg, spawn;
+}
+
+const difficultyDefs = [
+  DifficultyDef(1, 'Küken', 1.0, 1.0, 1.0),
+  DifficultyDef(2, 'Spatz', 1.15, 1.1, 1.1),
+  DifficultyDef(3, 'Falke', 1.3, 1.25, 1.2),
+  DifficultyDef(4, 'Adler', 1.5, 1.4, 1.3),
+  DifficultyDef(5, 'Phönix', 1.75, 1.6, 1.4),
+];
+
+const int kDifficultyCount = 5;
+
+DifficultyDef difficultyDef(int level) => difficultyDefs[level.clamp(1, kDifficultyCount) - 1];
 
 // ---------------- Welten ----------------
 

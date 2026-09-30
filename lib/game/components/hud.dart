@@ -70,6 +70,14 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       OutlineText.draw(c, text, Offset(cx, r.wave == kMaxWave ? 72.0 : 96.0), size: 13, color: Palette.cyan);
     }
 
+    if (g.phase == Phase.cleared) {
+      final big = min(46.0, s.x / 12);
+      OutlineText.draw(c, 'WELLE ${r.wave} GESCHAFFT', Offset(cx, s.y * 0.42), size: big, color: Palette.sun);
+      final bonus = r.goalBonus;
+      OutlineText.draw(c, bonus != null ? 'Ziel erreicht! +$bonus Zeitbonus' : 'Zeit abgelaufen',
+          Offset(cx, s.y * 0.42 + big), size: min(24.0, s.x / 22), color: bonus != null ? Palette.mint : Palette.cyan);
+    }
+
     if (g.banner > 0 && g.playing) {
       // Neue Welt: Name über dem Wellenbanner
       if (r.wave == 1 || biomeForWave(r.wave - 1) != g.biome) {

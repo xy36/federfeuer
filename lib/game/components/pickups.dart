@@ -18,6 +18,9 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
   final Vector2 vel;
   bool taken = false, _pulled = false;
 
+  /// Schon im Sammelradius erfasst und auf dem Weg zum Spieler.
+  bool get pulled => _pulled;
+
   @override
   void update(double dt) {
     if (!game.playing || taken) return;

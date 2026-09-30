@@ -36,10 +36,14 @@ class WeaponStats {
 
 /// Alles, was zu einem Durchlauf gehört (Werte, Inventar, Fortschritt).
 class RunState {
-  RunState(String startWeapon) {
+  RunState(String startWeapon, {this.difficulty = 1}) {
     weapons.add(OwnedWeapon(startWeapon, 0));
     hp = maxHp;
   }
+
+  /// Schwierigkeitsstufe 1–[kDifficultyCount].
+  final int difficulty;
+  DifficultyDef get difficultyDef => difficultyDefs[difficulty - 1];
 
   final Map<Stat, double> stats = {
     for (final s in Stat.values) s: s == Stat.maxHp ? 20.0 : (s == Stat.crit ? 5.0 : 0.0),
@@ -99,19 +103,46 @@ class RunState {
   int get rerollCost => (2 + wave * 0.8).floor() + rerolls * 2;
   int sellPrice(OwnedWeapon w) => (weaponPrice(w.id, w.tier) * 0.4).round();
 
-  bool canMerge(String id, int tier) => tier < 3 && weapons.any((w) => w.id == id && w.tier == tier);
-  bool canAddWeapon(String id, int tier) => weapons.length < 6 || canMerge(id, tier);
+  static const maxWeapons = 6;
 
-  /// Fügt eine Waffe hinzu und verschmilzt gleiche Waffen gleicher Stufe automatisch.
+  bool get slotsFull => weapons.length >= maxWeapons;
+
+  /// Gibt es schon eine gleiche Waffe gleicher Stufe (unter IV), mit der sie verschmelzen könnte?
+  bool canMerge(String id, int tier) => tier < 3 && weapons.any((w) => w.id == id && w.tier == tier);
+
+  /// Kauf verschmilzt nur, wenn alle Slots belegt sind – sonst kommt die Waffe in einen freien Slot.
+  bool mergesOnBuy(String id, int tier) => slotsFull && canMerge(id, tier);
+  bool canAddWeapon(String id, int tier) => !slotsFull || canMerge(id, tier);
+
+  /// Fügt eine Waffe in einen freien Slot ein. Sind alle Slots belegt,
+  /// verschmilzt sie mit einer gleichen Waffe gleicher Stufe (eine Stufe, keine Kette).
   void addWeapon(String id, int tier) {
-    var t = tier;
-    while (t < 3) {
-      final i = weapons.indexWhere((w) => w.id == id && w.tier == t);
-      if (i < 0) break;
-      weapons.removeAt(i);
-      t++;
+    if (!slotsFull) {
+      weapons.add(OwnedWeapon(id, tier));
+      return;
     }
-    weapons.add(OwnedWeapon(id, t));
+    final i = weapons.indexWhere((w) => w.id == id && w.tier == tier);
+    if (i >= 0 && tier < 3) weapons[i].tier++;
+  }
+
+  /// Index einer zweiten, gleichen Waffe gleicher Stufe für Slot [i], sonst -1.
+  int mergePartner(int i) {
+    final w = weapons[i];
+    if (w.tier >= 3) return -1;
+    for (var j = 0; j < weapons.length; j++) {
+      if (j != i && weapons[j].id == w.id && weapons[j].tier == w.tier) return j;
+    }
+    return -1;
+  }
+
+  /// Verschmilzt Slot [i] mit seinem Partner: [i] steigt eine Stufe auf, der Partner wird frei.
+  bool merge(int i) {
+    final j = mergePartner(i);
+    if (j < 0) return false;
+    final w = weapons[i];
+    w.tier++;
+    weapons.removeAt(j);
+    return true;
   }
 
   void rollOffers(Random r) => offers = List.generate(4, (_) => _randomOffer(r));

@@ -96,7 +96,7 @@ Der Spieler trägt bis zu 6 Waffen, die im Kreis um ihn schweben und jeweils sel
 | Railgun | 22 | 1,7 | 470 | 1500 | Durchschlägt alle Gegner | 28 |
 | Raketenwerfer | 15 | 1,6 | 390 | 420 | Explosion, Radius 75 | 30 |
  
-**Stufen:** Jede Waffe gibt es in Stufe I bis IV. Kauft der Spieler eine Waffe, die er in gleicher Stufe schon besitzt, verschmelzen beide automatisch zur nächsten Stufe (auch kettenweise).
+**Stufen:** Jede Waffe gibt es in Stufe I bis IV. Eine gekaufte Waffe kommt immer in einen freien Slot, auch wenn der Spieler sie in gleicher Stufe schon besitzt. Zwei gleiche Waffen gleicher Stufe (unter IV) kann er im Shop per Knopf am Waffenslot verschmelzen: Der angetippte Slot steigt eine Stufe auf, der andere wird frei. Ketten laufen nicht automatisch, jeder Schritt ist ein eigener Klick.
  
 | Stufe | Farbe | Schaden | Abklingzeit | Preis |
 | --- | --- | --- | --- | --- |
@@ -141,16 +141,33 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
 - **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle).
 - **Gewichtung:** Krähe 10, Käfer 7, Spucker 4 + 0,3 · w, Brocken 2 + 0,3 · w.
  
-Am Wellenende verschwinden alle Gegner und Projektile, liegengebliebenes Material wird automatisch eingesammelt.
+Am Wellenende verpuffen alle Gegner und Projektile. Material, das schon zum Spieler fliegt, wird noch gutgeschrieben; alles, was noch am Boden liegt, verfällt. Die Szene steht dann 1,2 s still mit der Einblendung „WELLE X GESCHAFFT“ und darunter „Ziel erreicht! +N Zeitbonus“ bzw. „Zeit abgelaufen“; erst danach erscheinen Level-up oder Shop. Wer zum Ziel eilt, tauscht also zurückgelassene Beute gegen den Zeitbonus.
  
+## Schwierigkeitsstufen
+
+Es gibt fünf Stufen. Zu Beginn ist nur Küken spielbar; wer eine Stufe gewinnt, schaltet die nächste frei. Gewählt wird im Startmenü, die Wahl bleibt gespeichert.
+
+| Stufe | Name | Gegner-HP | Gegner-Schaden | Spawnrate | Schlechtwetter (Grundchance) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Küken | × 1,0 | × 1,0 | × 1,0 | 20 % |
+| 2 | Spatz | × 1,15 | × 1,1 | × 1,1 | 35 % |
+| 3 | Falke | × 1,3 | × 1,25 | × 1,2 | 50 % |
+| 4 | Adler | × 1,5 | × 1,4 | × 1,3 | 65 % |
+| 5 | Phönix | × 1,75 | × 1,6 | × 1,4 | 80 % |
+
+- **HP und Schaden** werden nach der Wellenskalierung multipliziert und gelten auch für den Boss (Schaden gerundet).
+- **Spawnrate:** Das Spawn-Intervall wird durch den Faktor geteilt.
+- **Schlechtwetter:** 20 % + 15 % pro Stufe über 1, dazu der Zuschlag der Welt (siehe „Wetter“).
+- **Fortschritt:** Gespeichert werden die höchste freigeschaltete Stufe, die gewählte Stufe und die Bestleistung pro Stufe. Die Bestleistung aus der Zeit vor den Stufen zählt für Küken.
+- **Debug-Modus:** In Debug-Builds (oder mit `--dart-define=FEDERFEUER_DEBUG=true`) gibt es im Startmenü einen Schalter, der alle Stufen freigibt. Er wird nicht gespeichert; Siege im Debug-Modus zählen trotzdem für den Fortschritt.
+
 ## Wetter
 
 Zu Beginn jeder Welle wird das Wetter gewürfelt; es bleibt die ganze Welle über gleich. Wetter verändert die Flugphysik und zwingt so zu anderen Ausweichmustern. Bisher gibt es Klar, Wind und Regen; Nebel, Gewitter, Hitze und Schnee sind geplant.
 
 - **Häufigkeit:** Chance auf schlechtes Wetter = 20 % + 15 % pro Schwierigkeitsstufe über 1 (Stufe 1–5) + Zuschlag der Welt, begrenzt auf 100 %. Sonst ist es klar. Das schlechte Wetter kommt gleichverteilt aus dem Wetter-Pool der Welt.
-- **Stand:** Schwierigkeitsstufen gibt es noch nicht, daher gilt immer Stufe 1.
 
-| Welt | Wetter-Pool | Zuschlag | Chance (Stufe 1) |
+| Welt | Wetter-Pool | Zuschlag | Chance (Küken) |
 | --- | --- | --- | --- |
 | Felder | Wind, Regen | 0 | 20 % |
 | Dorf | Regen | 0 | 20 % |
@@ -205,7 +222,7 @@ Nach jeder Welle bietet der Shop 4 zufällige Angebote: mit 45 % Chance eine Waf
 - **Preise:** Waffen Basis × Stufe × (1 + 0,10 · (w − 1)), Items Basis × (1 + 0,12 · (w − 1)).
 - **Neu würfeln:** ⌊2 + 0,8 · w⌋, pro weiterem Wurf in derselben Shopphase +2.
 - **Verkaufen:** 40 % des aktuellen Waffenpreises; die letzte Waffe kann nicht verkauft werden.
-- **Slots voll:** Bei 6 Waffen ist ein Kauf nur möglich, wenn er verschmilzt.
+- **Slots voll:** Bei 6 Waffen ist ein Kauf nur möglich, wenn die Waffe mit einer gleichen Waffe gleicher Stufe verschmelzen kann; sie verschmilzt dann direkt beim Kauf (eine Stufe).
  
 | Item | Basispreis | Effekt |
 | --- | --- | --- |
@@ -234,13 +251,17 @@ Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays ü
 - **HUD oben Mitte:** Wellennummer, Countdown (rot unter 5 s) und Fortschrittsleiste bis zum Ziel; in Welle 15 stattdessen „BOSS“ mit Boss-HP-Leiste.
 - **Wetteranzeige:** Unter Timer bzw. Boss-Leiste steht das aktuelle Wetter (bei Wind mit Richtungspfeil, z. B. „Wind ▶“); das Wellenbanner nennt es ebenfalls.
 - **Einblendungen:** Wellenbanner zu Beginn, schwebende Schadenszahlen (weiß, Krit gelb, Spieler rot, Heilung mint), „LEVEL UP“ am Spieler.
-- **Startmenü:** Logo, Kurzerklärung, Steuerung, Wahl der Startwaffe, Bestleistung.
-- **Level-up:** 4 Karten, grauer oder lila Streifen für normal/selten.
-- **Shop:** Hinweis auf den Zeitbonus, wenn das Ziel erreicht wurde; Angebotskarten mit Stufenfarbe und Hinweis bei Verschmelzung, Neu-würfeln-Button, Waffenslots mit Verkaufen, Itemleiste, Werteübersicht, Button für die nächste Welle.
-- **Pause & Game Over:** Weiterspielen/Aufgeben bzw. Zusammenfassung (Welle, Gegner, Level) und neue Runde.
-- **Menü-Navigation:** Alle Buttons sind per Tastatur (Pfeile/Tab, Enter/Leertaste) und Controller (Steuerkreuz oder Stick, A bestätigt) bedienbar; der fokussierte Button bekommt einen lila Rahmen. Mit Controller ist in jedem neuen Menü sofort der erste Button fokussiert.
+- **Startmenü:** Zweispaltig. Links Logo, Kurzerklärung, Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe), Tastenhinweise und in Debug-Builds der Debug-Schalter. Rechts drei Waffenkarten; ein Tipp auf die Karte startet den Run. Auf niedrigen Bildschirmen (Handy quer) ist das Logo einzeilig und die Kurzerklärung entfällt.
+- **Level-up:** 4 Karten mit großem Wert (z. B. „+4 %“); die ganze Karte ist wählbar. Seltene Karten haben ein lila Kopfband und das Badge „SELTEN“.
+- **Shop:** Kopfzeile mit Hinweisen (Zeitbonus, nächste Welt) und Geld. Angebotskarten mit Kopfband in Stufenfarbe (Items apricot), Badge mit Stufe; grün „STUFE … · PAAR“, wenn der Spieler die Waffe in gleicher Stufe schon hat, bzw. „⤴ STUFE …“, wenn der Kauf bei vollen Slots direkt verschmilzt; und Preis-Etikett als Fußzeile; zu teure Karten sind ausgegraut, gekaufte werden zu einem leeren Platz. Darunter sechs Waffenslots (leere Slots sichtbar) mit Verkaufen-Knopf und – wenn ein Partner gleicher Stufe da ist – grünem Verschmelzen-Knopf („⤴ II“), Items als Etiketten, Werte in zwei Spalten, rechts unten der Start der nächsten Welle.
+- **Pause & Game Over:** Pause zeigt Welle, Welt und Stufe, dazu Weiterspielen/Aufgeben. Game Over zeigt „SIEG!“ bzw. „ABGESTÜRZT“, Kacheln für Welle, Gegner und Level, die Stufe, ggf. die neu freigeschaltete Stufe und „Neue Runde“.
+- **Menü-Navigation:** Alle Buttons sind per Tastatur (Pfeile/Tab, Enter/Leertaste) und Controller (Steuerkreuz oder Stick, A bestätigt) bedienbar; der fokussierte Knopf bzw. die fokussierte Karte hebt sich an und bekommt einen weißen Rahmen (ebenso bei Mauszeiger darüber, ohne Rahmen). Mit Controller ist in jedem neuen Menü sofort der erste Button fokussiert. In den ersten 0,5 s nach dem Öffnen eines Menüs wird Controller-A ignoriert, damit ein Tippen zum Fliegen nichts versehentlich auswählt.
  
 Stil: dicke dunkle Konturen, Kartenschatten, kräftige Farben – eher Arcade-Sticker als klassisches Material Design.
+
+- **Panels:** dunkles Indigo mit leichtem Glanz oben, fast schwarze Kontur, weicher Schatten.
+- **Karten und Knöpfe:** cremefarbene bzw. farbige Sticker mit 3er-Tintenkontur und Versatzschatten nach unten; beim Antippen drücken sie sich ein.
+- **Schrift:** Lilita One für Titel, Knöpfe und Zahlen, Nunito (fett) für Fließtext; beide unter SIL Open Font License in `assets/fonts/`. Die System-Schriftgröße wird in den Menüs ignoriert, weil Karten feste Größen haben.
  
 ## Technische Umsetzung (Flutter + Flame)
  
@@ -263,11 +284,12 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `components/goal.dart` | Ziel am rechten Weltende |
 | `components/hud.dart` | HUD im Viewport, Randpfeile |
 | `game/weather.dart` | Wetterzustand, Würfeln pro Welle, Modifikatoren |
+| `game/progress.dart` | Fortschritt über Runs: freigeschaltete Stufen, Bestleistung pro Stufe, Debug-Modus |
 | `game/gamepad_input.dart` | Controller-Eingaben: Bewegung, Fliegen, Pause, Menü-Navigation |
 | `components/weather_layer.dart` | Regen, Windlinien und Blätter im Viewport, Pfützen am Boden |
-| `ui/*.dart` | Menü, Level-up, Shop, Pause, Game Over, Touch-Steuerung |
+| `ui/*.dart` | Menü, Level-up, Shop, Pause, Game Over, Touch-Steuerung; `widgets.dart` enthält die Bausteine (Panel, Sticker, Knöpfe, Karten, Etiketten) |
  
-Phasen: `menu → play → levelUp → shop → play … → over`. Außerhalb von `play` läuft die Engine mit dt = 0 weiter, damit Entfernen/Hinzufügen von Komponenten verarbeitet wird, ohne dass sich etwas bewegt. Temporäre Komponenten tragen das Mixin `Transient` und werden beim Wellenwechsel gesammelt entfernt.
+Phasen: `menu → play → cleared → levelUp → shop → play … → over`; `cleared` ist die kurze Einblendung nach einer Welle. Außerhalb von `play` läuft die Engine mit dt = 0 weiter, damit Entfernen/Hinzufügen von Komponenten verarbeitet wird, ohne dass sich etwas bewegt. Temporäre Komponenten tragen das Mixin `Transient` und werden beim Wellenwechsel gesammelt entfernt.
  
 ## Offene Punkte & Roadmap
  
@@ -282,7 +304,7 @@ Offene Fragen:
 Phase 1 – Fundament:
  
 - [x] Flutter-Port lokal bauen und `flutter analyze` fehlerfrei bekommen
-- [x] Bestleistung mit `shared_preferences` speichern (Schlüssel `bestWave`)
+- [x] Bestleistung mit `shared_preferences` speichern (pro Stufe, Schlüssel `bestWave_<Stufe>`)
 - [ ] Soundeffekte und Musik (`flame_audio`)
 - [ ] Performance-Test mit 110 Gegnern auf einem Mittelklasse-Android
  
@@ -292,7 +314,8 @@ Phase 2 – Inhalte:
 - [ ] Nahkampfwaffen und weitere Fernwaffen
 - [ ] Elitegegner und ein Zwischenboss
 - [ ] Seltene Items mit Spezialeffekten (z. B. Kettenblitz, Dornen)
-- [ ] Weitere Wetter: Nebel, Gewitter, Hitze, Schnee (z. B. Schnee für Gebirge und Gipfel); Schwierigkeitsstufen
+- [ ] Weitere Wetter: Nebel, Gewitter, Hitze, Schnee (z. B. Schnee für Gebirge und Gipfel)
+- [x] Fünf Schwierigkeitsstufen mit Freischalten durch Sieg
 - [x] Wetter-Pools pro Welt
  
 Phase 3 – Politur & Release:
