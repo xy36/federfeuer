@@ -29,6 +29,8 @@ class _FederfeuerAppState extends State<FederfeuerApp> {
     return MaterialApp(
       title: 'Federfeuer',
       debugShowCheckedModeBanner: false,
+      // Menüs haben feste Kartengrößen; System-Schriftgröße würde sie sprengen.
+      builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
       home: Scaffold(
         backgroundColor: const Color(0xFF1D1540),
         body: SafeArea(
@@ -36,17 +38,20 @@ class _FederfeuerAppState extends State<FederfeuerApp> {
             game: _game,
             focusNode: _game.focusNode,
             autofocus: true,
-            overlayBuilderMap: {
-              'menu': (context, game) => MenuOverlay(game: game),
-              'levelUp': (context, game) => LevelUpOverlay(game: game),
-              'shop': (context, game) => ShopOverlay(game: game),
-              'pause': (context, game) => PauseOverlay(game: game),
-              'gameOver': (context, game) => GameOverOverlay(game: game),
-              'controls': (context, game) => ControlsOverlay(game: game),
-            },
+            overlayBuilderMap: buildOverlayMap(),
           ),
         ),
       ),
     );
   }
 }
+
+/// Alle Flutter-Overlays des Spiels (Menüs und Touch-Steuerung).
+Map<String, Widget Function(BuildContext, FederfeuerGame)> buildOverlayMap() => {
+      'menu': (context, game) => MenuOverlay(game: game),
+      'levelUp': (context, game) => LevelUpOverlay(game: game),
+      'shop': (context, game) => ShopOverlay(game: game),
+      'pause': (context, game) => PauseOverlay(game: game),
+      'gameOver': (context, game) => GameOverOverlay(game: game),
+      'controls': (context, game) => ControlsOverlay(game: game),
+    };

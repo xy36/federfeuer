@@ -11,14 +11,15 @@ import 'projectiles.dart';
 import 'transient.dart';
 
 class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  Enemy(this.type, Vector2 pos, int wave, Random rng) : super(position: pos, priority: 5) {
+  Enemy(this.type, Vector2 pos, int wave, DifficultyDef diff, Random rng) : super(position: pos, priority: 5) {
     final d = enemyDefs[type]!;
     // Wellenskalierung gilt laut GDD nicht für den Boss.
     final boss = type == EnemyType.boss;
     r = d.radius;
-    maxHp = boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38);
+    // Schwierigkeitsstufe wirkt auch auf den Boss.
+    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38)) * diff.hp;
     hp = maxHp;
-    dmg = boss ? d.dmg : (d.dmg * (1 + (wave - 1) * 0.15)).roundToDouble();
+    dmg = ((boss ? d.dmg : d.dmg * (1 + (wave - 1) * 0.15)) * diff.dmg).roundToDouble();
     spd = boss ? d.speed : d.speed * (1 + wave * 0.02);
     fly = d.flying;
     t = rng.nextDouble() * 10;
