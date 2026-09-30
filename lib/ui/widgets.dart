@@ -53,6 +53,46 @@ class Panel extends StatelessWidget {
   }
 }
 
+/// Tipp-, Tastatur- und Controller-bedienbare Fläche mit Fokusrahmen.
+/// Enter/Leertaste bzw. Controller-A lösen [onPressed] über [ActivateIntent] aus.
+class Pressable extends StatefulWidget {
+  const Pressable({super.key, required this.onPressed, required this.child, this.radius = 12});
+  final VoidCallback? onPressed;
+  final Widget child;
+  final double radius;
+
+  @override
+  State<Pressable> createState() => _PressableState();
+}
+
+class _PressableState extends State<Pressable> {
+  bool _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final onPressed = widget.onPressed;
+    return FocusableActionDetector(
+      enabled: onPressed != null,
+      onFocusChange: (v) => setState(() => _focused = v),
+      actions: {
+        ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: (_) => onPressed?.call()),
+        ButtonActivateIntent: CallbackAction<ButtonActivateIntent>(onInvoke: (_) => onPressed?.call()),
+      },
+      child: GestureDetector(
+        onTap: onPressed,
+        child: DecoratedBox(
+          position: DecorationPosition.foreground,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius + 3),
+            border: _focused ? Border.all(color: Palette.purple, width: 3) : null,
+          ),
+          child: Padding(padding: const EdgeInsets.all(3), child: widget.child),
+        ),
+      ),
+    );
+  }
+}
+
 class GameButton extends StatelessWidget {
   const GameButton({super.key, required this.label, required this.onPressed, this.color = Palette.sun});
   final String label;
@@ -63,8 +103,8 @@ class GameButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Opacity(
       opacity: onPressed == null ? 0.4 : 1,
-      child: GestureDetector(
-        onTap: onPressed,
+      child: Pressable(
+        onPressed: onPressed,
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
           decoration: BoxDecoration(

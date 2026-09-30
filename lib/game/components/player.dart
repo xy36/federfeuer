@@ -33,7 +33,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     if (run == null || !game.playing) return;
 
     final dir = (game.inRight ? 1 : 0) - (game.inLeft ? 1 : 0);
-    final double maxSpeed = 230 * max(0.4, 1 + run.stat(Stat.speed) / 100);
+    final double maxSpeed = kPlayerSpeed * max(0.4, 1 + run.stat(Stat.speed) / 100);
     final fly = game.inFly;
 
     if (dir != 0) {
@@ -45,10 +45,13 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     vel.x = clampD(vel.x, -maxSpeed, maxSpeed);
 
     // Halten = Schub nach oben, Loslassen = langsames Gleiten nach unten
-    vel.y += ((fly ? -1250 : 0) + 650) * dt;
-    vel.y = clampD(vel.y, -340, fly ? 340 : 150);
+    // Regen: weniger Schub, schnelleres Absinken beim Gleiten
+    final w = game.weather;
+    vel.y += ((fly ? -1250.0 * w.thrustFactor : 0.0) + 650) * dt;
+    vel.y = clampD(vel.y, -340, fly ? 340.0 : 150 * w.glideFallFactor);
 
-    position.x = clampD(position.x + vel.x * dt, r, kWorldW - r);
+    // Wind als Drift: Höchsttempo bleibt, gegen den Wind geht es langsamer voran
+    position.x = clampD(position.x + (vel.x + w.windX) * dt, r, game.worldW - r);
     position.y += vel.y * dt;
     if (position.y < kCeil + r) {
       position.y = kCeil + r;

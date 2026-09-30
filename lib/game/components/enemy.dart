@@ -13,12 +13,13 @@ import 'transient.dart';
 class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
   Enemy(this.type, Vector2 pos, int wave, Random rng) : super(position: pos, priority: 5) {
     final d = enemyDefs[type]!;
-    final m = type == EnemyType.boss ? 1.0 : 1 + (wave - 1) * 0.38;
+    // Wellenskalierung gilt laut GDD nicht für den Boss.
+    final boss = type == EnemyType.boss;
     r = d.radius;
-    maxHp = d.hp * m;
+    maxHp = boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38);
     hp = maxHp;
-    dmg = (d.dmg * (1 + (wave - 1) * 0.15)).roundToDouble();
-    spd = d.speed * (1 + wave * 0.02);
+    dmg = boss ? d.dmg : (d.dmg * (1 + (wave - 1) * 0.15)).roundToDouble();
+    spd = boss ? d.speed : d.speed * (1 + wave * 0.02);
     fly = d.flying;
     t = rng.nextDouble() * 10;
     shootT = 0.5 + rng.nextDouble() * 1.5;
@@ -31,6 +32,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   double t = 0, shootT = 0, jumpT = 1, summonT = 5, flash = 0;
   bool dead = false;
   final vel = Vector2.zero();
+
+  /// Wie stark der Wind diesen Gegner verschiebt.
+  double get windFactor => switch (type) {
+        EnemyType.crow => WeatherConfig.windFactorLight,
+        EnemyType.spitter => WeatherConfig.windFactorMedium,
+        EnemyType.beetle => WeatherConfig.windFactorGround,
+        EnemyType.rock => WeatherConfig.windFactorHeavy,
+        EnemyType.boss => WeatherConfig.windFactorBoss,
+      };
 
   static final _legPaint = Paint()
     ..color = const Color(0xFF1D3A26)
@@ -101,7 +111,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             for (var k = 0; k < 3; k++) {
               game.world.add(SpawnMarker(
                 EnemyType.crow,
-                Vector2(clampD(x + game.rnd(-90, 90), 40, kWorldW - 40),
+                Vector2(clampD(x + game.rnd(-90, 90), 40, game.worldW - 40),
                     clampD(y + game.rnd(-40, 60), kCeil + 40, kGround - 60)),
                 0.6,
               ));
@@ -110,7 +120,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         }
     }
 
-    position.x = clampD(x + vel.x * dt, r, kWorldW - r);
+    position.x = clampD(x + (vel.x + game.weather.windX * windFactor) * dt, r, game.worldW - r);
     position.y += vel.y * dt;
     if (y > kGround - r) {
       position.y = kGround - r;

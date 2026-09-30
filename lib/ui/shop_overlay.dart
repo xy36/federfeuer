@@ -29,6 +29,12 @@ class _ShopOverlayState extends State<ShopOverlay> {
             Expanded(child: Text('Welle ${r.wave} geschafft', style: headingStyle)),
             MoneyPill(r.money),
           ]),
+          if (biomeForWave(r.wave + 1) != biomeForWave(r.wave))
+            Text('Nächste Welt: ${biomeDefs[biomeForWave(r.wave + 1)]!.name}',
+                style: const TextStyle(color: Palette.purple, fontWeight: FontWeight.w700)),
+          if (r.goalBonus != null)
+            Text('Ziel erreicht – +${r.goalBonus} Material Zeitbonus',
+                style: const TextStyle(color: Palette.good, fontWeight: FontWeight.w700)),
           sectionTitle('Angebote'),
           Wrap(spacing: 10, runSpacing: 10, children: [
             for (var i = 0; i < r.offers.length; i++) _offer(r, i),
@@ -151,8 +157,9 @@ class _ShopOverlayState extends State<ShopOverlay> {
         if (r.weapons.length > 1)
           Padding(
             padding: const EdgeInsets.only(right: 6),
-            child: GestureDetector(
-              onTap: () => setState(() => r.sell(i)),
+            child: Pressable(
+              onPressed: () => setState(() => r.sell(i)),
+              radius: 8,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                 decoration: BoxDecoration(

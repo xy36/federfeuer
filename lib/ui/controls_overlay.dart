@@ -10,7 +10,8 @@ class ControlsOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final touch = isTouchPlatform;
+    // Sobald ein Controller benutzt wurde, stören die Touch-Buttons nur.
+    final touch = isTouchPlatform && !game.pad.used;
     return Stack(children: [
       Positioned(
         top: 8,

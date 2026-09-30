@@ -49,6 +49,8 @@ class RunState {
 
   int wave = 1, money = 0, xp = 0, level = 0, pendingLevels = 0, kills = 0, rerolls = 0;
   double hp = 20;
+  /// Bonus-Material der letzten Welle fürs Erreichen des Ziels; null = per Timer beendet.
+  int? goalBonus;
   List<Offer> offers = [];
   List<LevelChoice> levelChoices = [];
 
@@ -120,7 +122,9 @@ class RunState {
       final id = ids[r.nextInt(ids.length)];
       final roll = r.nextDouble();
       var tier = 0;
-      if (wave >= 7 && roll < 0.08) {
+      if (wave >= 11 && roll < 0.03) {
+        tier = 3;
+      } else if (wave >= 7 && roll < 0.08) {
         tier = 2;
       } else if (wave >= 3 && roll < 0.25) {
         tier = 1;

@@ -31,7 +31,7 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
       position.x += dx / dist * 520 * dt;
       position.y += dy / dist * 520 * dt;
     } else {
-      vel.y = min(vel.y + 300 * dt, 70.0);
+      vel.y = min(vel.y + 300 * dt, 70.0 * game.weather.dropFallFactor);
       vel.x *= pow(0.1, dt);
       position.x += vel.x * dt;
       position.y = min(kGround - 5, y + vel.y * dt);

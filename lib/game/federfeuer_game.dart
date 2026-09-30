@@ -3,11 +3,15 @@ import 'dart:math';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
+import 'components/decor.dart';
 import 'components/effects.dart';
 import 'components/enemy.dart';
+import 'components/goal.dart';
 import 'components/hud.dart';
 import 'components/pickups.dart';
 import 'components/player.dart';
@@ -15,8 +19,11 @@ import 'components/projectiles.dart';
 import 'components/scenery.dart';
 import 'components/transient.dart';
 import 'components/weapon_mount.dart';
+import 'components/weather_layer.dart';
 import 'config.dart';
+import 'gamepad_input.dart';
 import 'run_state.dart';
+import 'weather.dart';
 
 enum Phase { menu, play, levelUp, shop, paused, over }
 
@@ -25,15 +32,45 @@ class ArenaWorld extends World {}
 class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   FederfeuerGame() : super(world: ArenaWorld());
 
-  static const overlayIds = ['menu', 'levelUp', 'shop', 'pause', 'gameOver', 'controls'];
+  static const overlayIds = [
+    'menu',
+    'levelUp',
+    'shop',
+    'pause',
+    'gameOver',
+    'controls',
+  ];
 
   final rng = Random();
-  final focusNode = FocusNode();
+  /// Fokus des Spiels selbst. Nicht per Pfeil/Tab/Controller erreichbar, sonst
+  /// zieht die Richtungsnavigation in Menüs auf diesen bildschirmgroßen Knoten.
+  final focusNode = FocusNode(debugLabel: 'Spiel', skipTraversal: true);
   final enemies = <Enemy>[];
   final _mounts = <WeaponMount>[];
   late final Player player;
+  late final Weather weather = Weather(random: rng);
+  late final WeatherLayer _weatherLayer = WeatherLayer(weather, priority: 50);
+  late final RainPuddles _puddles = RainPuddles(
+    weather,
+    arenaWidth: kArenaW,
+    groundY: kGround,
+    priority: -40,
+  );
 
   Phase phase = Phase.menu;
+
+  /// Breite der aktuellen Welt; wächst pro Welle (siehe [worldWidth]).
+  double worldW = kArenaW;
+
+  /// X-Position des Ziels, null in der Bosswelle.
+  double? goalX;
+
+  /// Welt (Kulisse) der aktuellen Welle; im Menü die Felder.
+  Biome biome = Biome.fields;
+  BiomeDef get biomeDef => biomeDefs[biome]!;
+
+  /// Läuft im Spiel und im Menü, steht in Pause und Zwischenmenüs (für Animationen der Kulisse).
+  double clock = 0;
   RunState? run;
   int bestWave = 0;
   bool won = false;
@@ -41,9 +78,15 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   // Eingabe
   bool keyLeft = false, keyRight = false, keyFly = false;
   bool touchLeft = false, touchRight = false, touchFly = false;
-  bool get inLeft => keyLeft || touchLeft;
-  bool get inRight => keyRight || touchRight;
-  bool get inFly => keyFly || touchFly;
+  late final pad = GamepadInput(
+    onNavigate: _padNavigate,
+    onConfirm: _padConfirm,
+    onBack: _padBack,
+    onStart: _padStart,
+  );
+  bool get inLeft => keyLeft || touchLeft || pad.left;
+  bool get inRight => keyRight || touchRight || pad.right;
+  bool get inFly => keyFly || touchFly || pad.fly;
   bool get playing => phase == Phase.play;
 
   // Kamera (Weltkoordinaten)
@@ -62,9 +105,39 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   Future<void> onLoad() async {
     camera.viewfinder.anchor = Anchor.topLeft;
     player = Player();
-    world.addAll([Backdrop(), Ground(), player]);
-    camera.viewport.add(Hud());
+    world.addAll([Backdrop(), Decor(), Ground(), _puddles, player]);
+    camera.viewport.addAll([_weatherLayer, Hud()]);
+    await _loadBest();
+    pad.start();
     overlays.add('menu');
+  }
+
+  @override
+  void onRemove() {
+    pad.stop();
+    super.onRemove();
+  }
+
+  // ---------------- Bestleistung ----------------
+
+  static const _bestKey = 'bestWave';
+
+  Future<void> _loadBest() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      bestWave = prefs.getInt(_bestKey) ?? 0;
+    } catch (e) {
+      debugPrint('Bestleistung konnte nicht geladen werden: $e');
+    }
+  }
+
+  Future<void> _saveBest() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_bestKey, bestWave);
+    } catch (e) {
+      debugPrint('Bestleistung konnte nicht gespeichert werden: $e');
+    }
   }
 
   @override
@@ -94,9 +167,23 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     _setOverlays(['controls']);
     _clearArena();
     r.hp = r.maxHp;
-    player.reset(Vector2(kWorldW / 2, kGround - 140));
+    r.goalBonus = null;
+    final boss = isBossWave(r.wave);
+    worldW = worldWidth(r.wave);
+    biome = biomeForWave(r.wave);
+    _puddles.setArenaWidth(worldW);
+    goalX = boss ? null : worldW - kGoalInset;
+    if (goalX != null) world.add(Goal(goalX!));
+    // Timer-Wellen starten links, die Bosswelle in der Arenamitte.
+    player.reset(Vector2(boss ? worldW / 2 : kStartX, kGround - 140));
     _syncWeapons();
-    waveTime = r.wave == kMaxWave ? 0 : min(20.0 + (r.wave - 1) * 4, 56.0);
+    // Wetter-Pool und Zuschlag kommen aus der Welt; Schwierigkeitsstufen gibt es noch nicht (Stufe 1).
+    weather.startWave(
+      difficulty: 1,
+      pool: biomeDef.weatherPool,
+      bonus: biomeDef.badWeatherBonus,
+    );
+    waveTime = boss ? 0 : waveDuration(r.wave);
     _spawnT = 1.2;
     banner = 2;
     winT = 0;
@@ -104,7 +191,13 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     touchLeft = touchRight = touchFly = false;
     if (r.wave == kMaxWave) {
       final side = rng.nextBool() ? -500.0 : 500.0;
-      world.add(SpawnMarker(EnemyType.boss, Vector2(clampD(player.x + side, 100, kWorldW - 100), 170), 2));
+      world.add(
+        SpawnMarker(
+          EnemyType.boss,
+          Vector2(clampD(player.x + side, 100, worldW - 100), 170),
+          2,
+        ),
+      );
     }
     camX = _targetCam();
     focusNode.requestFocus();
@@ -113,6 +206,15 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void nextWave() {
     run!.wave++;
     startWave();
+  }
+
+  /// Ziel erreicht: Welle bestanden, Bonus für die Restzeit.
+  void reachGoal() {
+    final r = run!;
+    final bonus = (max(0.0, waveTime) / kGoalBonusSeconds).floor();
+    r.goalBonus = bonus;
+    r.gain(bonus);
+    endWave();
   }
 
   void endWave() {
@@ -161,16 +263,29 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final r = run!;
     phase = Phase.over;
     won = win;
-    bestWave = max(bestWave, win ? kMaxWave + 1 : r.wave);
+    final reached = win ? kMaxWave + 1 : r.wave;
+    if (reached > bestWave) {
+      bestWave = reached;
+      _saveBest();
+    }
     _setOverlays([]);
     Future.delayed(Duration(milliseconds: win ? 0 : 700), () {
-      if (phase == Phase.over) overlays.add('gameOver');
+      if (phase != Phase.over) return;
+      overlays.add('gameOver');
+      _focusMenuSoon();
     });
   }
 
   void toMenu() {
     run = null;
     phase = Phase.menu;
+    worldW = kArenaW;
+    goalX = null;
+    biome = Biome.fields;
+    _puddles.setArenaWidth(worldW);
+    weather.reset();
+    _weatherLayer.clearInstant();
+    _puddles.clearInstant();
     _clearArena();
     for (final m in _mounts) {
       m.removeFromParent();
@@ -187,6 +302,61 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         overlays.remove(id);
       }
     }
+    // Fokus von entfernten Menü-Buttons zurückholen.
+    focusNode.requestFocus();
+    if (!playing) _focusMenuSoon();
+  }
+
+  // ---------------- Menü-Navigation (Tastatur & Controller) ----------------
+
+  /// Mit Controller wird im neuen Menü direkt der erste Button fokussiert.
+  void _focusMenuSoon() {
+    if (!pad.used) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!playing) _focusFirstMenuItem();
+    });
+  }
+
+  /// Fokus liegt auf keinem Menü-Button, sondern beim Spiel selbst.
+  bool get _menuUnfocused {
+    final f = FocusManager.instance.primaryFocus;
+    return f == null || f == focusNode || f is FocusScopeNode;
+  }
+
+  void _focusFirstMenuItem() {
+    for (final n in focusNode.traversalDescendants) {
+      if (n.canRequestFocus && n.context != null) {
+        n.requestFocus();
+        return;
+      }
+    }
+  }
+
+  void _padNavigate(TraversalDirection dir) {
+    if (playing) return;
+    if (_menuUnfocused) {
+      _focusFirstMenuItem();
+    } else {
+      FocusManager.instance.primaryFocus!.focusInDirection(dir);
+    }
+  }
+
+  void _padConfirm() {
+    if (playing) return;
+    final ctx = FocusManager.instance.primaryFocus?.context;
+    if (_menuUnfocused || ctx == null) {
+      _focusFirstMenuItem();
+    } else {
+      Actions.maybeInvoke(ctx, const ActivateIntent());
+    }
+  }
+
+  void _padBack() {
+    if (phase == Phase.paused) togglePause();
+  }
+
+  void _padStart() {
+    if (phase == Phase.play || phase == Phase.paused) togglePause();
   }
 
   void _clearArena() {
@@ -215,11 +385,13 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void update(double dt) {
     dt = min(dt, 0.05);
     final active = playing;
+    if (active || run == null) clock += dt;
+    weather.update(active ? dt : 0);
     super.update(active ? dt : 0);
 
     if (run == null) {
       _menuT += dt;
-      camX = (sin(_menuT * 0.08) * 0.5 + 0.5) * max(0.0, kWorldW - viewW);
+      camX = (sin(_menuT * 0.08) * 0.5 + 0.5) * max(0.0, worldW - viewW);
       _placeCamera(0, 0);
       return;
     }
@@ -229,6 +401,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     banner = max(0.0, banner - dt);
     shake = max(0.0, shake - dt * 40);
     enemies.removeWhere((e) => e.dead);
+    if (!isBossWave(r.wave)) _despawnStragglers();
     _separateEnemies();
     _updateCamera(dt);
 
@@ -237,8 +410,13 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       if (winT <= 0) endRun(true);
       return;
     }
-    if (r.wave < kMaxWave) {
+    if (!isBossWave(r.wave)) {
       waveTime -= dt;
+      final g = goalX;
+      if (g != null && player.x + player.r >= g) {
+        reachGoal();
+        return;
+      }
       if (waveTime <= 0) {
         endWave();
         return;
@@ -248,7 +426,10 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     _spawnT -= dt;
     if (_spawnT <= 0) {
       _spawnBatch();
-      _spawnT = max(0.9, 2.4 - r.wave * 0.15) * rnd(0.7, 1.3) * (r.wave == kMaxWave ? 1.7 : 1);
+      _spawnT =
+          max(0.9, 2.4 - r.wave * 0.15) *
+          rnd(0.7, 1.3) *
+          (r.wave == kMaxWave ? 1.7 : 1);
     }
 
     final regen = r.stat(Stat.regen);
@@ -261,13 +442,16 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
   }
 
-  double _targetCam() => viewW >= kWorldW
-      ? (kWorldW - viewW) / 2
-      : clampD(player.x - viewW / 2 + player.vel.x * 0.35, 0, kWorldW - viewW);
+  double _targetCam() => viewW >= worldW
+      ? (worldW - viewW) / 2
+      : clampD(player.x - viewW / 2 + player.vel.x * 0.35, 0, worldW - viewW);
 
   void _updateCamera(double dt) {
     camX += (_targetCam() - camX) * min(1.0, dt * 6);
-    _placeCamera((rng.nextDouble() - 0.5) * shake, (rng.nextDouble() - 0.5) * shake);
+    _placeCamera(
+      (rng.nextDouble() - 0.5) * shake,
+      (rng.nextDouble() - 0.5) * shake,
+    );
   }
 
   void _placeCamera(double sx, double sy) {
@@ -285,10 +469,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final total = pool.fold(0.0, (a, b) => a + b.$2);
 
     var n = 1 + (w / 2.5).floor() + (rng.nextDouble() < 0.4 ? 1 : 0);
-    var cx = rnd(60, kWorldW - 60);
-    while ((cx - player.x).abs() < 280) {
-      cx = rnd(60, kWorldW - 60);
-    }
+    final cx = isBossWave(w) ? _bossWaveSpawnX() : _spawnXNearPlayer();
     while (n-- > 0) {
       var roll = rng.nextDouble() * total;
       var type = EnemyType.crow;
@@ -300,10 +481,50 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         }
       }
       final d = enemyDefs[type]!;
-      final x = clampD(cx + rnd(-80, 80), 40, kWorldW - 40);
+      final x = clampD(cx + rnd(-80, 80), 40, worldW - 40);
       final y = d.flying ? rnd(kCeil + 50, kGround - 90) : kGround - d.radius;
       world.add(SpawnMarker(type, Vector2(x, y), 0.9));
     }
+  }
+
+  /// Bosswelle: irgendwo in der Arena, mindestens [kSpawnMinDist] entfernt.
+  double _bossWaveSpawnX() {
+    var cx = rnd(60, worldW - 60);
+    while ((cx - player.x).abs() < kSpawnMinDist) {
+      cx = rnd(60, worldW - 60);
+    }
+    return cx;
+  }
+
+  /// Timer-Wellen: sichtbar im Bild, meist in Flugrichtung zum Ziel.
+  /// Mindestens [kSpawnMinDist] entfernt, höchstens bis [kSpawnScreenMargin] vor
+  /// den Bildrand (und nie weiter als [kSpawnMaxDist]). Ist die Seite zu schmal,
+  /// erscheint die Gruppe im Mindestabstand knapp außerhalb.
+  /// Ist auf einer Seite kein Platz (Weltrand), kommt die Gruppe von der anderen.
+  double _spawnXNearPlayer() {
+    double pick(double side) {
+      final edge = side > 0 ? camX + viewW - kSpawnScreenMargin : camX + kSpawnScreenMargin;
+      final room = (edge - player.x) * side;
+      final maxD = max(kSpawnMinDist, min(kSpawnMaxDist, room));
+      return player.x + side * rnd(kSpawnMinDist, maxD);
+    }
+
+    final side = rng.nextDouble() < kSpawnAheadChance ? 1.0 : -1.0;
+    var cx = pick(side);
+    if (cx < 60 || cx > worldW - 60) cx = pick(-side);
+    return clampD(cx, 60, worldW - 60);
+  }
+
+  /// Gegner, die weit hinter dem Spieler zurückbleiben, verschwinden ohne Drop,
+  /// damit sie nicht die Obergrenze für lebende Gegner blockieren.
+  void _despawnStragglers() {
+    for (final e in enemies) {
+      if (!e.dead && e.x < player.x - kDespawnBehind) {
+        e.dead = true;
+        e.removeFromParent();
+      }
+    }
+    enemies.removeWhere((e) => e.dead);
   }
 
   void addEnemy(EnemyType type, Vector2 pos) {
@@ -363,7 +584,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void gain(int v) {
-    if (run!.gain(v)) floatText(player.position - Vector2(0, 40), 'LEVEL UP', Palette.sun, 18);
+    if (run!.gain(v)) {
+      floatText(player.position - Vector2(0, 40), 'LEVEL UP', Palette.sun, 18);
+    }
   }
 
   void hurtEnemy(Enemy e, double dmg, bool crit, double knock) {
@@ -371,8 +594,12 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     e.hp -= dmg;
     e.flash = 0.08;
     if (e.type != EnemyType.boss) e.position.x += knock;
-    floatText(Vector2(e.x, e.y - e.r), '${dmg.round()}', crit ? Palette.sun : const Color(0xFFFFFFFF),
-        crit ? 18 : 14);
+    floatText(
+      Vector2(e.x, e.y - e.r),
+      '${dmg.round()}',
+      crit ? Palette.sun : const Color(0xFFFFFFFF),
+      crit ? 18 : 14,
+    );
     final ls = run!.stat(Stat.lifesteal);
     if (ls > 0 && rng.nextDouble() * 100 < ls) heal(1);
     if (e.hp <= 0) killEnemy(e);
@@ -392,16 +619,23 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         o.removeFromParent();
         burst(o.position, const Color(0xFFE8D9FF), 6);
       }
-      for (final c in world.children.where((c) => c is EnemyBullet || c is SpawnMarker).toList()) {
+      for (final c
+          in world.children
+              .where((c) => c is EnemyBullet || c is SpawnMarker)
+              .toList()) {
         c.removeFromParent();
       }
       return;
     }
     burst(e.position, const Color(0xFFE8D9FF), 12, 170);
     for (var i = 0; i < enemyDefs[e.type]!.drop; i++) {
-      world.add(Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng));
+      world.add(
+        Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng),
+      );
     }
-    if (rng.nextDouble() < 0.04) world.add(Drop(e.position.clone(), material: false, rng: rng));
+    if (rng.nextDouble() < 0.04) {
+      world.add(Drop(e.position.clone(), material: false, rng: rng));
+    }
   }
 
   void explode(Vector2 at, double radius, double dmg, bool crit) {
@@ -409,7 +643,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     burst(at, const Color(0xFFFF9F1C), 18, 220);
     world.add(Ring(at.clone(), radius));
     for (final e in enemies) {
-      if (!e.dead && e.position.distanceTo(at) < radius + e.r) hurtEnemy(e, dmg, crit, 0);
+      if (!e.dead && e.position.distanceTo(at) < radius + e.r) {
+        hurtEnemy(e, dmg, crit, 0);
+      }
     }
   }
 
@@ -421,15 +657,51 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   // ---------------- Tastatur ----------------
 
+  static final _menuKeys = {
+    LogicalKeyboardKey.arrowUp,
+    LogicalKeyboardKey.arrowDown,
+    LogicalKeyboardKey.arrowLeft,
+    LogicalKeyboardKey.arrowRight,
+    LogicalKeyboardKey.tab,
+  };
+
   @override
-  KeyEventResult onKeyEvent(KeyEvent event, Set<LogicalKeyboardKey> keysPressed) {
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
     bool has(LogicalKeyboardKey k) => keysPressed.contains(k);
     keyLeft = has(LogicalKeyboardKey.keyA) || has(LogicalKeyboardKey.arrowLeft);
-    keyRight = has(LogicalKeyboardKey.keyD) || has(LogicalKeyboardKey.arrowRight);
-    keyFly = has(LogicalKeyboardKey.space) || has(LogicalKeyboardKey.keyW) || has(LogicalKeyboardKey.arrowUp);
+    keyRight =
+        has(LogicalKeyboardKey.keyD) || has(LogicalKeyboardKey.arrowRight);
+    keyFly =
+        has(LogicalKeyboardKey.space) ||
+        has(LogicalKeyboardKey.keyW) ||
+        has(LogicalKeyboardKey.arrowUp);
+    // Menüs: Pfeile/Tab holen den Fokus auf den ersten Button,
+    // danach übernimmt Flutters Fokus-Navigation (Pfeile, Tab, Enter).
+    if (!playing &&
+        event is KeyDownEvent &&
+        _menuKeys.contains(event.logicalKey)) {
+      _focusFirstMenuItem();
+      return KeyEventResult.handled;
+    }
     if (event is KeyDownEvent &&
-        (event.logicalKey == LogicalKeyboardKey.keyP || event.logicalKey == LogicalKeyboardKey.escape)) {
+        (event.logicalKey == LogicalKeyboardKey.keyP ||
+            event.logicalKey == LogicalKeyboardKey.escape)) {
       togglePause();
+    }
+    if (kDebugMode && event is KeyDownEvent && playing) {
+      // Debug: Wetter direkt umschalten
+      if (event.logicalKey == LogicalKeyboardKey.digit1) {
+        weather.set(WeatherType.clear);
+      }
+      if (event.logicalKey == LogicalKeyboardKey.digit2) {
+        weather.set(WeatherType.wind);
+      }
+      if (event.logicalKey == LogicalKeyboardKey.digit3) {
+        weather.set(WeatherType.rain);
+      }
     }
     return KeyEventResult.handled;
   }

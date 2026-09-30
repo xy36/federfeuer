@@ -1,0 +1,303 @@
+# Federfeuer – Game Design Document
+ 
+Sep 30, 2026 · @Chris
+ 
+## Überblick
+ 
+Federfeuer ist ein 2D-Arena-Shooter im Stil von Brotato, bei dem der Spieler fliegt statt läuft: In 15 Wellen fliegt er jeweils von links nach rechts zum Ziel, am Ende besiegt er den Geierkönig. Dieses Dokument beschreibt den Stand des Prototyps (Web-Version und Flutter/Flame-Port) und dient als Vorlage für die Weiterentwicklung.
+ 
+| Aspekt | Festlegung |
+| --- | --- |
+| Genre | Arena-Shooter / Roguelite-Light, Runs von ca. 12–15 Minuten |
+| Perspektive | 2D-Seitenansicht mit leichter Schrägsicht (Bodenschatten, Parallax) |
+| Plattform | Flutter + Flame; zuerst Android/iOS im Querformat, Desktop mit Tastatur; Controller auf allen Plattformen |
+| Zielgruppe | Gelegenheitsspieler, die kurze Runs mit Build-Entscheidungen mögen |
+| Held | „Kampfspatz“ – gelber Vogel mit Fliegerbrille |
+ 
+Designpfeiler:
+ 
+- **Eine Taste zum Fliegen:** Die Flugsteuerung ist das Alleinstellungsmerkmal. Ausweichen passiert vertikal und horizontal.
+- **Waffen zielen selbst:** Der Spieler kümmert sich nur um Position und Build, nicht ums Zielen.
+- **Kurze Entscheidungen zwischen Wellen:** Level-up und Shop sind schnell lesbar und in unter 30 Sekunden erledigt.
+ 
+## Kernloop
+ 
+Ein Run besteht aus 15 Wellen; zwischen den Wellen trifft der Spieler Build-Entscheidungen, bevor es weitergeht.
+ 
+&#91;embedded content: Kernloop · Welle, Level-up, Shop, Boss\]
+ 
+Wellen 1–14 enden, sobald der Spieler das Ziel am rechten Weltende erreicht oder der Timer abläuft; danach folgen Level-ups (nur wenn XP gereicht hat) und der Shop. Jede Welle dauert länger und ist schwerer als die vorige. Nach Welle 14 führt der Shop in die Bosswelle, die erst mit dem Tod des Geierkönigs endet. HP auf 0 beendet den Run in jeder Welle.
+ 
+## Steuerung & Bewegung
+ 
+Halten lässt den Vogel steigen, Loslassen lässt ihn langsam gleiten; links/rechts bewegt ihn frei in beide Richtungen. Alle Werte sind in Welteinheiten pro Sekunde (virtuelle Bildhöhe = 540).
+ 
+| Eingabe | Tastatur | Touch | Controller |
+| --- | --- | --- | --- |
+| Links / rechts | A / D oder Pfeiltasten | Buttons ◀ ▶ unten links | Linker Stick (Totzone 0,35) oder Steuerkreuz |
+| Fliegen (halten) | Leertaste, W oder ↑ | Button „Flug“ unten rechts | A, RB oder RT |
+| Pause | P oder Esc | Button oben rechts | Start; in der Pause B zum Weiterspielen |
+
+Controller folgen der Xbox-Standardbelegung (Paket `gamepads`); mehrere angeschlossene Controller steuern gemeinsam. Sobald ein Controller benutzt wurde, werden die Touch-Buttons ausgeblendet.
+ 
+| Parameter | Wert |
+| --- | --- |
+| Maximale Horizontalgeschwindigkeit | 230 × (1 + Tempo %), mindestens 40 % |
+| Horizontale Beschleunigung | 1500 |
+| Ausrollen ohne Eingabe | Geschwindigkeit × 0,002 pro Sekunde |
+| Schwerkraft | 650 |
+| Schub beim Halten | 1250 (netto 600 nach oben) |
+| Steiggeschwindigkeit max. | 340 |
+| Fallgeschwindigkeit beim Gleiten max. | 150 |
+| Kollisionsradius Spieler | 16 |
+| Unverwundbarkeit nach Treffer | 0,6 s (Blinken) |
+ 
+Am Boden kann der Spieler laufen, an der Decke wird er gestoppt. Der Vogel neigt sich je nach Vertikalgeschwindigkeit, die Flügel schlagen beim Fliegen schneller.
+ 
+## Arena & Kamera
+ 
+Die Welt ist 540 Einheiten hoch; ihre Breite wächst mit der Welle. Der Spieler startet links, das Ziel liegt am rechten Ende. Die Kamera folgt ihm nur horizontal, zurück nach links darf er jederzeit.
+
+- **Weltbreite:** Mit Grundtempo (230) ist die Strecke in 3/5 der Wellenzeit durchflogen: Breite = 230 × 0,6 × Wellendauer. Welle 1 = 2760, Welle 9 = 7176, Welle 14 = 9936.
+- **Bosswelle:** Feste Arena von 2400 ohne Ziel, Start in der Mitte.
+- **Ziel:** Leuchtendes Tor mit karierter Zielflagge, 90 vor dem rechten Weltende.
+ 
+- **Grenzen:** Boden bei y = 468, Decke bei y = 24, links und rechts Pfosten mit gelb-dunklen Warnstreifen. Außerhalb wird abgedunkelt.
+- **Kamera:** Zoom = min(Bildhöhe / 540, Bildbreite / 560). Sie führt leicht in Flugrichtung vor (Geschwindigkeit × 0,35) und folgt weich nach. Im Hochformat wird oben mehr Himmel gezeigt.
+- **Kamerawackeln:** 8 bei Spielertreffer, 5 bei Explosionen, 20 beim Tod des Bosses; klingt schnell ab.
+- **Tiefenwirkung:** Jede Figur wirft einen Schatten auf den Boden, der mit der Flughöhe kleiner und blasser wird. Dazu drei Bergketten mit Parallax (Faktor 0,15 / 0,35 / 0,6) vor einem Abendhimmel mit Sonne.
+- **Randpfeile:** Rote Dreiecke am Bildschirmrand zeigen Gegner außerhalb des sichtbaren Bereichs.
+ 
+Farbwelt: Dämmerung von Indigo über Pflaume und Koralle zu Aprikose, dazu Sonnengelb für den Helden und Mint für Material. Mit den Welten wandert der Himmel vom späten Nachmittag bis in die Nacht.
+
+## Welten
+
+Der Run führt durch fünf Welten, die sich nach der Welle richten. Welten bestimmen Kulisse (Himmel, Bergketten, Boden, Objekte) und Wetter (siehe „Wetter“); Gegner, Spawns und Werte hängen weiter nur an der Wellennummer. Beim Betreten einer neuen Welt steht ihr Name über dem Wellenbanner, der Shop davor kündigt sie an.
+
+| Welt | Wellen | Tageszeit | Bergketten | Boden & Kulisse |
+| --- | --- | --- | --- | --- |
+| Felder | 1–4 | Später Nachmittag | Flache Hügel (Höhe × 0,6) | Grüne Wiese, Weizenfelder, Heuballen, Zäune, Vogelscheuchen |
+| Dorf | 5–8 | Dämmerung | Sanfte Hügel | Häuser mit erleuchteten Fenstern, Zäune, Laternen |
+| Wald mit Fluss | 9–12 | Späte Dämmerung | Höhere Hügel (× 1,1) | Tannen, Laubbäume, Büsche; Fluss mit Glitzern im Vordergrund |
+| Gebirge | 13–14 | Blaue Stunde | Spitze Gipfel (× 1,8), hinterste Kette mit Schnee | Fels statt Gras, Findlinge, Latschen, Felsnadeln |
+| Gipfel | 15 (Boss) | Nacht mit Mond und Sternen | Spitze Gipfel tief unten, alle mit Schnee | Schneedecke, Schneehügel, Gipfelkreuz mit Gebetsfahnen in der Arenamitte |
+
+Im Menü ist die Felder-Kulisse zu sehen. Die Kulisse wird nur im sichtbaren Ausschnitt gezeichnet; Art und Position jedes Objekts hängen fest am Index, sodass eine Welt bei jedem Besuch gleich aussieht.
+ 
+## Waffen
+ 
+Der Spieler trägt bis zu 6 Waffen, die im Kreis um ihn schweben und jeweils selbstständig auf den nächsten Gegner in Reichweite feuern. Zu Beginn wählt er Pistole, Maschinenpistole oder Schrotflinte.
+ 
+| Waffe | Schaden | Abklingzeit (s) | Reichweite | Projektil-Tempo | Besonderheit | Basispreis |
+| --- | --- | --- | --- | --- | --- | --- |
+| Pistole | 8 | 0,75 | 330 | 720 | Allrounder | 15 |
+| Maschinenpistole | 3 | 0,18 | 270 | 760 | Streuung 0,22 rad | 18 |
+| Schrotflinte | 5 × 5 | 1,15 | 210 | 640 | 5 Kugeln im 0,6-rad-Fächer | 20 |
+| Railgun | 22 | 1,7 | 470 | 1500 | Durchschlägt alle Gegner | 28 |
+| Raketenwerfer | 15 | 1,6 | 390 | 420 | Explosion, Radius 75 | 30 |
+ 
+**Stufen:** Jede Waffe gibt es in Stufe I bis IV. Kauft der Spieler eine Waffe, die er in gleicher Stufe schon besitzt, verschmelzen beide automatisch zur nächsten Stufe (auch kettenweise).
+ 
+| Stufe | Farbe | Schaden | Abklingzeit | Preis |
+| --- | --- | --- | --- | --- |
+| I | Grau | × 1,0 | × 1,0 | × 1,0 |
+| II | Blau | × 1,7 | × 0,9 | × 1,9 |
+| III | Lila | × 2,7 | × 0,8 | × 3,3 |
+| IV | Rot | × 4,2 | × 0,7 | × 5,5 |
+ 
+Endwerte: Schaden × (1 + Schaden %), Abklingzeit ÷ (1 + Angriffstempo %) mit Untergrenze Faktor 0,3, Reichweite + Reichweiten-Bonus. Jede Kugel würfelt einzeln auf einen kritischen Treffer (doppelter Schaden, gelbe Zahl).
+ 
+## Gegner
+ 
+Fünf Gegnertypen mit klar unterscheidbarem Verhalten; Schaden entsteht durch Berührung oder Projektile. Werte gelten für Welle 1.
+ 
+| Gegner | Ab Welle | HP | Tempo | Schaden | Radius | Material | Verhalten |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Krähe | 1 | 6 | 95 | 2 | 13 | 1 | Fliegt direkt auf den Spieler zu, leichtes Auf und Ab |
+| Käfer | 2 | 12 | 75 | 3 | 15 | 1 | Läuft am Boden, springt hoch, wenn der Spieler über ihm ist (alle 1,5–2,5 s) |
+| Spucker | 3 | 9 | 70 | 2 | 14 | 1 | Hält 200–300 Abstand, schießt alle \~2,4 s eine Kugel (Tempo 240) |
+| Brocken | 5 | 45 | 42 | 5 | 27 | 3 | Langsamer, schwerer Verfolger mit HP-Leiste |
+| Geierkönig (Boss) | 15 | 4500 | 55 | 6 | 52 | – | Schwebt, Fächer aus 7 Kugeln alle 1,5 s, ruft alle 6 s drei Krähen |
+ 
+Skalierung pro Welle w (gilt nicht für den Boss):
+ 
+- HP × (1 + 0,38 · (w − 1))
+- Schaden × (1 + 0,15 · (w − 1)), gerundet
+- Tempo × (1 + 0,02 · w)
+ 
+Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln. Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
+ 
+## Wellen & Spawns
+ 
+Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Beginn jeder Welle wird der Spieler voll geheilt und an den Start gesetzt (x = 120; Bosswelle: Arenamitte).
+ 
+- **Dauer:** 20 s + 4 s pro Welle ohne Obergrenze (Welle 1 = 20 s, Welle 9 = 52 s, Welle 14 = 72 s).
+- **Ende:** Erreicht der Spieler das Ziel, ist die Welle sofort bestanden und er bekommt ⌊Restzeit / 2⌋ Material als Zeitbonus. Läuft vorher der Timer ab, ist die Welle ebenfalls bestanden, aber ohne Bonus.
+- **Steigende Schwierigkeit:** Gegnerwerte (siehe Skalierung), Gruppengröße und der Anteil von Spuckern und Brocken wachsen mit jeder Welle weiter. Das Spawn-Intervall erreicht ab Welle 10 seine Untergrenze von 0,9 s.
+- **Spawn-Intervall:** max(0,9; 2,4 − 0,15 · w) s, zufällig ±30 %; in der Bosswelle × 1,7.
+- **Gruppengröße:** 1 + ⌊w / 2,5⌋, mit 40 % Chance einer mehr. Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
+- **Warnung:** Ein rotes, pulsierendes X markiert jeden Spawn 0,9 s vorher (Boss: 2 s).
+- **Obergrenze:** keine neuen Spawns bei mehr als 110 lebenden Gegnern.
+- **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle).
+- **Gewichtung:** Krähe 10, Käfer 7, Spucker 4 + 0,3 · w, Brocken 2 + 0,3 · w.
+ 
+Am Wellenende verschwinden alle Gegner und Projektile, liegengebliebenes Material wird automatisch eingesammelt.
+ 
+## Wetter
+
+Zu Beginn jeder Welle wird das Wetter gewürfelt; es bleibt die ganze Welle über gleich. Wetter verändert die Flugphysik und zwingt so zu anderen Ausweichmustern. Bisher gibt es Klar, Wind und Regen; Nebel, Gewitter, Hitze und Schnee sind geplant.
+
+- **Häufigkeit:** Chance auf schlechtes Wetter = 20 % + 15 % pro Schwierigkeitsstufe über 1 (Stufe 1–5) + Zuschlag der Welt, begrenzt auf 100 %. Sonst ist es klar. Das schlechte Wetter kommt gleichverteilt aus dem Wetter-Pool der Welt.
+- **Stand:** Schwierigkeitsstufen gibt es noch nicht, daher gilt immer Stufe 1.
+
+| Welt | Wetter-Pool | Zuschlag | Chance (Stufe 1) |
+| --- | --- | --- | --- |
+| Felder | Wind, Regen | 0 | 20 % |
+| Dorf | Regen | 0 | 20 % |
+| Wald mit Fluss | Regen | +15 % | 35 % |
+| Gebirge | Wind | +25 % | 45 % |
+| Gipfel | Wind | +40 % | 60 % |
+
+| Wetter | Wirkung |
+| --- | --- |
+| Klar | Keine |
+| Wind | Seitlicher Drift von 80 auf Spieler, Gegner und alle Kugeln; ±15 % Böen. Richtung zufällig, wechselt alle 8–12 s; Aufbau und kompletter Richtungswechsel dauern 1,5 s |
+| Regen | Schub × 0,9, maximale Fallgeschwindigkeit beim Gleiten × 1,3, Material sinkt × 1,5 schneller |
+
+Wind addiert sich zur Bewegung, ohne die Höchstgeschwindigkeit zu ändern: Gegen den Wind kommt der Spieler langsamer voran. Gegner werden je nach Klasse unterschiedlich stark verschoben:
+
+| Gegner | Windanfälligkeit |
+| --- | --- |
+| Krähe | 1,0 |
+| Spucker | 0,8 |
+| Käfer | 0,5 |
+| Brocken | 0,35 |
+| Geierkönig | 0,2 |
+
+Darstellung: Regenschleier mit Pfützen am Boden, die sich füllen und danach wieder trocknen; bei Wind Windlinien und Blätter. Das Wetter wird beim Wechsel in 1,2 s weich ein- und ausgeblendet. Im Debug-Build schalten die Tasten 1 / 2 / 3 direkt auf Klar / Wind / Regen.
+
+## Progression
+ 
+Material ist gleichzeitig Währung und Erfahrung: Jedes aufgesammelte Stück gibt 1 Geld und 1 XP. Für Level L braucht der Spieler (L + 3)² XP; jedes Level gibt sofort +1 Max-HP und eine Verbesserung nach der Welle.
+ 
+- **Drops:** Gegner lassen Material fallen, das langsam zu Boden sinkt. Im Sammelradius (70 + Bonus) fliegt es zum Spieler. 4 % Chance auf ein Herz (+3 HP).
+- **Level-up-Auswahl:** 4 zufällige Optionen, jede mit 20 % Chance „selten“ (doppelter Wert).
+ 
+| Wert | Start | Level-up normal | Wirkung |
+| --- | --- | --- | --- |
+| Max-HP | 20 | +3 | Lebenspunkte |
+| Regeneration | 0 | +1 | Heilt Wert ÷ 5 HP pro Sekunde |
+| Schaden % | 0 | +6 | Multipliziert Waffenschaden |
+| Angriffstempo % | 0 | +6 | Verkürzt Abklingzeiten |
+| Krit-Chance % | 5 | +4 | Chance auf doppelten Schaden |
+| Reichweite | 0 | +25 | Addiert auf Waffenreichweite |
+| Rüstung | 0 | +1 | Schaden × 15 / (15 + Rüstung); negativ erhöht Schaden |
+| Tempo % | 0 | +5 | Bewegungsgeschwindigkeit |
+| Lebensraub % | 0 | +2 | Chance pro Treffer auf +1 HP |
+| Sammelradius | 0 | – | Nur über Items |
+ 
+Jeder erlittene Treffer macht mindestens 1 Schaden.
+ 
+## Shop & Items
+ 
+Nach jeder Welle bietet der Shop 4 zufällige Angebote: mit 45 % Chance eine Waffe, sonst ein Item. Ab Welle 3 können Waffen in Stufe II (25 %), ab Welle 7 in Stufe III (8 %) und ab Welle 11 in Stufe IV (3 %) auftauchen. Die Chancen sind kumulativ: Ein Wurf unter 3 % ergibt Stufe IV, unter 8 % Stufe III, unter 25 % Stufe II.
+ 
+- **Preise:** Waffen Basis × Stufe × (1 + 0,10 · (w − 1)), Items Basis × (1 + 0,12 · (w − 1)).
+- **Neu würfeln:** ⌊2 + 0,8 · w⌋, pro weiterem Wurf in derselben Shopphase +2.
+- **Verkaufen:** 40 % des aktuellen Waffenpreises; die letzte Waffe kann nicht verkauft werden.
+- **Slots voll:** Bei 6 Waffen ist ein Kauf nur möglich, wenn er verschmilzt.
+ 
+| Item | Basispreis | Effekt |
+| --- | --- | --- |
+| Magnet | 10 | +70 Sammelradius |
+| Riesenapfel | 12 | +5 Max-HP |
+| Blechhelm | 14 | +2 Rüstung |
+| Goldfeder | 14 | +12 % Tempo |
+| Pflasterrolle | 15 | +2 Regeneration |
+| Fernglas | 16 | +60 Reichweite |
+| Kleeblatt | 16 | +8 % Krit-Chance |
+| Hantel | 18 | +12 % Schaden, −3 % Tempo |
+| Doppelter Espresso | 18 | +15 % Angriffstempo |
+| Schildkrötenpanzer | 20 | +5 Rüstung, −8 % Tempo |
+| Fetter Wurm | 20 | +8 Max-HP, +1 Regeneration |
+| Vampirzahn | 22 | +4 % Lebensraub |
+| Energiedose | 22 | +25 % Angriffstempo, −2 Rüstung |
+| Glaskanone | 25 | +30 % Schaden, −6 Max-HP |
+ 
+Items stapeln sich unbegrenzt.
+ 
+## UI & HUD
+ 
+Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays über der angehaltenen Szene.
+ 
+- **HUD oben links:** HP-Leiste mit Zahl, XP-Leiste, Level und Materialzähler.
+- **HUD oben Mitte:** Wellennummer, Countdown (rot unter 5 s) und Fortschrittsleiste bis zum Ziel; in Welle 15 stattdessen „BOSS“ mit Boss-HP-Leiste.
+- **Wetteranzeige:** Unter Timer bzw. Boss-Leiste steht das aktuelle Wetter (bei Wind mit Richtungspfeil, z. B. „Wind ▶“); das Wellenbanner nennt es ebenfalls.
+- **Einblendungen:** Wellenbanner zu Beginn, schwebende Schadenszahlen (weiß, Krit gelb, Spieler rot, Heilung mint), „LEVEL UP“ am Spieler.
+- **Startmenü:** Logo, Kurzerklärung, Steuerung, Wahl der Startwaffe, Bestleistung.
+- **Level-up:** 4 Karten, grauer oder lila Streifen für normal/selten.
+- **Shop:** Hinweis auf den Zeitbonus, wenn das Ziel erreicht wurde; Angebotskarten mit Stufenfarbe und Hinweis bei Verschmelzung, Neu-würfeln-Button, Waffenslots mit Verkaufen, Itemleiste, Werteübersicht, Button für die nächste Welle.
+- **Pause & Game Over:** Weiterspielen/Aufgeben bzw. Zusammenfassung (Welle, Gegner, Level) und neue Runde.
+- **Menü-Navigation:** Alle Buttons sind per Tastatur (Pfeile/Tab, Enter/Leertaste) und Controller (Steuerkreuz oder Stick, A bestätigt) bedienbar; der fokussierte Button bekommt einen lila Rahmen. Mit Controller ist in jedem neuen Menü sofort der erste Button fokussiert.
+ 
+Stil: dicke dunkle Konturen, Kartenschatten, kräftige Farben – eher Arcade-Sticker als klassisches Material Design.
+ 
+## Technische Umsetzung (Flutter + Flame)
+ 
+Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutter-Widgets als Overlays des `GameWidget`. Kollisionen werden manuell per Kreisabstand geprüft statt über `HasCollisionDetection` – bei vielen Kugeln schneller und deterministisch.
+ 
+| Datei | Verantwortung |
+| --- | --- |
+| `lib/main.dart` | App-Start, Querformat, `GameWidget` mit Overlay-Map |
+| `game/federfeuer_game.dart` | `FlameGame`: Phasen, Wellen, Spawns, Kamera, Kampf, Tastatur |
+| `game/config.dart` | Alle Daten: Waffen, Stufen, Items, Level-ups, Gegner, Farben, Welten (`biomeDefs`), Wetter (`WeatherConfig`) |
+| `game/run_state.dart` | Zustand eines Runs: Werte, Inventar, Shop- und Level-Logik |
+| `components/player.dart` | Flugphysik und Zeichnung des Spielers |
+| `components/weapon_mount.dart` | Waffe im Ring um den Spieler, Zielsuche, Feuern |
+| `components/enemy.dart` | KI und Zeichnung aller Gegnertypen inkl. Boss |
+| `components/projectiles.dart` | Spielerkugeln (Durchschlag, Explosion) und Gegnerkugeln |
+| `components/pickups.dart` | Material/Herz-Drops und Spawn-Warnungen |
+| `components/effects.dart` | Partikel, Explosionsring, schwebende Zahlen |
+| `components/scenery.dart` | Himmel, Sterne, Parallax-Berge, Boden, Fluss, Weltgrenzen – je nach Welt |
+| `components/decor.dart` | Kulissen-Objekte der Welten (Felder, Häuser, Bäume, Felsen, Gipfelkreuz) |
+| `components/goal.dart` | Ziel am rechten Weltende |
+| `components/hud.dart` | HUD im Viewport, Randpfeile |
+| `game/weather.dart` | Wetterzustand, Würfeln pro Welle, Modifikatoren |
+| `game/gamepad_input.dart` | Controller-Eingaben: Bewegung, Fliegen, Pause, Menü-Navigation |
+| `components/weather_layer.dart` | Regen, Windlinien und Blätter im Viewport, Pfützen am Boden |
+| `ui/*.dart` | Menü, Level-up, Shop, Pause, Game Over, Touch-Steuerung |
+ 
+Phasen: `menu → play → levelUp → shop → play … → over`. Außerhalb von `play` läuft die Engine mit dt = 0 weiter, damit Entfernen/Hinzufügen von Komponenten verarbeitet wird, ohne dass sich etwas bewegt. Temporäre Komponenten tragen das Mixin `Transient` und werden beim Wellenwechsel gesammelt entfernt.
+ 
+## Offene Punkte & Roadmap
+ 
+Der Prototyp ist spielbar; als Nächstes geht es um Stabilität, dann um Tiefe und Wiederspielwert.
+ 
+Offene Fragen:
+ 
+- ~~Soll es bei 10 Wellen bleiben oder wie bei Brotato 20 Wellen mit Boss in der Mitte und am Ende?~~ **Entschieden:** 15 Wellen, Boss am Ende (Welle 15); jede Welle dauert länger und ist schwerer.
+- Bleibt die Grafik prozedural gezeichnet, oder kommen Sprites/Spritesheets?
+- Monetarisierung: Einmalkauf, Free-to-play oder rein privat?
+ 
+Phase 1 – Fundament:
+ 
+- [x] Flutter-Port lokal bauen und `flutter analyze` fehlerfrei bekommen
+- [x] Bestleistung mit `shared_preferences` speichern (Schlüssel `bestWave`)
+- [ ] Soundeffekte und Musik (`flame_audio`)
+- [ ] Performance-Test mit 110 Gegnern auf einem Mittelklasse-Android
+ 
+Phase 2 – Inhalte:
+ 
+- [ ] Charakterklassen mit eigenen Start-Boni und Nachteilen
+- [ ] Nahkampfwaffen und weitere Fernwaffen
+- [ ] Elitegegner und ein Zwischenboss
+- [ ] Seltene Items mit Spezialeffekten (z. B. Kettenblitz, Dornen)
+- [ ] Weitere Wetter: Nebel, Gewitter, Hitze, Schnee (z. B. Schnee für Gebirge und Gipfel); Schwierigkeitsstufen
+- [x] Wetter-Pools pro Welt
+ 
+Phase 3 – Politur & Release:
+ 
+- [ ] Sprites, Animationen und Treffer-Feedback
+- [ ] Einstellungen (Lautstärke, Button-Größe, Linkshänder)
+- [ ] Meta-Progression zwischen Runs
+- [ ] Store-Release über Codemagic auf Google Play
