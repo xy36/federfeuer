@@ -36,6 +36,8 @@ void main() {
       expect(Weather.badWeatherChance(3), closeTo(0.50, 1e-9));
       expect(Weather.badWeatherChance(5), closeTo(0.80, 1e-9));
       expect(Weather.badWeatherChance(10), 1.0);
+      expect(Weather.badWeatherChance(1, 0.4), closeTo(0.60, 1e-9));
+      expect(Weather.badWeatherChance(5, 0.4), 1.0);
     });
 
     test('roll hält die Chance ein', () {
@@ -46,6 +48,23 @@ void main() {
         if (w.roll(difficulty: 3) != WeatherType.clear) bad++;
       }
       expect(bad / n, closeTo(0.5, 0.02));
+    });
+
+    test('Welt-Pool und Zuschlag wirken', () {
+      final w = Weather(random: Random(5));
+      const n = 20000;
+      var wind = 0, rain = 0;
+      for (var i = 0; i < n; i++) {
+        switch (w.roll(pool: const [WeatherType.wind], bonus: 0.4)) {
+          case WeatherType.wind:
+            wind++;
+          case WeatherType.rain:
+            rain++;
+          case WeatherType.clear:
+        }
+      }
+      expect(rain, 0);
+      expect(wind / n, closeTo(0.6, 0.02));
     });
 
     test('leerer Pool ergibt immer Klar', () {

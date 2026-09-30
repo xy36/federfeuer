@@ -40,7 +40,7 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
     position.addScaled(vel, dt);
     position.x += game.weather.windX * dt;
     life -= dt;
-    if (y > kGround + 8 || y < 0 || x < 0 || x > kWorldW) life = 0;
+    if (y > kGround + 8 || y < 0 || x < 0 || x > game.worldW) life = 0;
 
     if (life > 0) {
       for (final e in game.enemies) {

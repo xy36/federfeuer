@@ -10,9 +10,12 @@ class MenuOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final controls = isTouchPlatform
-        ? ['◀ ▶ bewegen', '„Flug“ halten: fliegen']
-        : ['A / D bewegen', 'Leertaste halten: fliegen', 'P: Pause'];
+    final controls = [
+      ...isTouchPlatform
+          ? ['◀ ▶ bewegen', '„Flug“ halten: fliegen']
+          : ['A / D bewegen', 'Leertaste halten: fliegen', 'P: Pause'],
+      'Controller: Stick bewegen, A halten: fliegen, Start: Pause',
+    ];
     return Panel(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -20,7 +23,7 @@ class MenuOverlay extends StatelessWidget {
         children: [
           const OutlinedLabel('FEDER\nFEUER'),
           const SizedBox(height: 14),
-          const Text('Halte dich in der Luft, weiche aus und überlebe 10 Wellen. '
+          const Text('Halte dich in der Luft, weiche aus und überlebe $kMaxWave Wellen. '
               'Deine Waffen zielen und schießen von selbst – zwischen den Wellen kaufst du neue.'),
           const SizedBox(height: 8),
           Wrap(spacing: 14, runSpacing: 4, children: [for (final c in controls) Text(c, style: mutedStyle)]),

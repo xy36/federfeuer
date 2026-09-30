@@ -59,16 +59,23 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       OutlineText.draw(c, 'Welle ${r.wave}', Offset(cx, 22), size: 16);
       OutlineText.draw(c, '${max(0, g.waveTime.ceil())}', Offset(cx, 54),
           size: 30, color: g.waveTime < 5 ? Palette.coral : Palette.sun);
+      final goal = g.goalX;
+      if (goal != null) _drawProgress(c, cx, 76, min(200.0, s.x * 0.34), g.player.x / goal);
     }
 
     // Wetteranzeige unter Timer bzw. Boss-Leiste
     final wt = g.weather;
     if (!wt.isClear) {
       final text = wt.isWindy ? (wt.windBase >= 0 ? 'Wind ▶' : '◀ Wind') : wt.label;
-      OutlineText.draw(c, text, Offset(cx, r.wave == kMaxWave ? 72.0 : 84.0), size: 13, color: Palette.cyan);
+      OutlineText.draw(c, text, Offset(cx, r.wave == kMaxWave ? 72.0 : 96.0), size: 13, color: Palette.cyan);
     }
 
     if (g.banner > 0 && g.playing) {
+      // Neue Welt: Name über dem Wellenbanner
+      if (r.wave == 1 || biomeForWave(r.wave - 1) != g.biome) {
+        OutlineText.draw(c, g.biomeDef.name, Offset(cx, s.y * 0.42 - min(40.0, s.x / 14)),
+            size: min(26.0, s.x / 20), color: Palette.mint);
+      }
       OutlineText.draw(c, r.wave == kMaxWave ? 'Der Geierkönig kommt' : 'Welle ${r.wave}',
           Offset(cx, s.y * 0.42), size: min(46.0, s.x / 12), color: Palette.sun);
       if (!g.weather.isClear) {
@@ -88,6 +95,21 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
         _drawArrow(c, s.x - 6, sy, -1);
       }
     }
+  }
+
+  /// Strecke bis zum Ziel: Leiste mit Spielerpunkt und karierter Zielmarke.
+  void _drawProgress(Canvas c, double cx, double y, double w, double k) {
+    final x0 = cx - w / 2;
+    drawRect(c, x0 - 3, y - 3, w + 6, 10, Palette.ink);
+    drawRect(c, x0, y, w, 4, const Color(0xFF3A2C52));
+    drawRect(c, x0, y, w * clampD(k, 0, 1), 4, Palette.sun);
+    for (var i = 0; i < 2; i++) {
+      for (var j = 0; j < 2; j++) {
+        drawRect(c, x0 + w + 4 + i * 5, y - 3 + j * 5, 5, 5, (i + j).isEven ? Colors.white : Palette.ink);
+      }
+    }
+    drawCircle(c, x0 + w * clampD(k, 0, 1), y + 2, 6, Palette.ink);
+    drawCircle(c, x0 + w * clampD(k, 0, 1), y + 2, 4, Palette.sun);
   }
 
   void _drawArrow(Canvas c, double x, double y, double dir) {

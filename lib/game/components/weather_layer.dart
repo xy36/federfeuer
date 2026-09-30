@@ -222,6 +222,13 @@ class RainPuddles extends Component {
     int priority = 1,
   })  : _rng = random ?? Random(),
         super(priority: priority) {
+    setArenaWidth(arenaWidth);
+  }
+
+  /// Verteilt die Pfützen neu, z. B. wenn die Welt pro Welle länger wird.
+  void setArenaWidth(double arenaWidth) {
+    _puddles.clear();
+    _ripples.clear();
     final count = (arenaWidth / 140).round();
     for (var i = 0; i < count; i++) {
       _puddles.add(_Puddle(

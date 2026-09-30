@@ -1,53 +1,8 @@
 import 'dart:math';
 
-/// Wetterarten. Umgesetzt sind bisher Klar, Wind und Regen;
-/// Nebel, Gewitter, Hitze und Schnee folgen laut GDD.
-enum WeatherType {
-  clear('Klar'),
-  wind('Wind'),
-  rain('Regen');
+import 'config.dart';
 
-  const WeatherType(this.label);
-  final String label;
-}
-
-/// Alle Wetterwerte an einer Stelle (kann später nach config.dart wandern).
-class WeatherConfig {
-  WeatherConfig._();
-
-  // Wind
-  /// Seitlicher Drift in Welteinheiten pro Sekunde.
-  static const double windStrength = 80;
-  static const double windSwitchMin = 8;
-  static const double windSwitchMax = 12;
-
-  /// Dauer eines kompletten Richtungswechsels (+80 → −80) in Sekunden.
-  static const double windTurnTime = 1.5;
-
-  /// Böen: ±15 % Schwankung um den Grundwind.
-  static const double windGust = 0.15;
-  static const double windGustSpeed = 1.7;
-
-  /// Windanfälligkeit nach Gegnerklasse (1 = voller Drift).
-  static const double windFactorLight = 1.0; // Krähe
-  static const double windFactorMedium = 0.8; // Spucker
-  static const double windFactorGround = 0.5; // Käfer
-  static const double windFactorHeavy = 0.35; // Brocken
-  static const double windFactorBoss = 0.2; // Geierkönig
-
-  // Regen
-  static const double rainThrustFactor = 0.9; // Schub −10 %
-  static const double rainGlideFallFactor = 1.3; // Gleiten +30 % Fall
-  static const double rainDropFallFactor = 1.5; // Material sinkt schneller
-
-  // Häufigkeit
-  static const double badWeatherBase = 0.20; // Stufe 1 (Küken)
-  static const double badWeatherPerLevel = 0.15; // +15 % pro Stufe
-  static const List<WeatherType> defaultPool = [
-    WeatherType.wind,
-    WeatherType.rain,
-  ];
-}
+export 'config.dart' show WeatherConfig, WeatherType;
 
 /// Zustand und Modifikatoren des aktuellen Wetters.
 ///
@@ -90,21 +45,25 @@ class Weather {
   double get dropFallFactor =>
       isRaining ? WeatherConfig.rainDropFallFactor : 1.0;
 
-  /// Chance auf nicht-klares Wetter je Schwierigkeitsstufe (1–5).
-  static double badWeatherChance(int difficulty) {
-    final c = WeatherConfig.badWeatherBase +
-        WeatherConfig.badWeatherPerLevel * (difficulty - 1);
+  /// Chance auf nicht-klares Wetter je Schwierigkeitsstufe (1–5),
+  /// plus Zuschlag der Welt ([bonus]).
+  static double badWeatherChance(int difficulty, [double bonus = 0]) {
+    final c =
+        WeatherConfig.badWeatherBase +
+        WeatherConfig.badWeatherPerLevel * (difficulty - 1) +
+        bonus;
     return c.clamp(0.0, 1.0).toDouble();
   }
 
-  /// Würfelt ein Wetter aus [pool] (später: Pool der aktuellen Welt).
+  /// Würfelt ein Wetter aus [pool] (Pool der aktuellen Welt).
   WeatherType roll({
     int difficulty = 1,
     List<WeatherType> pool = WeatherConfig.defaultPool,
+    double bonus = 0,
   }) {
     final candidates = pool.where((t) => t != WeatherType.clear).toList();
     if (candidates.isEmpty) return WeatherType.clear;
-    if (_rng.nextDouble() >= badWeatherChance(difficulty)) {
+    if (_rng.nextDouble() >= badWeatherChance(difficulty, bonus)) {
       return WeatherType.clear;
     }
     return candidates[_rng.nextInt(candidates.length)];
@@ -114,8 +73,9 @@ class Weather {
   WeatherType startWave({
     int difficulty = 1,
     List<WeatherType> pool = WeatherConfig.defaultPool,
+    double bonus = 0,
   }) {
-    set(roll(difficulty: difficulty, pool: pool));
+    set(roll(difficulty: difficulty, pool: pool, bonus: bonus));
     return _type;
   }
 
@@ -125,8 +85,7 @@ class Weather {
     _time = 0;
     _wind = 0;
     if (type == WeatherType.wind) {
-      _windTarget =
-          (_rng.nextBool() ? 1.0 : -1.0) * WeatherConfig.windStrength;
+      _windTarget = (_rng.nextBool() ? 1.0 : -1.0) * WeatherConfig.windStrength;
       _switchIn = _nextSwitch();
     } else {
       _windTarget = 0;
