@@ -4,6 +4,7 @@ import '../game/config.dart';
 import '../game/federfeuer_game.dart';
 import '../game/progress.dart';
 import '../game/run_state.dart';
+import '../platform/desktop_window.dart';
 import 'widgets.dart';
 
 // ---------------- Startmenü ----------------
@@ -89,17 +90,26 @@ class _MenuOverlayState extends State<MenuOverlay> {
       Wrap(spacing: 6, runSpacing: 6, children: [
         for (final (key, what) in controls) _keyHint(key, what),
         _keyHint('🎮', 'Stick · A · Start'),
+        if (isDesktop) _keyHint('F11', 'Vollbild'),
       ]),
-      if (kDebugTools)
+      if (isDesktop || kDebugTools)
         Padding(
           padding: const EdgeInsets.only(top: 12),
-          child: GameButton(
-            label: p.debugUnlockAll ? 'Debug: alles frei' : 'Debug: aus',
-            icon: '🛠',
-            size: 13,
-            color: p.debugUnlockAll ? Palette.purple : Ui.card,
-            onPressed: () => setState(() => p.debugUnlockAll = !p.debugUnlockAll),
-          ),
+          child: Wrap(spacing: 8, children: [
+            if (isDesktop) const FullScreenButton(),
+            if (kDebugTools)
+              GameButton(
+                label: p.debugUnlockAll ? 'Debug: alles frei' : 'Debug: aus',
+                icon: '🛠',
+                size: 13,
+                color: p.debugUnlockAll ? Palette.purple : Ui.card,
+                onPressed: () => setState(() => p.debugUnlockAll = !p.debugUnlockAll),
+              ),
+            if (kDebugTools)
+              GameButton(label: 'Performance-Test', icon: '⏱', size: 13, color: Ui.card, onPressed: game.startBenchmark),
+            if (kDebugTools)
+              GameButton(label: 'Render-Analyse', icon: '🔬', size: 13, color: Ui.card, onPressed: game.startRenderAnalysis),
+          ]),
         ),
     ]);
   }
@@ -116,8 +126,8 @@ class _MenuOverlayState extends State<MenuOverlay> {
           depth: 4,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
           child: Column(children: [
-            Text(unlocked ? '${d.level}' : '🔒', style: displayStyle(16, Palette.ink)),
-            FittedBox(fit: BoxFit.scaleDown, child: Text(d.name, maxLines: 1, style: displayStyle(13, Palette.ink))),
+            Text(unlocked ? '${d.level}' : '🔒', style: numberStyle(16, Ui.cardText)),
+            FittedBox(fit: BoxFit.scaleDown, child: Text(d.name, maxLines: 1, style: displayStyle(13, Ui.cardText))),
           ]),
         ),
       ),
@@ -128,11 +138,11 @@ class _MenuOverlayState extends State<MenuOverlay> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
           decoration: BoxDecoration(
-            color: Ui.card,
+            color: Ui.glass,
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: Palette.ink, width: 2),
+            border: Border.all(color: Ui.edge, width: 2),
           ),
-          child: Text(key, style: displayStyle(12, Palette.ink)),
+          child: Text(key, style: bodyText(11.5, color: Ui.cardText, weight: 900)),
         ),
         const SizedBox(width: 5),
         Text(what, style: bodyText(12, color: Ui.muted)),
@@ -181,7 +191,7 @@ class _MenuOverlayState extends State<MenuOverlay> {
 
 Widget _statLine(String label, String value) => Row(children: [
       Expanded(child: Text(label, style: bodyText(12, color: Ui.cardMuted))),
-      Text(value, style: bodyText(12.5, color: Palette.ink, weight: 900)),
+      Text(value, style: bodyText(12.5, color: Ui.cardText, weight: 900)),
     ]);
 
 // ---------------- Level-up ----------------
@@ -224,16 +234,16 @@ class _LevelUpOverlayState extends State<LevelUpOverlay> {
   Widget _card(LevelChoice c, int i) {
     final stat = c.option.stat, rare = c.rare;
     return ChoiceCard(
-      accent: rare ? Palette.purple : const Color(0xFFCFCFD6),
+      accent: rare ? Palette.purple : Ui.card,
       badge: rare ? 'SELTEN' : null,
       icon: c.option.icon,
       title: stat.label,
       width: 176,
       height: 176,
       body: Center(
-        child: Text('+${fmtNum(c.value)}${stat.unit}', style: displayStyle(34, Palette.good)),
+        child: Text('+${fmtNum(c.value)}${stat.unit}', style: numberStyle(34, const Color(0xFFB5FFD0)).copyWith(shadows: glowShadows(Palette.mint))),
       ),
-      footer: CardFooter(const Text('Wählen'), color: rare ? const Color(0xFFD9B8FF) : Palette.sun),
+      footer: CardFooter(const Text('Wählen'), color: rare ? Palette.purple : Palette.sun),
       onPressed: () {
         widget.game.chooseLevel(i);
         if (mounted) setState(() {});
@@ -268,6 +278,7 @@ class PauseOverlay extends StatelessWidget {
           Wrap(alignment: WrapAlignment.center, spacing: 12, children: [
             GameButton(label: 'Weiterspielen', icon: '▶', color: Palette.mint, onPressed: game.togglePause),
             GameButton(label: 'Aufgeben', color: Ui.card, onPressed: game.toMenu),
+            if (isDesktop) const FullScreenButton(),
           ]),
         ],
       ),
@@ -291,7 +302,7 @@ class GameOverOverlay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          OutlinedLabel(game.won ? 'SIEG!' : 'ABGESTÜRZT', size: 44, color: game.won ? Palette.sun : Palette.coral),
+          OutlinedLabel(game.won ? 'SIEG!' : 'ABGESTÜRZT', size: 44, color: game.won ? Palette.sun : Palette.coral, align: TextAlign.center),
           const SizedBox(height: 8),
           Text(
             game.won ? 'Der Geierkönig ist gefallen.' : 'Der Kampfspatz ist abgestürzt.',
@@ -310,11 +321,13 @@ class GameOverOverlay extends StatelessWidget {
               margin: const EdgeInsets.only(top: 14),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: Palette.mint,
+                color: Palette.mint.withAlpha(36),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Palette.ink, width: 3),
+                border: Border.all(color: Palette.mint.withAlpha(180), width: 1.4),
+                boxShadow: [BoxShadow(color: Palette.mint.withAlpha(70), blurRadius: 20)],
               ),
-              child: Text('🔓 Neue Stufe: ${difficultyDef(unlocked).name}', style: displayStyle(18, Palette.ink)),
+              child: Text('🔓 Neue Stufe: ${difficultyDef(unlocked).name}',
+                  style: displayStyle(17, const Color(0xFFCFFFE0)).copyWith(shadows: glowShadows(Palette.mint))),
             ),
           const SizedBox(height: 16),
           GameButton(label: 'Neue Runde', icon: '↻', color: Palette.mint, onPressed: game.toMenu),
@@ -322,4 +335,21 @@ class GameOverOverlay extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Umschalter Vollbild/Fenster (nur am PC); zeigt den aktuellen Modus.
+class FullScreenButton extends StatelessWidget {
+  const FullScreenButton({super.key});
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: DesktopWindow.fullScreen,
+        builder: (context, full, _) => GameButton(
+          label: full ? 'Fenster' : 'Vollbild',
+          icon: full ? '🗗' : '⛶',
+          size: 13,
+          color: Ui.card,
+          onPressed: DesktopWindow.toggle,
+        ),
+      );
 }

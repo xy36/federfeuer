@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../federfeuer_game.dart';
+import '../perf.dart';
 import 'draw.dart';
+import 'light.dart';
 import 'enemy.dart';
 import 'transient.dart';
 
@@ -19,9 +21,10 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
     required this.radius,
     required this.color,
   })  : _trail = Paint()
-          ..color = color.withAlpha(100)
-          ..strokeWidth = radius
-          ..strokeCap = StrokeCap.round,
+          ..color = color.withAlpha(150)
+          ..strokeWidth = radius * 1.4
+          ..strokeCap = StrokeCap.round
+          ..blendMode = BlendMode.plus,
         super(position: position, priority: 6);
 
   final Vector2 vel;
@@ -79,8 +82,11 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
 
   @override
   void render(Canvas c) {
-    c.drawLine(Offset.zero, Offset(-vel.x * 0.025, -vel.y * 0.025), _trail);
-    drawCircle(c, 0, 0, radius, crit ? Palette.sun : color);
+    if (perfSkip.contains(RenderPart.projectiles)) return;
+    final col = crit ? Palette.sun : color;
+    c.drawLine(Offset.zero, Offset(-vel.x * 0.03, -vel.y * 0.03), _trail);
+    Glow.draw(c, 0, 0, radius * (crit ? 5 : 3.6), col.withAlpha(200));
+    drawCircle(c, 0, 0, radius * 0.65, Colors.white);
   }
 }
 
@@ -109,7 +115,10 @@ class EnemyBullet extends PositionComponent with HasGameReference<FederfeuerGame
 
   @override
   void render(Canvas c) {
-    drawCircle(c, 0, 0, radius + 2, Palette.ink);
-    drawCircle(c, 0, 0, radius, color);
+    if (perfSkip.contains(RenderPart.projectiles)) return;
+    // Dunkler Kern mit rotem Leuchten – klar unterscheidbar von eigenen Kugeln
+    Glow.draw(c, 0, 0, radius * 4, color.withAlpha(190));
+    drawCircle(c, 0, 0, radius + 1.5, Color.lerp(color, Colors.white, 0.3)!);
+    drawCircle(c, 0, 0, radius - 1, const Color(0xFF1B0A1E));
   }
 }

@@ -12,7 +12,7 @@ Federfeuer ist ein 2D-Arena-Shooter im Stil von Brotato, bei dem der Spieler fli
 | Perspektive | 2D-Seitenansicht mit leichter Schrägsicht (Bodenschatten, Parallax) |
 | Plattform | Flutter + Flame; zuerst Android/iOS im Querformat, Desktop mit Tastatur; Controller auf allen Plattformen |
 | Zielgruppe | Gelegenheitsspieler, die kurze Runs mit Build-Entscheidungen mögen |
-| Held | „Kampfspatz“ – gelber Vogel mit Fliegerbrille |
+| Held | „Kampfspatz“ – leuchtender, goldener Geistvogel mit Fliegerbrille |
  
 Designpfeiler:
  
@@ -37,8 +37,11 @@ Halten lässt den Vogel steigen, Loslassen lässt ihn langsam gleiten; links/rec
 | Links / rechts | A / D oder Pfeiltasten | Buttons ◀ ▶ unten links | Linker Stick (Totzone 0,35) oder Steuerkreuz |
 | Fliegen (halten) | Leertaste, W oder ↑ | Button „Flug“ unten rechts | A, RB oder RT |
 | Pause | P oder Esc | Button oben rechts | Start; in der Pause B zum Weiterspielen |
+| Vollbild / Fenster (PC) | F11 oder Alt+Enter; Knopf im Startmenü und in der Pause | – | – |
 
 Controller folgen der Xbox-Standardbelegung (Paket `gamepads`); mehrere angeschlossene Controller steuern gemeinsam. Sobald ein Controller benutzt wurde, werden die Touch-Buttons ausgeblendet.
+
+Am PC (Windows, macOS, Linux) startet das Spiel im Vollbild; die Wahl Vollbild/Fenster wird gespeichert. Im Fenstermodus ist es 1280 × 720 groß, mindestens 960 × 540. Während des Spielens ist der Mauszeiger ausgeblendet, in Menüs sichtbar.
  
 | Parameter | Wert |
 | --- | --- |
@@ -60,33 +63,40 @@ Die Welt ist 540 Einheiten hoch; ihre Breite wächst mit der Welle. Der Spieler 
 
 - **Weltbreite:** Mit Grundtempo (230) ist die Strecke in 3/5 der Wellenzeit durchflogen: Breite = 230 × 0,6 × Wellendauer. Welle 1 = 2760, Welle 9 = 7176, Welle 14 = 9936.
 - **Bosswelle:** Feste Arena von 2400 ohne Ziel, Start in der Mitte.
-- **Ziel:** Leuchtendes Tor mit karierter Zielflagge, 90 vor dem rechten Weltende.
+- **Ziel:** Lichtsäule mit aufsteigenden Lichtkugeln und leuchtendem Fuß, 90 vor dem rechten Weltende.
  
-- **Grenzen:** Boden bei y = 468, Decke bei y = 24, links und rechts Pfosten mit gelb-dunklen Warnstreifen. Außerhalb wird abgedunkelt.
+- **Grenzen:** Boden bei y = 468, Decke bei y = 24, links und rechts leuchtende Lichtvorhänge in der Kantenfarbe der Welt. Außerhalb wird abgedunkelt.
 - **Kamera:** Zoom = min(Bildhöhe / 540, Bildbreite / 560). Sie führt leicht in Flugrichtung vor (Geschwindigkeit × 0,35) und folgt weich nach. Im Hochformat wird oben mehr Himmel gezeigt.
 - **Kamerawackeln:** 8 bei Spielertreffer, 5 bei Explosionen, 20 beim Tod des Bosses; klingt schnell ab.
-- **Tiefenwirkung:** Jede Figur wirft einen Schatten auf den Boden, der mit der Flughöhe kleiner und blasser wird. Dazu drei Bergketten mit Parallax (Faktor 0,15 / 0,35 / 0,6) vor einem Abendhimmel mit Sonne.
-- **Randpfeile:** Rote Dreiecke am Bildschirmrand zeigen Gegner außerhalb des sichtbaren Bereichs.
+- **Tiefenwirkung:** Jede Figur wirft einen Schatten auf den Boden, der mit der Flughöhe kleiner und blasser wird. Dahinter vier Silhouetten-Ebenen mit Parallax (Faktor 0,12 / 0,26 / 0,45 / 0,68), nach hinten heller und dunstiger, mit Dunstbändern dazwischen. Davor ein unscharfer, dunkler Vordergrund mit Parallax 1,35, der überwiegend unter der Bodenlinie bleibt.
+- **Randpfeile:** Leuchtende, rosarote Pfeile am Bildschirmrand zeigen Gegner außerhalb des sichtbaren Bereichs.
  
-Farbwelt: Dämmerung von Indigo über Pflaume und Koralle zu Aprikose, dazu Sonnengelb für den Helden und Mint für Material. Mit den Welten wandert der Himmel vom späten Nachmittag bis in die Nacht.
+Stil der Spielwelt: leuchtend und geschichtet, angelehnt an die Stimmung von „Ori and the Blind Forest“ (keine übernommenen Inhalte). Dunkle Silhouetten mit leuchtenden Lichtkanten, weiche Lichthöfe, lebendige Lichtstrahlen (8 weiche Strahlen je Lichtquelle; jeder wandert langsam, atmet und blendet in einem eigenen Rhythmus von 20–40 s auf und ab; sie fallen vor den mittleren Ebenen durch das Bild, nur die vorderste Ebene liegt davor), schwebende Lichtpartikel, leuchtende Pflanzen und eine Vignette. Leuchten wird über eine einmal gerenderte Glow-Textur additiv gezeichnet. Weichzeichner über große Flächen gibt es bewusst nicht (auf großen Bildschirmen zu teuer); weiche Kanten entstehen über Farbverläufe. Die Hintergrundebenen füllen nur bis knapp unter die nächste Ebene, um Überzeichnung zu sparen. Silhouetten (Hintergrundebenen, Schnee, Boden, Kulisse, Vordergrund) werden selbst in Dreiecke zerlegt und je Ebene mit einem `drawVertices`-Aufruf gezeichnet – große zusammengesetzte Pfade füllt die Engine sonst per Stencil über die ganze Hüllfläche. Viele gleichartige Leuchtpunkte werden gesammelt in einem Aufruf gezeichnet (Gegner-Leuchten in zwei Durchgängen hinter und vor den Körpern, Partikel, Funken), der Regen ebenso. Mit den Welten wandert das Licht von der goldenen Stunde bis in die Nacht. Sonnengelb bleibt die Farbe des Helden, Mint die des Materials. Umbau in Etappen: 1. Welt und Licht, 2. Held, Gegner, Projektile und Effekte, 3. HUD und Menüs – alle fertig.
+
+Figuren und Effekte:
+
+- **Held:** Lichtkern mit weichem Verlauf, durchscheinende Lichtflügel, die beim Flügelschlag aufleuchten, Lichtschweif aus den letzten Positionen, goldene Aura; er erhellt den Boden unter sich (je höher, desto schwächer). Die Fliegerbrille hat leuchtende Gläser.
+- **Gegner:** fast schwarze „Fäulnis“-Kreaturen mit violetter Aura und glühenden Augen; Krähe mit zerfransten Flügeln, Käfer mit glühenden Panzerrissen, Spucker mit grün pulsierendem Giftsack, Brocken mit Glutadern (HP-Leiste als Glutstreifen), Geierkönig mit Krone aus magentafarbenen Lichtsplittern und pulsierender Aura. Bei Treffern blitzen die Körper hell auf; beim Tod zerfallen sie in violette Funken.
+- **Waffen & Kugeln:** Waffen schweben als Lichtsplitter in Stufenfarbe und zeigen aufs Ziel, mit Mündungsblitz beim Schuss. Eigene Kugeln sind leuchtende Kugeln mit weißem Kern und Schweif (Krit gold), Gegnerkugeln haben einen dunklen Kern mit farbigem Leuchten.
+- **Drops:** Material als leuchtender Mint-Kristall, Herz als leuchtendes Herz; beide pulsieren.
 
 ## Welten
 
-Der Run führt durch fünf Welten, die sich nach der Welle richten. Welten bestimmen Kulisse (Himmel, Bergketten, Boden, Objekte) und Wetter (siehe „Wetter“); Gegner, Spawns und Werte hängen weiter nur an der Wellennummer. Beim Betreten einer neuen Welt steht ihr Name über dem Wellenbanner, der Shop davor kündigt sie an.
+Der Run führt durch fünf Welten, die sich nach der Welle richten. Welten bestimmen Kulisse (Himmel, Licht, Ebenen, Boden, Objekte) und Wetter (siehe „Wetter“); Gegner, Spawns und Werte hängen weiter nur an der Wellennummer. Beim Betreten einer neuen Welt steht ihr Name über dem Wellenbanner, der Shop davor kündigt sie an.
 
-| Welt | Wellen | Tageszeit | Bergketten | Boden & Kulisse |
+| Welt | Wellen | Licht | Ebenen | Boden & Kulisse |
 | --- | --- | --- | --- | --- |
-| Felder | 1–4 | Später Nachmittag | Flache Hügel (Höhe × 0,6) | Grüne Wiese, Weizenfelder, Heuballen, Zäune, Vogelscheuchen |
-| Dorf | 5–8 | Dämmerung | Sanfte Hügel | Häuser mit erleuchteten Fenstern, Zäune, Laternen |
-| Wald mit Fluss | 9–12 | Späte Dämmerung | Höhere Hügel (× 1,1) | Tannen, Laubbäume, Büsche; Fluss mit Glitzern im Vordergrund |
-| Gebirge | 13–14 | Blaue Stunde | Spitze Gipfel (× 1,8), hinterste Kette mit Schnee | Fels statt Gras, Findlinge, Latschen, Felsnadeln |
-| Gipfel | 15 (Boss) | Nacht mit Mond und Sternen | Spitze Gipfel tief unten, alle mit Schnee | Schneedecke, Schneehügel, Gipfelkreuz mit Gebetsfahnen in der Arenamitte |
+| Felder | 1–4 | Goldene Stunde, Sonne mit Strahlen, goldene Kanten | Flache Hügel mit einzelnen Bäumen und Windmühle | Weizen, Zäune, Vogelscheuchen, Bäume als Silhouetten; leuchtende Blüten, Pollen |
+| Dorf | 5–8 | Dämmerung, warme Kanten | Hügel mit Ruinen und Türmen, einzelne erleuchtete Fenster | Eingestürzte Mauern mit Fensterlicht, Laternen, Zäune; Glut am Boden |
+| Wald mit Fluss | 9–12 | Nachtblau, Mond mit Strahlen, türkise Kanten | Dichter Wald, vorn riesige Stämme bis aus dem Bild | Farne, Stämme, große Leuchtpilze, hängende Ranken; leuchtender Fluss |
+| Gebirge | 13–14 | Blaue Stunde, Mond, schwache Strahlen | Spitze Gipfel (× 1,7), hintere Ketten mit Schnee entlang der Grate, Latschen | Findlinge, Latschen; leuchtende Kristalle |
+| Gipfel | 15 (Boss) | Nacht mit Mond, Sternen und Polarlicht | Verschneite Gipfel tief unten | Schneewehen, Felsen, Gipfelkreuz mit glimmenden Gebetsfahnen in der Arenamitte; Eiskristalle |
 
 Im Menü ist die Felder-Kulisse zu sehen. Die Kulisse wird nur im sichtbaren Ausschnitt gezeichnet; Art und Position jedes Objekts hängen fest am Index, sodass eine Welt bei jedem Besuch gleich aussieht.
  
 ## Waffen
  
-Der Spieler trägt bis zu 6 Waffen, die im Kreis um ihn schweben und jeweils selbstständig auf den nächsten Gegner in Reichweite feuern. Zu Beginn wählt er Pistole, Maschinenpistole oder Schrotflinte.
+Der Spieler trägt bis zu 6 Waffen, die als Lichtsplitter im Kreis um ihn schweben und jeweils selbstständig auf den nächsten Gegner in Reichweite feuern. Zu Beginn wählt er Pistole, Maschinenpistole oder Schrotflinte.
  
 | Waffe | Schaden | Abklingzeit (s) | Reichweite | Projektil-Tempo | Besonderheit | Basispreis |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -136,7 +146,7 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
 - **Steigende Schwierigkeit:** Gegnerwerte (siehe Skalierung), Gruppengröße und der Anteil von Spuckern und Brocken wachsen mit jeder Welle weiter. Das Spawn-Intervall erreicht ab Welle 10 seine Untergrenze von 0,9 s.
 - **Spawn-Intervall:** max(0,9; 2,4 − 0,15 · w) s, zufällig ±30 %; in der Bosswelle × 1,7.
 - **Gruppengröße:** 1 + ⌊w / 2,5⌋, mit 40 % Chance einer mehr. Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
-- **Warnung:** Ein rotes, pulsierendes X markiert jeden Spawn 0,9 s vorher (Boss: 2 s).
+- **Warnung:** Ein pulsierender Fäulnis-Riss (dunkler Kern, violett-rotes Leuchten, der sich bis zum Erscheinen schließt) markiert jeden Spawn 0,9 s vorher (Boss: 2 s, größer).
 - **Obergrenze:** keine neuen Spawns bei mehr als 110 lebenden Gegnern.
 - **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle).
 - **Gewichtung:** Krähe 10, Käfer 7, Spucker 4 + 0,3 · w, Brocken 2 + 0,3 · w.
@@ -219,8 +229,16 @@ Jeder erlittene Treffer macht mindestens 1 Schaden.
  
 Nach jeder Welle bietet der Shop 4 zufällige Angebote: mit 45 % Chance eine Waffe, sonst ein Item. Ab Welle 3 können Waffen in Stufe II (25 %), ab Welle 7 in Stufe III (8 %) und ab Welle 11 in Stufe IV (3 %) auftauchen. Die Chancen sind kumulativ: Ein Wurf unter 3 % ergibt Stufe IV, unter 8 % Stufe III, unter 25 % Stufe II.
  
-- **Preise:** Waffen Basis × Stufe × (1 + 0,10 · (w − 1)), Items Basis × (1 + 0,12 · (w − 1)).
-- **Neu würfeln:** ⌊2 + 0,8 · w⌋, pro weiterem Wurf in derselben Shopphase +2.
+- **Preise:** Waffen Basis × Stufe × (1 + 0,12 · (w − 1) + 0,012 · (w − 1)²), Items Basis × (1 + 0,15 · (w − 1) + 0,015 · (w − 1)²). Der quadratische Anteil sorgt dafür, dass die Preise mit dem späten Einkommen mithalten.
+
+| Welle | Waffen | Items | Neu würfeln |
+| --- | --- | --- | --- |
+| 1 | × 1,0 | × 1,0 | 2 |
+| 5 | × 1,67 | × 1,84 | 7 |
+| 9 | × 2,73 | × 3,16 | 12 |
+| 14 | × 4,59 | × 5,49 | 21 |
+
+- **Neu würfeln:** ⌊2 + 0,8 · w + 0,04 · w²⌋, pro weiterem Wurf in derselben Shopphase +2.
 - **Verkaufen:** 40 % des aktuellen Waffenpreises; die letzte Waffe kann nicht verkauft werden.
 - **Slots voll:** Bei 6 Waffen ist ein Kauf nur möglich, wenn die Waffe mit einer gleichen Waffe gleicher Stufe verschmelzen kann; sie verschmilzt dann direkt beim Kauf (eine Stufe).
  
@@ -247,21 +265,23 @@ Items stapeln sich unbegrenzt.
  
 Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays über der angehaltenen Szene.
  
-- **HUD oben links:** HP-Leiste mit Zahl, XP-Leiste, Level und Materialzähler.
-- **HUD oben Mitte:** Wellennummer, Countdown (rot unter 5 s) und Fortschrittsleiste bis zum Ziel; in Welle 15 stattdessen „BOSS“ mit Boss-HP-Leiste.
-- **Wetteranzeige:** Unter Timer bzw. Boss-Leiste steht das aktuelle Wetter (bei Wind mit Richtungspfeil, z. B. „Wind ▶“); das Wellenbanner nennt es ebenfalls.
-- **Einblendungen:** Wellenbanner zu Beginn, schwebende Schadenszahlen (weiß, Krit gelb, Spieler rot, Heilung mint), „LEVEL UP“ am Spieler.
+- **HUD oben links:** Level als leuchtender Orb, die XP laufen als Lichtbogen um ihn herum; daneben die HP als leuchtende Glaskapsel mit Zahl darunter und der Materialzähler mit Mint-Kristall.
+- **HUD oben Mitte:** „WELLE X“ klein, darunter der Countdown (rosarot unter 5 s) und eine feine Lichtlinie bis zum Ziel mit leuchtendem Punkt für den Spieler und kleiner Lichtsäule am Ende; in Welle 15 stattdessen „DER GEIERKÖNIG“ mit magentafarbener HP-Kapsel.
+- **Wetteranzeige:** Unter Timer bzw. Boss-Leiste steht das aktuelle Wetter (bei Wind mit Richtungszeichen, z. B. „Wind ›“); das Wellenbanner nennt es ebenfalls.
+- **Einblendungen:** Wellenbanner zu Beginn (Weltname in der Kantenfarbe der Welt darüber), schwebende Schadenszahlen (weiß, Krit gelb, Spieler rot, Heilung mint; höchstens 40 gleichzeitig, mit scharfem Schatten statt Schein), „LEVEL UP“ am Spieler. Texte im Spiel haben einen weichen Schein in ihrer Farbe statt einer Kontur.
 - **Startmenü:** Zweispaltig. Links Logo, Kurzerklärung, Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe), Tastenhinweise und in Debug-Builds der Debug-Schalter. Rechts drei Waffenkarten; ein Tipp auf die Karte startet den Run. Auf niedrigen Bildschirmen (Handy quer) ist das Logo einzeilig und die Kurzerklärung entfällt.
 - **Level-up:** 4 Karten mit großem Wert (z. B. „+4 %“); die ganze Karte ist wählbar. Seltene Karten haben ein lila Kopfband und das Badge „SELTEN“.
 - **Shop:** Kopfzeile mit Hinweisen (Zeitbonus, nächste Welt) und Geld. Angebotskarten mit Kopfband in Stufenfarbe (Items apricot), Badge mit Stufe; grün „STUFE … · PAAR“, wenn der Spieler die Waffe in gleicher Stufe schon hat, bzw. „⤴ STUFE …“, wenn der Kauf bei vollen Slots direkt verschmilzt; und Preis-Etikett als Fußzeile; zu teure Karten sind ausgegraut, gekaufte werden zu einem leeren Platz. Darunter sechs Waffenslots (leere Slots sichtbar) mit Verkaufen-Knopf und – wenn ein Partner gleicher Stufe da ist – grünem Verschmelzen-Knopf („⤴ II“), Items als Etiketten, Werte in zwei Spalten, rechts unten der Start der nächsten Welle.
 - **Pause & Game Over:** Pause zeigt Welle, Welt und Stufe, dazu Weiterspielen/Aufgeben. Game Over zeigt „SIEG!“ bzw. „ABGESTÜRZT“, Kacheln für Welle, Gegner und Level, die Stufe, ggf. die neu freigeschaltete Stufe und „Neue Runde“.
-- **Menü-Navigation:** Alle Buttons sind per Tastatur (Pfeile/Tab, Enter/Leertaste) und Controller (Steuerkreuz oder Stick, A bestätigt) bedienbar; der fokussierte Knopf bzw. die fokussierte Karte hebt sich an und bekommt einen weißen Rahmen (ebenso bei Mauszeiger darüber, ohne Rahmen). Mit Controller ist in jedem neuen Menü sofort der erste Button fokussiert. In den ersten 0,5 s nach dem Öffnen eines Menüs wird Controller-A ignoriert, damit ein Tippen zum Fliegen nichts versehentlich auswählt.
+- **Menü-Navigation:** Alle Buttons sind per Tastatur (Pfeile/Tab, Enter/Leertaste) und Controller (Steuerkreuz oder Stick, A bestätigt) bedienbar; der fokussierte Knopf bzw. die fokussierte Karte hebt sich an, leuchtet heller und bekommt einen weißen Lichtrand (bei Mauszeiger darüber ohne Rand). Mit Controller ist in jedem neuen Menü sofort der erste Button fokussiert. In den ersten 0,5 s nach dem Öffnen eines Menüs wird Controller-A ignoriert, damit ein Tippen zum Fliegen nichts versehentlich auswählt.
  
-Stil: dicke dunkle Konturen, Kartenschatten, kräftige Farben – eher Arcade-Sticker als klassisches Material Design.
+Stil: leuchtendes Glas passend zur Spielwelt – ruhig und edel statt Arcade-Sticker.
 
-- **Panels:** dunkles Indigo mit leichtem Glanz oben, fast schwarze Kontur, weicher Schatten.
-- **Karten und Knöpfe:** cremefarbene bzw. farbige Sticker mit 3er-Tintenkontur und Versatzschatten nach unten; beim Antippen drücken sie sich ein.
-- **Schrift:** Lilita One für Titel, Knöpfe und Zahlen, Nunito (fett) für Fließtext; beide unter SIL Open Font License in `assets/fonts/`. Die System-Schriftgröße wird in den Menüs ignoriert, weil Karten feste Größen haben.
+- **Panels:** dunkles, durchscheinendes Glas (Nachtblau) mit feiner Lichtkante, bläulichem Schein nach außen und einem Lichtschimmer oben.
+- **Karten und Knöpfe:** dunkles Glas, getönt in der Akzentfarbe (Gold für Hauptaktionen, Mint für Start/Weiter, Lila für Seltenes, Stufenfarben bei Waffen); oben ein leuchtendes Farbband mit Symbol im Lichtkreis. Bei Fokus/Hover werden Kante und Schein heller und das Glas hebt sich leicht; beim Antippen sinkt es ein.
+- **Skalierung:** Menüs und HUD sind für 1280 × 720 (logische Pixel) ausgelegt und wachsen auf größeren Bildschirmen gleichmäßig mit: Faktor = min(Breite / 1280, Höhe / 720), mindestens 1, höchstens 2,2 (Full HD = 1,5). Auf kleineren Bildschirmen (Handys) bleibt alles in Originalgröße.
+- **Touch-Knöpfe und Pause:** Glaskreise mit feiner Lichtkante; gedrückt leuchten sie golden.
+- **Schrift:** Cinzel (elegante Versalien) für Titel und Beschriftungen, Nunito für Fließtext und für alle Zahlen (Cinzel zeichnet die 1 wie ein römisches I); beide unter SIL Open Font License in `assets/fonts/`. Die System-Schriftgröße wird in den Menüs ignoriert, weil Karten feste Größen haben.
  
 ## Technische Umsetzung (Flutter + Flame)
  
@@ -279,17 +299,30 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `components/projectiles.dart` | Spielerkugeln (Durchschlag, Explosion) und Gegnerkugeln |
 | `components/pickups.dart` | Material/Herz-Drops und Spawn-Warnungen |
 | `components/effects.dart` | Partikel, Explosionsring, schwebende Zahlen |
-| `components/scenery.dart` | Himmel, Sterne, Parallax-Berge, Boden, Fluss, Weltgrenzen – je nach Welt |
-| `components/decor.dart` | Kulissen-Objekte der Welten (Felder, Häuser, Bäume, Felsen, Gipfelkreuz) |
+| `components/scenery.dart` | Himmel, Licht und Strahlen, Sterne, Polarlicht, vier Silhouetten-Ebenen mit Dunst und Schnee, Boden mit Lichtkante, Leuchtpflanzen, Fluss, Weltgrenzen – je nach Welt |
+| `components/decor.dart` | Kulissen-Silhouetten auf dem Boden mit Lichtkante und Leuchtpunkten |
+| `components/atmosphere.dart` | Unscharfer Vordergrund (Parallax 1,35), Lichtpartikel und Vignette |
+| `components/light.dart` | Glow- und Strahl-Textur, additive Leuchtpunkte und Lichtstrahlen, gesammelt zeichnen (`GlowBatch`, `Rays`) |
+| `components/tris.dart` | Silhouetten als Dreiecke (`TriBatch`: Rechteck, Oval, Polygon mit Ear Clipping, Gelände, Streifen) |
 | `components/goal.dart` | Ziel am rechten Weltende |
 | `components/hud.dart` | HUD im Viewport, Randpfeile |
 | `game/weather.dart` | Wetterzustand, Würfeln pro Welle, Modifikatoren |
+| `platform/desktop_window.dart` | Fenster und Vollbild am PC (window_manager), F11/Alt+Enter, gespeicherter Modus |
+| `game/perf.dart` | Debug: Frame-Messung, FPS-Anzeige, Ergebnisse von Performance-Test und Render-Analyse, abschaltbare Bildteile |
 | `game/progress.dart` | Fortschritt über Runs: freigeschaltete Stufen, Bestleistung pro Stufe, Debug-Modus |
 | `game/gamepad_input.dart` | Controller-Eingaben: Bewegung, Fliegen, Pause, Menü-Navigation |
 | `components/weather_layer.dart` | Regen, Windlinien und Blätter im Viewport, Pfützen am Boden |
 | `ui/*.dart` | Menü, Level-up, Shop, Pause, Game Over, Touch-Steuerung; `widgets.dart` enthält die Bausteine (Panel, Sticker, Knöpfe, Karten, Etiketten) |
  
 Phasen: `menu → play → cleared → levelUp → shop → play … → over`; `cleared` ist die kurze Einblendung nach einer Welle. Außerhalb von `play` läuft die Engine mit dt = 0 weiter, damit Entfernen/Hinzufügen von Komponenten verarbeitet wird, ohne dass sich etwas bewegt. Temporäre Komponenten tragen das Mixin `Transient` und werden beim Wellenwechsel gesammelt entfernt.
+
+Debug-Werkzeuge (in Debug-Builds oder mit `--dart-define=FEDERFEUER_DEBUG=true`):
+
+- **Tasten 1 / 2 / 3:** Wetter Klar / Wind / Regen.
+- **F3:** FPS-Anzeige oben rechts – FPS, schlechteste Frame-Zeit der letzten 120 Frames, Build- und Raster-Zeit der Engine, Anzahl Gegner, Kugeln und Komponenten.
+- **Debug-Modus im Startmenü:** alle Schwierigkeitsstufen frei.
+- **Performance-Test im Startmenü:** schwerste Szene – Wald mit Regen, Stufe Phönix, dauerhaft 110 Gegner rund um den Spieler, sechs Waffen der Stufe IV, Held unverwundbar. Nach 3 s Aufwärmen wird 30 s gemessen; Ergebnis (Ø FPS, 1%-Low, schlechtester Frame, Raster/Build Ø und max) oben rechts und in der Konsole. Aussagekräftig nur im Profile- oder Release-Build.
+- **Render-Analyse im Startmenü:** dieselbe Lastszene, abschnittsweise gemessen (3 s Aufwärmen, je Abschnitt 1 s Einschwingen + 4 s Messung): zuerst alles an, dann jeweils ohne einen Bildteil (Hintergrund, Kulisse, Boden, Vordergrund, Atmosphäre, Wetter, Gegner-Körper, Gegner-Leuchten, Kugeln, Effekte, HUD). Ergebnis: Rasterzeit je Abschnitt und Ersparnis je Bildteil, größte zuerst – oben rechts und in der Konsole.
  
 ## Offene Punkte & Roadmap
  
@@ -298,7 +331,7 @@ Der Prototyp ist spielbar; als Nächstes geht es um Stabilität, dann um Tiefe u
 Offene Fragen:
  
 - ~~Soll es bei 10 Wellen bleiben oder wie bei Brotato 20 Wellen mit Boss in der Mitte und am Ende?~~ **Entschieden:** 15 Wellen, Boss am Ende (Welle 15); jede Welle dauert länger und ist schwerer.
-- Bleibt die Grafik prozedural gezeichnet, oder kommen Sprites/Spritesheets?
+- Bleibt die Grafik prozedural gezeichnet, oder kommen Sprites/Spritesheets? (Der leuchtende Stil ist bisher komplett prozedural umgesetzt.)
 - Monetarisierung: Einmalkauf, Free-to-play oder rein privat?
  
 Phase 1 – Fundament:
@@ -306,7 +339,7 @@ Phase 1 – Fundament:
 - [x] Flutter-Port lokal bauen und `flutter analyze` fehlerfrei bekommen
 - [x] Bestleistung mit `shared_preferences` speichern (pro Stufe, Schlüssel `bestWave_<Stufe>`)
 - [ ] Soundeffekte und Musik (`flame_audio`)
-- [ ] Performance-Test mit 110 Gegnern auf einem Mittelklasse-Android
+- [ ] Performance-Test mit 110 Gegnern auf einem Mittelklasse-Android (Werkzeug vorhanden: „Performance-Test“ im Startmenü, siehe Debug-Werkzeuge)
  
 Phase 2 – Inhalte:
  

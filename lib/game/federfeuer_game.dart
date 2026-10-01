@@ -6,6 +6,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
+import 'components/atmosphere.dart';
 import 'components/decor.dart';
 import 'components/effects.dart';
 import 'components/enemy.dart';
@@ -20,7 +21,9 @@ import 'components/weapon_mount.dart';
 import 'components/weather_layer.dart';
 import 'config.dart';
 import 'gamepad_input.dart';
+import 'perf.dart';
 import 'progress.dart';
+import '../platform/desktop_window.dart';
 import 'run_state.dart';
 import 'weather.dart';
 
@@ -74,6 +77,26 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   RunState? run;
   final progress = Progress();
 
+  // ---------------- Debug: Performance ----------------
+
+  final perf = PerfMonitor();
+
+  /// FPS-Anzeige (F3), unverwundbarer Held, laufender Performance-Test.
+  bool showPerf = false, godMode = false, benchmarkRunning = false;
+  double benchmarkLeft = 0;
+  PerfResult? perfResult;
+  static const benchmarkSeconds = 30.0, benchmarkWarmup = 3.0, benchmarkEnemies = 110;
+
+  /// Render-Analyse: misst die Lastszene abschnittsweise, jeweils ohne einen Bildteil.
+  bool analysisRunning = false;
+  final analysis = <(RenderPart?, PerfResult)>[];
+  static const analysisSettle = 1.0, analysisMeasure = 4.0;
+  final _segments = <RenderPart?>[null, ...RenderPart.values];
+  int analysisIndex = 0;
+  double _analysisT = 0;
+  RenderPart? get analysisPart => analysisRunning ? _segments[analysisIndex] : null;
+  int get analysisSegments => _segments.length;
+
   /// Beim letzten Sieg neu freigeschaltete Stufe (für Game Over), sonst null.
   int? newlyUnlocked;
   bool won = false;
@@ -111,8 +134,22 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   Future<void> onLoad() async {
     camera.viewfinder.anchor = Anchor.topLeft;
     player = Player();
-    world.addAll([Backdrop(), Decor(), Ground(), _puddles, player]);
-    camera.viewport.addAll([_weatherLayer, Hud()]);
+    world.addAll([
+      Backdrop(),
+      Decor(),
+      Ground(),
+      _puddles,
+      EnemyGlowPass(front: false),
+      EnemyGlowPass(front: true),
+      player,
+      Foreground(),
+    ]);
+    camera.viewport.addAll([Atmosphere(), _weatherLayer, Hud()]);
+    if (kDebugTools) {
+      camera.viewport.add(PerfOverlay());
+      perf.start();
+      HardwareKeyboard.instance.addHandler(_onDebugKey);
+    }
     await progress.load();
     pad.start();
     overlays.add('menu');
@@ -121,6 +158,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   @override
   void onRemove() {
     pad.stop();
+    perf.stop();
+    HardwareKeyboard.instance.removeHandler(_onDebugKey);
     super.onRemove();
   }
 
@@ -139,9 +178,13 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   // ---------------- Ablauf ----------------
 
-  void startRun(String weaponId) {
-    run = RunState(weaponId, difficulty: progress.selected);
+  void startRun(String weaponId, {int? difficulty}) {
+    run = RunState(weaponId, difficulty: difficulty ?? progress.selected);
     newlyUnlocked = null;
+    perfResult = null;
+    godMode = benchmarkRunning = analysisRunning = false;
+    perfSkip.clear();
+    analysis.clear();
     won = false;
     startWave();
   }
@@ -210,7 +253,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       if (d.material && !d.taken && d.pulled) r.gain(1);
     }
     for (final e in enemies) {
-      if (!e.dead) burst(e.position, const Color(0xFFE8D9FF), 8, 140);
+      if (!e.dead) burst(e.position, const Color(0xFFC77DFF), 8, 140);
     }
     for (final c in world.children
         .where((c) => c is Enemy || c is EnemyBullet || c is Bullet || c is SpawnMarker || c is Drop)
@@ -272,6 +315,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void toMenu() {
+    godMode = benchmarkRunning = analysisRunning = false;
+    perfSkip.clear();
+    perf.recording = false;
     run = null;
     phase = Phase.menu;
     worldW = kArenaW;
@@ -383,10 +429,14 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   @override
   void update(double dt) {
+    perf.frame(dt);
     dt = min(dt, 0.05);
     final active = playing;
+    // Am PC stört der Mauszeiger beim Spielen; in Menüs wird er gebraucht.
+    final cursor = isDesktop && active ? SystemMouseCursors.none : SystemMouseCursors.basic;
+    if (mouseCursor != cursor) mouseCursor = cursor;
     // Während der Einblendung laufen Effekte weiter, Figuren stehen still.
-    final animate = active || phase == Phase.cleared;
+    final animate = active || phase == Phase.cleared || run == null;
     if (active || run == null) clock += dt;
     weather.update(active ? dt : 0);
     super.update(animate ? dt : 0);
@@ -405,8 +455,12 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       }
       return;
     }
-    if (!active) return;
+    if (!active) {
+      perf.recording = false;
+      return;
+    }
     final r = run!;
+    if (benchmarkRunning) _benchmarkTick(dt);
 
     banner = max(0.0, banner - dt);
     shake = max(0.0, shake - dt * 40);
@@ -572,7 +626,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void hurtPlayer(double amount) {
     final r = run;
-    if (r == null || !playing || player.iframe > 0 || winT > 0) return;
+    if (r == null || !playing || player.iframe > 0 || winT > 0 || godMode) return;
     final a = r.stat(Stat.armor);
     final f = a >= 0 ? 15 / (15 + a) : 1 + (-a) / 15;
     final dmg = max(1, (amount * f).round());
@@ -628,7 +682,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         if (o.dead) continue;
         o.dead = true;
         o.removeFromParent();
-        burst(o.position, const Color(0xFFE8D9FF), 6);
+        burst(o.position, const Color(0xFFC77DFF), 6);
       }
       for (final c
           in world.children
@@ -638,7 +692,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       }
       return;
     }
-    burst(e.position, const Color(0xFFE8D9FF), 12, 170);
+    burst(e.position, const Color(0xFFC77DFF), 12, 170);
     for (var i = 0; i < enemyDefs[e.type]!.drop; i++) {
       world.add(
         Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng),
@@ -663,8 +717,117 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void burst(Vector2 at, Color color, int n, [double speed = 160]) =>
       world.add(Burst(at, color, n, speed, rng));
 
-  void floatText(Vector2 at, String text, Color color, double fontSize) =>
-      world.add(FloatText(at.clone()..x += rnd(-6, 6), text, color, fontSize));
+  /// Höchstzahl gleichzeitiger schwebender Zahlen – darüber werden neue ausgelassen.
+  static const maxFloatTexts = 40;
+  int floatTextCount = 0;
+
+  void floatText(Vector2 at, String text, Color color, double fontSize) {
+    if (floatTextCount >= maxFloatTexts) return;
+    world.add(FloatText(at.clone()..x += rnd(-6, 6), text, color, fontSize));
+  }
+
+  // ---------------- Debug: Performance-Test ----------------
+
+  /// Lastszene: Wald mit Regen (meiste Effekte), dauerhaft [benchmarkEnemies] Gegner,
+  /// sechs Stufe-IV-Waffen, Stufe Phönix, Held unverwundbar. Nach einer Aufwärmphase
+  /// wird [benchmarkSeconds] lang gemessen.
+  void startBenchmark() {
+    startRun('smg', difficulty: kDifficultyCount);
+    final r = run!;
+    r.wave = 12;
+    r.weapons.first.tier = 3;
+    for (final id in ['pistol', 'shotgun', 'rail', 'rocket', 'smg']) {
+      r.addWeapon(id, 3);
+    }
+    startWave();
+    weather.set(WeatherType.rain);
+    godMode = benchmarkRunning = true;
+    benchmarkLeft = benchmarkSeconds + benchmarkWarmup;
+    perf.reset();
+    showPerf = true;
+  }
+
+  void _benchmarkTick(double dt) {
+    waveTime = 999; // Welle endet nicht von selbst
+    player.iframe = 0;
+    // Gegnerzahl konstant halten, direkt rund um den Spieler
+    var guard = 0;
+    while (enemies.length < benchmarkEnemies && guard++ < 20) {
+      final type = benchmarkTypes[rng.nextInt(benchmarkTypes.length)];
+      final d = enemyDefs[type]!;
+      final x = clampD(player.x + (rng.nextBool() ? 1 : -1) * rnd(160, 650), 40, worldW - 40);
+      final y = d.flying ? rnd(kCeil + 50, kGround - 90) : kGround - d.radius;
+      addEnemy(type, Vector2(x, y));
+    }
+    if (analysisRunning) {
+      _analysisTick(dt);
+      return;
+    }
+    benchmarkLeft -= dt;
+    perf.recording = benchmarkLeft <= benchmarkSeconds;
+    if (benchmarkLeft <= 0) {
+      final result = perf.endRecording();
+      perfResult = result;
+      debugPrint(result.toString());
+      godMode = benchmarkRunning = false;
+      togglePause();
+    }
+  }
+
+  void startRenderAnalysis() {
+    startBenchmark();
+    analysisRunning = true;
+    analysis.clear();
+    analysisIndex = 0;
+    perfSkip.clear();
+    _analysisT = benchmarkWarmup + analysisMeasure;
+  }
+
+  void _analysisTick(double dt) {
+    _analysisT -= dt;
+    perf.recording = _analysisT <= analysisMeasure;
+    if (_analysisT > 0) return;
+    analysis.add((_segments[analysisIndex], perf.endRecording()));
+    perf.reset();
+    analysisIndex++;
+    if (analysisIndex >= _segments.length) {
+      perfSkip.clear();
+      analysisRunning = godMode = benchmarkRunning = false;
+      for (final line in analysisLines()) {
+        debugPrint(line);
+      }
+      togglePause();
+      return;
+    }
+    perfSkip
+      ..clear()
+      ..add(_segments[analysisIndex]!);
+    _analysisT = analysisSettle + analysisMeasure;
+  }
+
+  /// Ergebnis der Render-Analyse: Rasterzeit mit allem und Ersparnis je Bildteil (größte zuerst).
+  List<String> analysisLines() {
+    if (analysis.isEmpty) return const [];
+    final base = analysis.first.$2;
+    final rows = [
+      for (final (part, r) in analysis.skip(1)) (part!, r, base.avgRasterMs - r.avgRasterMs),
+    ]..sort((a, b) => b.$3.compareTo(a.$3));
+    return [
+      'Render-Analyse – alles an: Raster Ø ${base.avgRasterMs.toStringAsFixed(1)} ms, ${base.avgFps.toStringAsFixed(0)} FPS',
+      for (final (part, r, save) in rows)
+        'ohne ${part.label}: Raster ${r.avgRasterMs.toStringAsFixed(1)} ms  '
+            '(${save >= 0 ? '−' : '+'}${save.abs().toStringAsFixed(1)} ms${save.abs() < 1 ? ', im Rauschen' : ''})',
+    ];
+  }
+
+  /// F3 blendet die FPS-Anzeige ein/aus – global, auch in Menüs.
+  bool _onDebugKey(KeyEvent e) {
+    if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.f3) {
+      showPerf = !showPerf;
+      return true;
+    }
+    return false;
+  }
 
   // ---------------- Tastatur ----------------
 

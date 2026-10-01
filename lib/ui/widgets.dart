@@ -8,23 +8,36 @@ bool get isTouchPlatform =>
 
 // ---------------- Farben & Schrift ----------------
 
-/// UI-Farben der Menüs: dunkle Panels, cremefarbene Sticker-Karten.
+/// UI-Farben der Menüs: dunkles, durchscheinendes Glas mit Lichtkanten.
 class Ui {
-  static const panel = Color(0xF2221736);
-  static const panelEdge = Color(0xFF110A20);
-  static const panelLine = Color(0x33FFFFFF);
-  static const text = Color(0xFFF6F0FF);
-  static const muted = Color(0xFFB9A9DA);
-  static const card = Color(0xFFFFF6E6);
-  static const cardMuted = Color(0xFF7A6A8E);
-  static const slot = Color(0x1FFFFFFF);
+  static const panel = Color(0xD90A0F24);
+  static const glass = Color(0xE60D1430);
+  static const edge = Color(0x66CFE3FF);
+  static const panelLine = Color(0x33CFE3FF);
+  static const text = Color(0xFFF2F6FF);
+  static const muted = Color(0xFF9FB0D0);
+  static const cardText = Color(0xFFF2F6FF);
+  static const cardMuted = Color(0xFF9FB0D0);
+  static const badge = Color(0xCC050814);
+  static const slot = Color(0x14CFE3FF);
+
+  /// Neutraler Akzent für Knöpfe und Karten ohne eigene Farbe.
+  static const card = Color(0xFFBFD4FF);
 }
 
-const _display = 'LilitaOne';
+const _display = 'Cinzel';
 const _body = 'Nunito';
 
-TextStyle displayStyle(double size, [Color color = Ui.text]) =>
-    TextStyle(fontFamily: _display, fontSize: size, color: color, height: 1.05, letterSpacing: 0.5);
+/// Titel und Zahlen: elegante Versalien.
+TextStyle displayStyle(double size, [Color color = Ui.text]) => TextStyle(
+      fontFamily: _display,
+      fontSize: size,
+      color: color,
+      height: 1.1,
+      letterSpacing: size * 0.04,
+      fontWeight: FontWeight.w700,
+      fontVariations: const [FontVariation('wght', 700)],
+    );
 
 TextStyle bodyText(double size, {Color color = Ui.text, double weight = 700}) => TextStyle(
       fontFamily: _body,
@@ -37,15 +50,53 @@ TextStyle bodyText(double size, {Color color = Ui.text, double weight = 700}) =>
 
 final mutedStyle = bodyText(13, color: Ui.muted);
 
-/// Kleine Überschrift über einem Abschnitt im Panel.
+/// Zahlen: klare, sehr fette Ziffern (Cinzel zeichnet die 1 wie ein römisches I).
+TextStyle numberStyle(double size, [Color color = Ui.text]) => bodyText(size, color: color, weight: 900);
+
+/// Weicher Schein um Text in Akzentfarbe.
+List<Shadow> glowShadows(Color color, [double strength = 1]) => [
+      Shadow(color: color.withAlpha((150 * strength).round()), blurRadius: 14),
+      Shadow(color: color.withAlpha((90 * strength).round()), blurRadius: 4),
+    ];
+
+/// Kleine Überschrift über einem Abschnitt im Panel, mit feiner Lichtlinie.
 Widget sectionTitle(String text, {EdgeInsets padding = const EdgeInsets.only(top: 14, bottom: 8)}) => Padding(
       padding: padding,
-      child: Text(text.toUpperCase(), style: displayStyle(14, Ui.muted).copyWith(letterSpacing: 1.5)),
+      child: Row(children: [
+        Text(text.toUpperCase(), style: displayStyle(12.5, Ui.muted).copyWith(letterSpacing: 2.2)),
+        const SizedBox(width: 10),
+        Expanded(child: Container(height: 1, color: Ui.panelLine)),
+      ]),
     );
+
+// ---------------- Skalierung ----------------
+
+/// Skaliert ein Overlay auf großen Bildschirmen gleichmäßig hoch: Layout in
+/// Bezugsgröße (siehe [uiScaleFor]), dann auf den ganzen Bildschirm gestreckt.
+class UiScale extends StatelessWidget {
+  const UiScale({super.key, required this.child});
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
+        final k = uiScaleFor(box.maxWidth, box.maxHeight);
+        if (k <= 1) return child;
+        // Feste Größe nötig: Flame gibt Overlays lockere Vorgaben, sonst bliebe die
+        // FittedBox in Bezugsgröße und das Menü säße klein oben links.
+        return SizedBox(
+          width: box.maxWidth,
+          height: box.maxHeight,
+          child: FittedBox(
+            fit: BoxFit.fill,
+            child: SizedBox(width: box.maxWidth / k, height: box.maxHeight / k, child: child),
+          ),
+        );
+      });
+}
 
 // ---------------- Panel ----------------
 
-/// Abgedunkelter Hintergrund + zentriertes, scrollbares Panel.
+/// Abgedunkelter Hintergrund + zentriertes, scrollbares Glas-Panel.
 class Panel extends StatelessWidget {
   const Panel({super.key, required this.child, this.maxWidth = 560, this.padding = const EdgeInsets.all(20)});
   final Widget child;
@@ -56,7 +107,7 @@ class Panel extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox.expand(
       child: ColoredBox(
-        color: const Color(0x8C0B0616),
+        color: const Color(0x73020410),
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(10),
@@ -65,20 +116,23 @@ class Panel extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   color: Ui.panel,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: Ui.panelEdge, width: 3),
-                  boxShadow: const [BoxShadow(color: Color(0x99000000), offset: Offset(0, 8), blurRadius: 24)],
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: Ui.edge, width: 1.2),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x2E9FD8FF), blurRadius: 40, spreadRadius: 2),
+                    BoxShadow(color: Color(0x99000000), blurRadius: 30, offset: Offset(0, 10)),
+                  ],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(21),
                   child: DecoratedBox(
-                    // Leichter Glanz oben, damit das Panel nicht flach wirkt
+                    // Lichtschimmer oben, als fiele Licht auf das Glas
                     decoration: const BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topCenter,
                         end: Alignment.bottomCenter,
-                        colors: [Color(0x14FFFFFF), Color(0x00FFFFFF)],
-                        stops: [0, 0.35],
+                        colors: [Color(0x1FBFE3FF), Color(0x00BFE3FF)],
+                        stops: [0, 0.4],
                       ),
                     ),
                     child: SingleChildScrollView(
@@ -96,7 +150,7 @@ class Panel extends StatelessWidget {
   }
 }
 
-/// Titel mit dunkler Kontur und Versatzschatten (Logo, Überschriften).
+/// Leuchtender Titel (Logo, Überschriften).
 class OutlinedLabel extends StatelessWidget {
   const OutlinedLabel(this.text, {super.key, this.size = 48, this.color = Palette.sun, this.align = TextAlign.start});
   final String text;
@@ -106,30 +160,17 @@ class OutlinedLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = displayStyle(size, color).copyWith(height: 0.95);
-    final stroke = size / 7;
-    return Stack(children: [
-      Transform.translate(
-        offset: Offset(0, size / 11),
-        child: Text(text, textAlign: align, style: base.copyWith(
-          color: null,
-          foreground: Paint()
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = stroke
-            ..strokeJoin = StrokeJoin.round
-            ..color = Palette.ink,
-        )),
+    return Text(
+      text,
+      textAlign: align,
+      style: displayStyle(size, Color.lerp(color, Colors.white, 0.35)!).copyWith(
+        height: 1.0,
+        shadows: [
+          Shadow(color: color.withAlpha(200), blurRadius: size * 0.45),
+          Shadow(color: color.withAlpha(120), blurRadius: size * 0.12),
+        ],
       ),
-      Text(text, textAlign: align, style: base.copyWith(
-        color: null,
-        foreground: Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = stroke
-          ..strokeJoin = StrokeJoin.round
-          ..color = Palette.ink,
-      )),
-      Text(text, textAlign: align, style: base),
-    ]);
+    );
   }
 }
 
@@ -146,8 +187,8 @@ class PanelHeader extends StatelessWidget {
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          OutlinedLabel(title, size: 32, color: color),
-          if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 6), child: subtitle),
+          OutlinedLabel(title, size: 28, color: color),
+          if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 8), child: subtitle),
         ]),
       ),
       ?trailing,
@@ -205,8 +246,9 @@ class _PressableState extends State<Pressable> {
   }
 }
 
-/// Sticker-Optik: Tinten-Kontur, Versatzschatten; hebt sich bei Fokus/Hover,
-/// drückt sich beim Tippen ein. Fokus zeigt zusätzlich einen hellen Rahmen.
+/// Leuchtendes Glas in Akzentfarbe [color]: Lichtkante und Schein werden bei
+/// Fokus/Hover heller, das Glas hebt sich leicht; beim Tippen sinkt es ein.
+/// Fokus zeigt zusätzlich einen weißen Lichtrand.
 class Sticker extends StatelessWidget {
   const Sticker({
     super.key,
@@ -225,28 +267,39 @@ class Sticker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final lift = state.pressed ? -depth + 1 : (state.highlighted ? 3.0 : 0.0);
-    final shadow = state.pressed ? 1.0 : depth + (state.highlighted ? 3 : 0);
+    final on = state.highlighted;
+    final accent = state.enabled ? color : const Color(0xFF6C7590);
+    final lift = state.pressed ? 1.0 : (on ? -3.0 : 0.0);
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 90),
+      duration: const Duration(milliseconds: 120),
       curve: Curves.easeOut,
-      transform: Matrix4.translationValues(0, -lift, 0),
+      transform: Matrix4.translationValues(0, lift, 0),
       decoration: BoxDecoration(
-        color: state.enabled ? color : Color.lerp(color, const Color(0xFF8C8499), 0.55),
         borderRadius: BorderRadius.circular(radius),
-        border: Border.all(color: Palette.ink, width: 3),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.alphaBlend(accent.withAlpha(on ? 70 : 46), Ui.glass),
+            Color.alphaBlend(accent.withAlpha(on ? 26 : 12), Ui.glass),
+          ],
+        ),
+        border: Border.all(
+          color: state.focused ? Colors.white : accent.withAlpha(on ? 230 : 140),
+          width: state.focused ? 2 : 1.4,
+        ),
         boxShadow: [
-          if (state.focused) const BoxShadow(color: Colors.white, spreadRadius: 4),
-          BoxShadow(color: Palette.ink, offset: Offset(0, shadow)),
+          BoxShadow(color: accent.withAlpha(on ? 110 : (state.enabled ? 40 : 0)), blurRadius: on ? 22 : 12),
+          if (state.focused) const BoxShadow(color: Color(0x66FFFFFF), blurRadius: 16),
         ],
       ),
       padding: padding,
-      child: Opacity(opacity: state.enabled ? 1 : 0.6, child: child),
+      child: Opacity(opacity: state.enabled ? 1 : 0.55, child: child),
     );
   }
 }
 
-/// Knopf im Sticker-Stil.
+/// Knopf aus leuchtendem Glas; [color] ist der Akzent.
 class GameButton extends StatelessWidget {
   const GameButton({
     super.key,
@@ -264,6 +317,7 @@ class GameButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Color.lerp(color, Colors.white, 0.55)!;
     return Pressable(
       onPressed: onPressed,
       builder: (context, s) => Padding(
@@ -271,12 +325,12 @@ class GameButton extends StatelessWidget {
         child: Sticker(
           state: s,
           color: color,
-          radius: 14,
-          depth: 4,
-          padding: EdgeInsets.symmetric(horizontal: size * 0.9, vertical: size * 0.45),
+          radius: size * 1.4,
+          padding: EdgeInsets.symmetric(horizontal: size * 1.0, vertical: size * 0.5),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (icon != null) Padding(padding: const EdgeInsets.only(right: 8), child: Text(icon!, style: TextStyle(fontSize: size))),
-            Text(label, style: displayStyle(size, Palette.ink)),
+            if (icon != null)
+              Padding(padding: const EdgeInsets.only(right: 8), child: Text(icon!, style: TextStyle(fontSize: size, color: textColor))),
+            Text(label, style: displayStyle(size * 0.9, textColor).copyWith(shadows: glowShadows(color, s.highlighted ? 1 : 0.5))),
           ]),
         ),
       ),
@@ -285,7 +339,7 @@ class GameButton extends StatelessWidget {
 }
 
 /// Auswahlkarte (Waffe, Item, Level-up). Die ganze Karte ist der Knopf.
-/// Oben ein Farbband (Stufe/Seltenheit), unten eine Fußzeile (Preis, Aktion).
+/// Oben ein leuchtendes Band in Akzentfarbe (Stufe/Seltenheit), unten eine Fußzeile.
 class ChoiceCard extends StatelessWidget {
   const ChoiceCard({
     super.key,
@@ -296,7 +350,7 @@ class ChoiceCard extends StatelessWidget {
     required this.footer,
     required this.onPressed,
     this.badge,
-    this.badgeColor = Palette.ink,
+    this.badgeColor = Ui.badge,
     this.width = 176,
     this.height = 196,
   });
@@ -320,20 +374,37 @@ class ChoiceCard extends StatelessWidget {
           height: height,
           child: Sticker(
             state: s,
+            color: accent,
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(15),
               child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                 Container(
                   height: 44,
-                  color: accent,
                   padding: const EdgeInsets.symmetric(horizontal: 10),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [accent.withAlpha(120), accent.withAlpha(20)],
+                    ),
+                  ),
                   child: Row(children: [
-                    Text(icon, style: const TextStyle(fontSize: 24)),
+                    Container(
+                      width: 32,
+                      height: 32,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: const Color(0x66050814),
+                        boxShadow: [BoxShadow(color: accent.withAlpha(140), blurRadius: 12)],
+                      ),
+                      child: Text(icon, style: const TextStyle(fontSize: 18)),
+                    ),
                     const Spacer(),
-                    if (badge != null) Pill(badge!, color: badgeColor, textColor: Colors.white, size: 11),
+                    if (badge != null) Pill(badge!, color: badgeColor, textColor: Colors.white, size: 10.5),
                   ]),
                 ),
-                Container(height: 3, color: Palette.ink),
+                Container(height: 1.2, color: accent.withAlpha(170)),
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(10, 8, 10, 0),
@@ -341,12 +412,12 @@ class ChoiceCard extends StatelessWidget {
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         alignment: Alignment.centerLeft,
-                        child: Text(title, maxLines: 1, style: displayStyle(17, Palette.ink)),
+                        child: Text(title, maxLines: 1, style: displayStyle(15, Ui.cardText)),
                       ),
                       const SizedBox(height: 4),
                       Expanded(
                         child: DefaultTextStyle.merge(
-                          style: bodyText(12.5, color: Palette.ink),
+                          style: bodyText(12.5, color: Ui.cardText),
                           child: body,
                         ),
                       ),
@@ -363,7 +434,7 @@ class ChoiceCard extends StatelessWidget {
   }
 }
 
-/// Fußzeile einer Karte: farbiges Etikett über die ganze Breite.
+/// Fußzeile einer Karte: leuchtendes Etikett über die ganze Breite.
 class CardFooter extends StatelessWidget {
   const CardFooter(this.child, {super.key, this.color = Palette.sun});
   final Widget child;
@@ -371,22 +442,26 @@ class CardFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = Color.lerp(color, Colors.white, 0.6)!;
     return Container(
-      height: 34,
+      height: 32,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Palette.ink, width: 2.5),
+        color: color.withAlpha(46),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withAlpha(170), width: 1.2),
       ),
-      child: DefaultTextStyle.merge(style: displayStyle(16, Palette.ink), child: child),
+      child: DefaultTextStyle.merge(
+        style: displayStyle(14, text).copyWith(shadows: glowShadows(color, 0.6)),
+        child: child,
+      ),
     );
   }
 }
 
 // ---------------- Kleinteile ----------------
 
-/// Materialsymbol (Mint-Raute).
+/// Materialsymbol (leuchtender Mint-Kristall).
 class MaterialGem extends StatelessWidget {
   const MaterialGem({super.key, this.size = 11});
   final double size;
@@ -397,7 +472,11 @@ class MaterialGem extends StatelessWidget {
         child: Container(
           width: size,
           height: size,
-          decoration: BoxDecoration(color: Palette.mint, border: Border.all(color: Palette.ink, width: 1.5)),
+          decoration: BoxDecoration(
+            color: Palette.mint,
+            border: Border.all(color: const Color(0xFFE6FFF0), width: 1.2),
+            boxShadow: [BoxShadow(color: Palette.mint.withAlpha(180), blurRadius: size)],
+          ),
         ),
       );
 }
@@ -409,9 +488,9 @@ class PriceTag extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Row(mainAxisSize: MainAxisSize.min, children: [
-        const MaterialGem(size: 10),
-        const SizedBox(width: 7),
-        Text('$price'),
+        const MaterialGem(size: 9),
+        const SizedBox(width: 8),
+        Text('$price', style: numberStyle(15, DefaultTextStyle.of(context).style.color ?? Ui.text)),
       ]);
 }
 
@@ -426,8 +505,12 @@ class Pill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: size * 0.75, vertical: size * 0.3),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(999)),
+      padding: EdgeInsets.symmetric(horizontal: size * 0.8, vertical: size * 0.32),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Ui.panelLine, width: 1),
+      ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) Padding(padding: const EdgeInsets.only(right: 5), child: Text(icon!, style: TextStyle(fontSize: size))),
         Text(text, style: bodyText(size, color: textColor, weight: 850)),
@@ -445,14 +528,15 @@ class MoneyPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 6, 16, 6),
       decoration: BoxDecoration(
-        color: Palette.ink,
+        color: Ui.glass,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Palette.mint, width: 2.5),
+        border: Border.all(color: Palette.mint.withAlpha(170), width: 1.4),
+        boxShadow: [BoxShadow(color: Palette.mint.withAlpha(60), blurRadius: 18)],
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        const MaterialGem(size: 13),
-        const SizedBox(width: 10),
-        Text('$amount', style: displayStyle(24, Palette.mint)),
+        const MaterialGem(size: 12),
+        const SizedBox(width: 11),
+        Text('$amount', style: numberStyle(22, const Color(0xFFCFFFE0)).copyWith(shadows: glowShadows(Palette.mint, 0.7))),
       ]),
     );
   }
@@ -472,7 +556,7 @@ class ModsText extends StatelessWidget {
         for (final e in mods.entries)
           Text(
             '${e.value > 0 ? '+' : ''}${fmtNum(e.value)}${e.key.unit} ${e.key.label}',
-            style: bodyText(size, color: e.value < 0 ? Palette.bad : Palette.good, weight: 850),
+            style: bodyText(size, color: e.value < 0 ? const Color(0xFFFF8A9A) : const Color(0xFF8CF5B0), weight: 850),
           ),
       ],
     );
@@ -493,10 +577,11 @@ class StatTile extends StatelessWidget {
       decoration: BoxDecoration(
         color: Ui.slot,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Ui.panelLine, width: 2),
+        border: Border.all(color: color.withAlpha(110), width: 1.2),
+        boxShadow: [BoxShadow(color: color.withAlpha(40), blurRadius: 16)],
       ),
       child: Column(children: [
-        Text(value, style: displayStyle(30, color)),
+        Text(value, style: numberStyle(28, Color.lerp(color, Colors.white, 0.4)!).copyWith(shadows: glowShadows(color, 0.8))),
         const SizedBox(height: 2),
         Text(label, style: mutedStyle),
       ]),

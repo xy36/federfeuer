@@ -97,10 +97,9 @@ class RunState {
     );
   }
 
-  int weaponPrice(String id, int tier) =>
-      (weaponDefs[id]!.price * tiers[tier].price * (1 + 0.1 * (wave - 1))).round();
-  int itemPrice(ItemDef it) => (it.price * (1 + 0.12 * (wave - 1))).round();
-  int get rerollCost => (2 + wave * 0.8).floor() + rerolls * 2;
+  int weaponPrice(String id, int tier) => (weaponDefs[id]!.price * tiers[tier].price * weaponPriceFactor(wave)).round();
+  int itemPrice(ItemDef it) => (it.price * itemPriceFactor(wave)).round();
+  int get rerollCost => rerollBaseCost(wave) + rerolls * 2;
   int sellPrice(OwnedWeapon w) => (weaponPrice(w.id, w.tier) * 0.4).round();
 
   static const maxWeapons = 6;

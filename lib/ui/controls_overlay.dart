@@ -23,11 +23,12 @@ class ControlsOverlay extends StatelessWidget {
             height: 44,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: const Color(0x802A1D3A),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: const Color(0x99FFFFFF), width: 3),
+              color: const Color(0x990A0F24),
+              shape: BoxShape.circle,
+              border: Border.all(color: const Color(0x80CFE3FF), width: 1.4),
+              boxShadow: const [BoxShadow(color: Color(0x339FD8FF), blurRadius: 14)],
             ),
-            child: const Text('II', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16)),
+            child: Text('II', style: displayStyle(14, const Color(0xFFE6F2FF))),
           ),
         ),
       ),
@@ -89,11 +90,13 @@ class _HoldButtonState extends State<HoldButton> {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: _down ? const Color(0x80FFD23F) : const Color(0x24FFFFFF),
-          border: Border.all(color: const Color(0x8CFFFFFF), width: 3),
+          color: _down ? const Color(0x59FFD27A) : const Color(0x4D0A0F24),
+          border: Border.all(color: _down ? const Color(0xE6FFE6A0) : const Color(0x66CFE3FF), width: 1.6),
+          boxShadow: [BoxShadow(color: _down ? const Color(0x80FFD27A) : const Color(0x229FD8FF), blurRadius: _down ? 26 : 12)],
         ),
         child: Text(widget.label,
-            style: TextStyle(color: Colors.white, fontSize: widget.fontSize, fontWeight: FontWeight.w900)),
+            style: displayStyle(widget.fontSize * 0.85, const Color(0xFFF2F6FF))
+                .copyWith(shadows: _down ? glowShadows(const Color(0xFFFFD27A)) : null)),
       ),
     );
   }

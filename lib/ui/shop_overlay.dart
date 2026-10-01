@@ -40,8 +40,8 @@ class _ShopOverlayState extends State<ShopOverlay> {
             trailing: MoneyPill(r.money),
           ),
           Row(children: [
-            sectionTitle('Angebote'),
-            const Spacer(),
+            Expanded(child: sectionTitle('Angebote')),
+            const SizedBox(width: 12),
             GameButton(
               label: 'Neu würfeln · ${r.rerollCost}',
               icon: '🎲',
@@ -99,7 +99,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
         badge: mergeNow
             ? '⤴ STUFE ${tiers[o.tier + 1].label}'
             : (pair ? 'STUFE ${t.label} · PAAR' : 'STUFE ${t.label}'),
-        badgeColor: mergeNow || pair ? Palette.good : Palette.ink,
+        badgeColor: mergeNow || pair ? const Color(0xCC1F9D55) : Ui.badge,
         icon: d.icon,
         title: d.name,
         width: _cardW,
@@ -114,7 +114,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
         ]),
         footer: CardFooter(
           ok ? PriceTag(o.price) : const Text('Slots voll'),
-          color: ok && !poor ? Palette.sun : const Color(0xFFD9D2E3),
+          color: ok && !poor ? Palette.sun : const Color(0xFF6C7590),
         ),
         onPressed: poor || !ok ? null : () => _buy(i),
       );
@@ -129,7 +129,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
       width: _cardW,
       height: _cardH,
       body: ModsText(it.mods),
-      footer: CardFooter(PriceTag(o.price), color: poor ? const Color(0xFFD9D2E3) : Palette.sun),
+      footer: CardFooter(PriceTag(o.price), color: poor ? const Color(0xFF6C7590) : Palette.sun),
       onPressed: poor ? null : () => _buy(i),
     );
   }
@@ -154,7 +154,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
 
   Widget _line(String label, String value) => Row(children: [
         Expanded(child: Text(label, style: bodyText(12, color: Ui.cardMuted))),
-        Text(value, style: bodyText(12.5, color: Palette.ink, weight: 900)),
+        Text(value, style: bodyText(12.5, color: Ui.cardText, weight: 900)),
       ]);
 
   // ---------------- Inventar ----------------
@@ -199,9 +199,10 @@ class _ShopOverlayState extends State<ShopOverlay> {
       height: _slotH,
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
-        color: Ui.card,
+        color: Ui.glass,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Palette.ink, width: 2.5),
+        border: Border.all(color: t.color.withAlpha(120), width: 1.2),
+        boxShadow: [BoxShadow(color: t.color.withAlpha(40), blurRadius: 12)],
       ),
       child: Row(children: [
         Container(width: 8, color: t.color),
@@ -212,7 +213,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
           child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
             FittedBox(
               fit: BoxFit.scaleDown,
-              child: Text(w.def.name, maxLines: 1, style: displayStyle(13, Palette.ink)),
+              child: Text(w.def.name, maxLines: 1, style: displayStyle(13, Ui.cardText)),
             ),
             Text('Stufe ${t.label}', style: bodyText(11, color: Ui.cardMuted)),
           ]),
@@ -221,16 +222,16 @@ class _ShopOverlayState extends State<ShopOverlay> {
           _slotButton(
             '⤴ ${tiers[w.tier + 1].label}',
             'verschmelzen',
-            base: const Color(0xFFC4F5D2),
-            active: Palette.mint,
+            base: Palette.mint.withAlpha(40),
+            active: Palette.mint.withAlpha(110),
             onPressed: () => setState(() => r.merge(i)),
           ),
         if (r.weapons.length > 1)
           _slotButton(
             '+${r.sellPrice(w)}',
             'verkaufen',
-            base: const Color(0xFFEDE3F7),
-            active: Palette.sun,
+            base: Ui.slot,
+            active: Palette.sun.withAlpha(90),
             onPressed: () => setState(() => r.sell(i)),
           ),
       ]),
@@ -248,10 +249,10 @@ class _ShopOverlayState extends State<ShopOverlay> {
         decoration: BoxDecoration(
           color: s.highlighted ? active : base,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: s.focused ? Palette.purple : Palette.ink, width: s.focused ? 3 : 2),
+          border: Border.all(color: s.focused ? Colors.white : Ui.edge, width: s.focused ? 2 : 1),
         ),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(label, style: displayStyle(12, Palette.ink)),
+          Text(label, style: numberStyle(12, Ui.cardText)),
           Text(sub, style: bodyText(8.5, color: Ui.cardMuted)),
         ]),
       ),
@@ -285,7 +286,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
                   padding: const EdgeInsets.symmetric(vertical: 2.5),
                   child: Row(children: [
                     Expanded(child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis, style: bodyText(12.5, color: Ui.muted))),
-                    Text(value, style: displayStyle(14)),
+                    Text(value, style: numberStyle(14)),
                   ]),
                 ),
               ),

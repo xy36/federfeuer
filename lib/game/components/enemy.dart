@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../federfeuer_game.dart';
+import '../perf.dart';
 import 'draw.dart';
+import 'light.dart';
 import 'pickups.dart';
 import 'projectiles.dart';
 import 'transient.dart';
@@ -42,10 +44,6 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         EnemyType.rock => WeatherConfig.windFactorHeavy,
         EnemyType.boss => WeatherConfig.windFactorBoss,
       };
-
-  static final _legPaint = Paint()
-    ..color = const Color(0xFF1D3A26)
-    ..strokeWidth = 2;
 
   @override
   void update(double dt) {
@@ -134,87 +132,184 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     if (position.distanceTo(p) < r + game.player.r - 3) game.hurtPlayer(dmg);
   }
 
+  // ---------------- Darstellung: dunkle Fäulnis-Kreaturen ----------------
+
+  static const _body = Color(0xFF120A1E), _body2 = Color(0xFF221433);
+  static const _aura = Color(0xFFB44CFF), _eye = Color(0xFFFF4D6D), _ember = Color(0xFFFF8A3D);
+  static const _toxic = Color(0xFF9CFF5A), _crown = Color(0xFFFF5AE0);
+
+  static final _leg = Paint()
+    ..strokeWidth = 2.2
+    ..strokeCap = StrokeCap.round;
+  static final _crack = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.6
+    ..strokeCap = StrokeCap.round
+    ..blendMode = BlendMode.plus;
+
   @override
   void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.enemyBodies)) return;
     drawShadow(c, y, r);
     final face = (game.player.x - x) >= 0 ? 1.0 : -1.0;
-    final f = flash > 0;
-    Color k(Color col) => f ? Colors.white : col;
+    final hit = flash > 0;
+    // Treffer: Körper blitzt hell auf
+    Color k(Color col) => hit ? Color.lerp(col, Colors.white, 0.85)! : col;
+    final pulse = 0.5 + 0.5 * sin(t * 3);
+
+    // Leuchten (Aura, Augen, Risse) zeichnet der EnemyGlowPass gesammelt, siehe [collectGlows].
 
     c.save();
     c.scale(face, 1);
     switch (type) {
       case EnemyType.crow:
-        {
-          final fl = sin(t * 16);
-          drawTri(c, -4, -2, -18, -14 - fl * 8, 6, -4, k(const Color(0xFF3A2C52)));
-          drawOval(c, 0, 0, 14, 11, k(const Color(0xFF3A2C52)));
-          drawTri(c, -2, 0, -16, 8 + fl * 6, 6, 2, k(const Color(0xFF4D3C6B)));
-          drawTri(c, 11, -3, 22, 1, 11, 4, Palette.sun);
-          drawCircle(c, 6, -4, 2.5, const Color(0xFFFF4D6D));
-        }
+        final fl = sin(t * 16);
+        // Zerfranste Flügel
+        drawTri(c, -4, -2, -20, -15 - fl * 8, 6, -4, k(_body2));
+        drawTri(c, -10, -4, -22, -6 - fl * 6, -4, -1, k(_body2));
+        drawOval(c, 0, 0, 14, 10, k(_body));
+        drawTri(c, -2, 0, -18, 9 + fl * 6, 6, 2, k(_body2));
+        drawTri(c, 11, -3, 21, 1, 11, 3, k(const Color(0xFF3A2440)));
+        _glowEye(c, 6, -3, 2.4, _eye);
       case EnemyType.beetle:
-        {
-          for (var i = -1; i <= 1; i++) {
-            final lg = sin(t * 14 + i) * 3;
-            c.drawLine(Offset(i * 7.0, 4), Offset(i * 7 + lg, 15), _legPaint);
-          }
-          c.drawArc(Rect.fromCircle(center: const Offset(0, 4), radius: 16), pi, pi, true,
-              fillOf(k(const Color(0xFF46B36A))));
-          drawCircle(c, -6, -3, 3, k(const Color(0xFF2F7D49)));
-          drawCircle(c, 5, -6, 2.5, k(const Color(0xFF2F7D49)));
-          drawCircle(c, 15, 0, 6, k(const Color(0xFF1D3A26)));
-          drawCircle(c, 17, -2, 2, Colors.white);
+        for (var i = -1; i <= 1; i++) {
+          final lg = sin(t * 14 + i) * 3;
+          _leg.color = k(_body2);
+          c.drawLine(Offset(i * 7.0, 4), Offset(i * 7 + lg, 15), _leg);
         }
+        c.drawArc(Rect.fromCircle(center: const Offset(0, 4), radius: 16), pi, pi, true, fillOf(k(_body)));
+        // Glühende Risse im Panzer
+        _crack.color = _ember.withAlpha((150 + 90 * pulse).round());
+        c.drawPath(
+            Path()
+              ..moveTo(-12, 1)
+              ..lineTo(-6, -6)
+              ..lineTo(-1, -2)
+              ..lineTo(5, -9)
+              ..moveTo(-1, -2)
+              ..lineTo(3, 2),
+            _crack);
+        drawCircle(c, 15, 0, 6, k(_body2));
+        _glowEye(c, 17, -1.5, 2, _ember);
       case EnemyType.spitter:
-        {
-          final wb = sin(t * 5) * 1.5;
-          drawOval(c, 0, 0, 15 + wb, 13 - wb, k(const Color(0xFF9B5DE5)));
-          for (var i = -1; i <= 1; i++) {
-            drawTri(c, i * 8 - 3.0, 10, i * 8 + 3.0, 10, i * 8.0, 18 + sin(t * 6 + i) * 3,
-                k(const Color(0xFF7A3FC4)));
-          }
-          drawOval(c, 7, 3, 5, 4, Palette.ink);
-          drawCircle(c, 3, -5, 4, Colors.white);
-          drawCircle(c, 4, -5, 2, Palette.ink);
+        final wb = sin(t * 5) * 1.5;
+        drawOval(c, 0, 0, 15 + wb, 13 - wb, k(_body));
+        for (var i = -1; i <= 1; i++) {
+          drawTri(c, i * 8 - 3.0, 10, i * 8 + 3.0, 10, i * 8.0, 19 + sin(t * 6 + i) * 3, k(_body2));
         }
+        // Pulsierender Giftsack
+        drawOval(c, -3, 3, 6, 5, _toxic.withAlpha((170 + 60 * pulse).round()));
+        drawOval(c, 7, 3, 4.5, 3.5, k(const Color(0xFF05020A)));
+        _glowEye(c, 4, -5, 2.6, _toxic);
       case EnemyType.rock:
-        {
-          final path = Path();
-          for (var i = 0; i < 8; i++) {
-            final a = i / 8 * pi * 2, rr = r * (i.isOdd ? 0.88 : 1);
-            if (i == 0) {
-              path.moveTo(rr, 0);
-            } else {
-              path.lineTo(cos(a) * rr, sin(a) * rr);
-            }
+        final path = Path();
+        for (var i = 0; i < 8; i++) {
+          final a = i / 8 * pi * 2, rr = r * (i.isOdd ? 0.86 : 1);
+          if (i == 0) {
+            path.moveTo(rr, 0);
+          } else {
+            path.lineTo(cos(a) * rr, sin(a) * rr);
           }
-          path.close();
-          c.drawPath(path, fillOf(k(const Color(0xFF7D7A8C))));
-          drawCircle(c, -8, 8, 6, k(const Color(0xFF615E70)));
-          drawCircle(c, 6, -5, 4, Palette.sun);
-          drawCircle(c, 15, -5, 3.5, Palette.sun);
-          drawRect(c, 3, -12, 16, 3, Palette.ink);
         }
+        path.close();
+        c.drawPath(path, fillOf(k(_body)));
+        // Glutadern
+        _crack.color = _ember.withAlpha((140 + 100 * pulse).round());
+        c.drawPath(
+            Path()
+              ..moveTo(-r * 0.7, r * 0.2)
+              ..lineTo(-r * 0.25, -r * 0.1)
+              ..lineTo(0, r * 0.35)
+              ..lineTo(r * 0.3, r * 0.1)
+              ..moveTo(-r * 0.25, -r * 0.1)
+              ..lineTo(-r * 0.1, -r * 0.55),
+            _crack);
+        drawRect(c, 3, -12, 16, 3, k(_body2));
+        _glowEye(c, 7, -6, 3.2, _ember);
+        _glowEye(c, 15, -6, 2.8, _ember);
       case EnemyType.boss:
-        {
-          final fl = sin(t * 6);
-          drawTri(c, -10, -10, -70, -40 - fl * 25, 10, -6, k(const Color(0xFF3A1F4F)));
-          drawOval(c, 0, 0, 52, 38, k(const Color(0xFF3A1F4F)));
-          drawTri(c, -6, 0, -64, 26 + fl * 18, 14, 4, k(const Color(0xFF5A2F75)));
-          drawOval(c, 30, -18, 16, 14, const Color(0xFFE8C7A0));
-          drawTri(c, 40, -16, 64, -6, 40, -4, Palette.sun);
-          drawTri(c, 8, -32, 12, -46, 18, -32, Palette.sun);
-          drawTri(c, 18, -32, 22, -50, 28, -32, Palette.sun);
-          drawTri(c, 28, -32, 32, -46, 38, -32, Palette.sun);
-          drawCircle(c, 34, -20, 4, const Color(0xFFFF4D6D));
+        final fl = sin(t * 6);
+        drawTri(c, -10, -10, -74, -44 - fl * 25, 10, -6, k(_body2));
+        drawTri(c, -30, -16, -80, -18 - fl * 20, -12, -6, k(_body2));
+        drawOval(c, 0, 0, 52, 38, k(_body));
+        drawTri(c, -6, 0, -68, 28 + fl * 18, 14, 4, k(_body2));
+        drawOval(c, 30, -18, 16, 13, k(const Color(0xFF2E1B3C)));
+        drawTri(c, 40, -16, 64, -6, 40, -4, k(const Color(0xFF3A2440)));
+        // Krone aus Lichtsplittern
+        for (var i = 0; i < 3; i++) {
+          final cx = 13.0 + i * 10, hgt = i == 1 ? 18.0 : 14.0;
+          drawTri(c, cx - 4, -32, cx, -32 - hgt, cx + 4, -32, _crown.withAlpha(230));
         }
+        _glowEye(c, 34, -20, 4, _crown);
     }
     c.restore();
 
     if (type == EnemyType.rock && hp < maxHp) {
-      drawRect(c, -20, -r - 10, 40, 5, Palette.ink);
-      drawRect(c, -20, -r - 10, 40 * clampD(hp / maxHp, 0, 1), 5, Palette.coral);
+      drawRect(c, -20, -r - 10, 40, 4, const Color(0xCC120A1E));
+      drawRect(c, -20, -r - 10, 40 * clampD(hp / maxHp, 0, 1), 4, _ember);
+    }
+  }
+
+  void _glowEye(Canvas c, double x, double y, double r, Color col) {
+    drawCircle(c, x, y, r, Color.lerp(col, Colors.white, 0.45)!);
+  }
+
+  /// Leuchtpunkte dieses Gegners in Weltkoordinaten: [back] hinter dem Körper (Aura),
+  /// [front] davor (Augen, Risse, Giftsack, Krone, HP-Glut).
+  void collectGlows(GlowBatch back, GlowBatch front) {
+    if (dead) return;
+    final face = (game.player.x - x) >= 0 ? 1.0 : -1.0;
+    final pulse = 0.5 + 0.5 * sin(t * 3);
+    void f(double lx, double ly, double rad, Color col) => front.add(x + face * lx, y + ly, rad, col);
+    void eye(double lx, double ly, double rad, Color col) => f(lx, ly, rad * 6, col.withAlpha(170));
+
+    // Violette Aura, damit die dunklen Körper vor dunklem Hintergrund lesbar bleiben
+    back.add(x, y, r * (type == EnemyType.boss ? 3.0 : 1.9),
+        _aura.withAlpha((type == EnemyType.boss ? 90 + 40 * pulse : 70).round()));
+    switch (type) {
+      case EnemyType.crow:
+        eye(6, -3, 2.4, _eye);
+      case EnemyType.beetle:
+        f(-2, -3, 16, _ember.withAlpha((60 + 50 * pulse).round()));
+        eye(17, -1.5, 2, _ember);
+      case EnemyType.spitter:
+        f(-3, 3, 22, _toxic.withAlpha((90 + 80 * pulse).round()));
+        eye(4, -5, 2.6, _toxic);
+      case EnemyType.rock:
+        f(-r * 0.1, r * 0.1, r * 1.1, _ember.withAlpha((50 + 50 * pulse).round()));
+        eye(7, -6, 3.2, _ember);
+        eye(15, -6, 2.8, _ember);
+        if (hp < maxHp) front.add(x - 20 + 40 * clampD(hp / maxHp, 0, 1), y - r - 8, 10, _ember.withAlpha(120));
+      case EnemyType.boss:
+        for (var i = 0; i < 3; i++) {
+          final hgt = i == 1 ? 18.0 : 14.0;
+          f(13.0 + i * 10, -32 - hgt * 0.6, 16, _crown.withAlpha((90 + 60 * pulse).round()));
+        }
+        eye(34, -20, 4, _crown);
+    }
+  }
+}
+
+/// Zeichnet das Leuchten aller Gegner in einem Aufruf: [front] = false hinter den
+/// Körpern (Aura), true davor (Augen, Risse …).
+class EnemyGlowPass extends Component with HasGameReference<FederfeuerGame> {
+  EnemyGlowPass({required this.front}) : super(priority: front ? 6 : 4);
+  final bool front;
+  final _back = GlowBatch(), _front = GlowBatch();
+
+  @override
+  void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.enemyGlow)) return;
+    for (final e in game.enemies) {
+      e.collectGlows(_back, _front);
+    }
+    // Jeder Durchgang zeichnet nur seine Hälfte und verwirft die andere.
+    if (front) {
+      _front.flush(c);
+      _back.clear();
+    } else {
+      _back.flush(c);
+      _front.clear();
     }
   }
 }

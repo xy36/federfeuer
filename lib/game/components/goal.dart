@@ -5,40 +5,50 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import 'draw.dart';
+import 'light.dart';
 import 'transient.dart';
 
-/// Ziel am rechten Weltende: leuchtendes Tor mit Zielflagge.
+/// Ziel am rechten Weltende: eine Lichtsäule, in der Lichtkugeln aufsteigen.
 class Goal extends PositionComponent with Transient {
   Goal(double x) : super(position: Vector2(x, 0), priority: -30);
 
   double _t = 0;
-  final _glow = Paint()
-    ..shader = LinearGradient(
-      colors: [Palette.sun.withAlpha(0), Palette.sun, Palette.sun.withAlpha(0)],
-    ).createShader(const Rect.fromLTWH(-40, 0, 80, 1));
+  final _beam = Paint()
+    ..blendMode = BlendMode.plus
+    ..shader = const LinearGradient(
+      colors: [Color(0x00FFE6A0), Color(0xFFFFE6A0), Color(0x00FFE6A0)],
+    ).createShader(const Rect.fromLTWH(-34, 0, 68, 1));
+  final _core = Paint()
+    ..blendMode = BlendMode.plus
+    ..shader = const LinearGradient(
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+      colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
+    ).createShader(const Rect.fromLTWH(0, kCeil - 40, 1, kGround - kCeil + 40));
 
   @override
   void update(double dt) => _t += dt;
 
   @override
   void render(Canvas c) {
-    // Leuchtender Streifen über die ganze Flughöhe; die Paint-Deckkraft pulsiert.
-    _glow.color = Color.fromRGBO(0, 0, 0, 0.25 + 0.2 * sin(_t * 3));
-    c.drawRect(const Rect.fromLTWH(-40, kCeil, 80, kGround - kCeil), _glow);
+    final pulse = 0.5 + 0.5 * sin(_t * 2.4);
+    // Breiter weicher Strahl und heller Kern
+    _beam.color = Color.fromRGBO(0, 0, 0, 0.16 + 0.08 * pulse);
+    c.drawRect(const Rect.fromLTRB(-34, kCeil - 40, 34, kGround), _beam);
+    _core.color = Color.fromRGBO(0, 0, 0, 0.4 + 0.15 * pulse);
+    c.drawRect(const Rect.fromLTRB(-2, kCeil - 40, 2, kGround), _core);
 
-    // Mast
-    drawRect(c, -4, kCeil + 30, 8, kGround - kCeil - 30, Palette.ink);
-    drawCircle(c, 0, kCeil + 28, 7, Palette.sun);
-
-    // Karierte Flagge, weht leicht
-    const cols = 6, rows = 4, cell = 12.0;
-    for (var i = 0; i < cols; i++) {
-      final wave = sin(_t * 5 - i * 0.7) * 3;
-      for (var j = 0; j < rows; j++) {
-        final col = (i + j).isEven ? Colors.white : Palette.ink;
-        drawRect(c, 4 + i * cell, kCeil + 34 + j * cell + wave, cell, cell, col);
-      }
+    // Aufsteigende Lichtkugeln
+    for (var i = 0; i < 9; i++) {
+      final k = ((_t * 0.35 + i / 9) % 1);
+      final y = kGround - k * (kGround - kCeil);
+      final x = sin(_t * 1.3 + i * 2.1) * 18;
+      Glow.draw(c, x, y, 10 + 6 * sin(i + _t), Color.fromRGBO(255, 236, 170, 0.8 * (1 - k)));
     }
-    OutlineText.draw(c, 'ZIEL', const Offset(0, kGround - 20), size: 16, color: Palette.sun);
+
+    // Lichtquelle am Boden
+    Glow.draw(c, 0, kGround - 4, 80 + 20 * pulse, const Color(0x8CFFD98A));
+    drawOval(c, 0, kGround - 2, 26, 5, const Color(0xFFFFF4D6));
+    OutlineText.draw(c, 'ZIEL', const Offset(0, kGround - 34), size: 15, color: const Color(0xFFFFF1C2));
   }
 }

@@ -1,9 +1,11 @@
 import 'dart:math';
+import 'dart:typed_data';
 import 'dart:ui';
 
 import 'package:flame/components.dart';
 
 import '../weather.dart';
+import '../perf.dart';
 
 Color _rgba(int r, int g, int b, double a) =>
     Color.fromARGB((a.clamp(0.0, 1.0) * 255).round(), r, g, b);
@@ -161,6 +163,7 @@ class WeatherLayer extends Component {
 
   @override
   void render(Canvas canvas) {
+    if (perfSkip.contains(RenderPart.weather)) return;
     if (_rainAlpha > 0) _renderRain(canvas);
     if (_windAlpha > 0) _renderWind(canvas);
   }
@@ -171,13 +174,16 @@ class WeatherLayer extends Component {
     canvas.drawRect(Offset.zero & Size(_size.x, _size.y), _overlayPaint);
 
     _rainPaint.color = _rgba(0xC8, 0xD8, 0xFF, 0.45 * _rainAlpha);
+    // Alle Tropfen in einem Aufruf (statt einer Linie pro Tropfen)
+    final pts = Float32List(_drops.length * 4);
+    var k = 0;
     for (final d in _drops) {
-      canvas.drawLine(
-        Offset(d.x, d.y),
-        Offset(d.x - d.len * _rainSlant, d.y - d.len),
-        _rainPaint,
-      );
+      pts[k++] = d.x;
+      pts[k++] = d.y;
+      pts[k++] = d.x - d.len * _rainSlant;
+      pts[k++] = d.y - d.len;
     }
+    canvas.drawRawPoints(PointMode.lines, pts, _rainPaint);
   }
 
   void _renderWind(Canvas canvas) {
@@ -285,6 +291,7 @@ class RainPuddles extends Component {
 
   @override
   void render(Canvas canvas) {
+    if (perfSkip.contains(RenderPart.weather)) return;
     if (_wet <= 0.01) return;
     _puddlePaint.color = _rgba(0x9F, 0xB4, 0xE8, 0.45 * _wet);
     for (final p in _puddles) {
