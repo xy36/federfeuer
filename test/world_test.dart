@@ -29,6 +29,14 @@ void main() {
       expected.forEach((w, b) => expect(biomeForWave(w), b, reason: 'Welle $w'));
     });
 
+    test('UI wächst auf großen Bildschirmen mit, bleibt auf kleinen gleich', () {
+      expect(uiScaleFor(844, 390), 1);
+      expect(uiScaleFor(1280, 720), 1);
+      expect(uiScaleFor(1920, 1080), closeTo(1.5, 1e-9));
+      expect(uiScaleFor(2560, 1080), closeTo(1.5, 1e-9), reason: 'Ultrawide: Höhe begrenzt');
+      expect(uiScaleFor(3840, 2160), kUiMaxScale);
+    });
+
     test('Bosswelle nutzt die feste Arena', () {
       expect(isBossWave(kMaxWave), isTrue);
       expect(worldWidth(kMaxWave), kArenaW);

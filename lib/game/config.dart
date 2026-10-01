@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 /// Virtuelle Höhe der Spielwelt. Die Breite ergibt sich aus dem Seitenverhältnis.
@@ -41,6 +42,27 @@ const double kWaveClearDelay = 1.2;
 const int kMenuConfirmGraceMs = 500;
 
 bool isBossWave(int wave) => wave == kMaxWave;
+
+// ---------------- Shop-Preise ----------------
+
+/// Preisfaktor je Welle: 1 + lin·(w−1) + quad·(w−1)². Der quadratische Anteil
+/// hält mit dem späten Einkommen mit (mehr und längere Wellen, größere Gruppen).
+const double kWeaponPriceLin = 0.12, kWeaponPriceQuad = 0.012;
+const double kItemPriceLin = 0.15, kItemPriceQuad = 0.015;
+
+/// Neu würfeln: ⌊2 + lin·w + quad·w²⌋, jeder weitere Wurf in derselben Shopphase +2.
+const double kRerollLin = 0.8, kRerollQuad = 0.04;
+
+double weaponPriceFactor(int wave) => 1 + kWeaponPriceLin * (wave - 1) + kWeaponPriceQuad * (wave - 1) * (wave - 1);
+double itemPriceFactor(int wave) => 1 + kItemPriceLin * (wave - 1) + kItemPriceQuad * (wave - 1) * (wave - 1);
+int rerollBaseCost(int wave) => (2 + kRerollLin * wave + kRerollQuad * wave * wave).floor();
+
+/// Bezugsgröße der Menüs und des HUD (logische Pixel).
+const double kUiRefW = 1280, kUiRefH = 720, kUiMaxScale = 2.2;
+
+/// Menüs und HUD wachsen auf großen Bildschirmen mit (z. B. PC im Vollbild);
+/// auf kleineren Bildschirmen bleibt alles in Originalgröße.
+double uiScaleFor(double w, double h) => clampD(min(w / kUiRefW, h / kUiRefH), 1, kUiMaxScale);
 
 /// Dauer einer Timer-Welle in Sekunden.
 double waveDuration(int wave) => 20.0 + (wave - 1) * 4;
@@ -265,24 +287,36 @@ DifficultyDef difficultyDef(int level) => difficultyDefs[level.clamp(1, kDifficu
 
 enum Biome { fields, village, forest, mountains, summit }
 
-/// Kulisse einer Welt. Rein optisch; Spielwerte hängen nur an der Welle.
+/// Form der Parallax-Ebenen einer Welt.
+enum LayerStyle { hills, ruins, forest, peaks }
+
+/// Kulisse einer Welt im leuchtenden, geschichteten Stil: Himmel mit Lichtquelle,
+/// vier Silhouetten-Ebenen mit Dunst, dunkler Boden mit Lichtkante, Lichtpartikel.
+/// Spielwerte hängen nur an der Welle; die Welt bestimmt zusätzlich das Wetter.
 class BiomeDef {
   const BiomeDef({
     required this.name,
     required this.sky,
-    required this.sun,
-    required this.ridges,
-    required this.grass,
-    required this.grassDark,
-    required this.soil,
-    required this.tuft,
-    required this.pebble,
-    this.ridgeAmp = 1,
-    this.ridgeDrop = 0,
-    this.jagged = false,
-    this.snowCaps = 0,
+    required this.light,
+    required this.layers,
+    required this.fog,
+    required this.ground,
+    required this.rim,
+    required this.glow,
+    required this.style,
+    this.lightX = 0.7,
+    this.lightY = 200,
+    this.lightSize = 60,
+    this.moon = false,
+    this.shafts = false,
     this.stars = false,
+    this.aurora = false,
     this.river = false,
+    this.snow = false,
+    this.layerDrop = 0,
+    this.layerAmp = 1,
+    this.motes = 40,
+    this.shaftStrength = 1,
     this.weatherPool = WeatherConfig.defaultPool,
     this.badWeatherBonus = 0,
   });
@@ -292,22 +326,36 @@ class BiomeDef {
   /// Himmelsverlauf von oben nach unten (4 Stufen).
   final List<Color> sky;
 
-  /// Sonne bzw. Mond.
-  final Color sun;
+  /// Farbe der Lichtquelle (Sonne/Mond), ihrer Strahlen und des Lichthofs.
+  final Color light;
 
-  /// Drei Bergketten von hinten nach vorn.
-  final List<Color> ridges;
-  final Color grass, grassDark, soil, tuft, pebble;
+  /// Position (Anteil der Bildbreite, Welt-y) und Größe der Lichtquelle.
+  final double lightX, lightY, lightSize;
+  final bool moon;
 
-  /// Höhe der Bergketten (Faktor) und Verschiebung nach unten.
-  final double ridgeAmp, ridgeDrop;
+  /// Vier Silhouetten-Ebenen von hinten (hell, dunstig) nach vorn (dunkel).
+  final List<Color> layers;
 
-  /// Spitze Gipfel statt sanfter Hügel.
-  final bool jagged;
+  /// Dunst zwischen den Ebenen.
+  final Color fog;
 
-  /// Wie viele Bergketten (von hinten) Schneekappen tragen.
-  final int snowCaps;
-  final bool stars, river;
+  /// Boden und Vordergrund (fast schwarz) und die leuchtende Kante darauf.
+  final Color ground, rim;
+
+  /// Leuchtfarbe für Pflanzen, Laternen und schwebende Lichtpartikel.
+  final Color glow;
+  final LayerStyle style;
+
+  final bool shafts, stars, aurora, river, snow;
+
+  /// Verschiebung der Ebenen nach unten und Höhenfaktor (Gipfel: Berge tief unten).
+  final double layerDrop, layerAmp;
+
+  /// Anzahl der schwebenden Lichtpartikel.
+  final int motes;
+
+  /// Helligkeit der Lichtstrahlen (1 = normal).
+  final double shaftStrength;
 
   /// Mögliche Schlechtwetter dieser Welt und Zuschlag auf die Chance dafür.
   final List<WeatherType> weatherPool;
@@ -315,77 +363,109 @@ class BiomeDef {
 }
 
 const Map<Biome, BiomeDef> biomeDefs = {
+  // Goldene Stunde: warmes Gegenlicht, Pollen und Glühwürmchen
   Biome.fields: BiomeDef(
     name: 'Felder',
-    sky: [Color(0xFF2B3470), Color(0xFF7A4E8C), Color(0xFFF08A6E), Color(0xFFFFD08A)],
-    sun: Color(0xFFFFE9B0),
-    ridges: [Color(0xFF6B4F86), Color(0xFF55557A), Color(0xFF3E5A4A)],
-    ridgeAmp: 0.6,
-    grass: Color(0xFF5FA85A),
-    grassDark: Color(0xFF3F7A3E),
-    soil: Color(0xFF4A3326),
-    tuft: Color(0xFFE3C55A),
-    pebble: Color(0xFF5E4232),
+    sky: [Color(0xFF1B2748), Color(0xFF4B5588), Color(0xFFE39A6E), Color(0xFFFFD9A0)],
+    light: Color(0xFFFFE2A6),
+    lightX: 0.72,
+    lightY: 215,
+    lightSize: 62,
+    shafts: true,
+    shaftStrength: 0.55,
+    layers: [Color(0xFF9C86A6), Color(0xFF675C88), Color(0xFF34365C), Color(0xFF15162D)],
+    fog: Color(0xFFF6C99C),
+    ground: Color(0xFF0B0D1C),
+    rim: Color(0xFFFFD27A),
+    glow: Color(0xFFFFE6A0),
+    style: LayerStyle.hills,
+    layerAmp: 0.7,
+    motes: 34,
     weatherPool: [WeatherType.wind, WeatherType.rain],
   ),
+  // Dämmerung über verlassenen Ruinen, glimmende Laternen
   Biome.village: BiomeDef(
     name: 'Dorf',
-    sky: [Color(0xFF1D1540), Color(0xFF5E2A6B), Color(0xFFD4607A), Color(0xFFFFB86B)],
-    sun: Color(0xFFFFE2A0),
-    ridges: [Color(0xFF51306F), Color(0xFF3A2358), Color(0xFF2A1A42)],
-    grass: Color(0xFF3F8A5C),
-    grassDark: Color(0xFF2B6245),
-    soil: Color(0xFF34202E),
-    tuft: Color(0xFF57A872),
-    pebble: Color(0xFF4A2F40),
+    sky: [Color(0xFF111431), Color(0xFF3A2C5E), Color(0xFFB0587A), Color(0xFFF29C7C)],
+    light: Color(0xFFFFB892),
+    lightX: 0.3,
+    lightY: 300,
+    lightSize: 56,
+    layers: [Color(0xFF8C6E98), Color(0xFF5A4778), Color(0xFF2E2552), Color(0xFF130E27)],
+    fog: Color(0xFFE48C98),
+    ground: Color(0xFF0A0717),
+    rim: Color(0xFFFFA86B),
+    glow: Color(0xFFFFB86B),
+    style: LayerStyle.ruins,
+    motes: 30,
     weatherPool: [WeatherType.rain],
   ),
+  // Nachtblauer Wald mit leuchtenden Pflanzen und Mondstrahlen
   Biome.forest: BiomeDef(
     name: 'Wald mit Fluss',
-    sky: [Color(0xFF141A3A), Color(0xFF3A2A5E), Color(0xFF8A4A6E), Color(0xFFD9806A)],
-    sun: Color(0xFFFFD6A0),
-    ridges: [Color(0xFF34405E), Color(0xFF263A48), Color(0xFF1A2E30)],
-    ridgeAmp: 1.1,
-    grass: Color(0xFF2F7A52),
-    grassDark: Color(0xFF1F5A3A),
-    soil: Color(0xFF1F2A2A),
-    tuft: Color(0xFF3F9A62),
-    pebble: Color(0xFF2E3A36),
+    sky: [Color(0xFF030A1C), Color(0xFF0A2544), Color(0xFF1A5470), Color(0xFF3FA3B5)],
+    light: Color(0xFFBFF6FF),
+    lightX: 0.62,
+    lightY: 150,
+    lightSize: 46,
+    moon: true,
+    shafts: true,
+    layers: [Color(0xFF2E7088), Color(0xFF1B4A64), Color(0xFF0E2B41), Color(0xFF05101D)],
+    fog: Color(0xFF5CC6D6),
+    ground: Color(0xFF020912),
+    rim: Color(0xFF7FF3FF),
+    glow: Color(0xFF8CFAFF),
+    style: LayerStyle.forest,
+    layerAmp: 0.8,
     river: true,
+    motes: 70,
     weatherPool: [WeatherType.rain],
     badWeatherBonus: 0.15,
   ),
+  // Blaue Stunde, Nebel zwischen spitzen Gipfeln
   Biome.mountains: BiomeDef(
     name: 'Gebirge',
-    sky: [Color(0xFF0F1433), Color(0xFF2A2A5A), Color(0xFF6A4A7A), Color(0xFFB07A8A)],
-    sun: Color(0xFFFFE0C0),
-    ridges: [Color(0xFF55557E), Color(0xFF3F3F64), Color(0xFF2C2C4A)],
-    ridgeAmp: 1.8,
-    jagged: true,
-    snowCaps: 1,
-    grass: Color(0xFF6E6A7E),
-    grassDark: Color(0xFF4E4A5E),
-    soil: Color(0xFF2E2A3A),
-    tuft: Color(0xFF8A86A0),
-    pebble: Color(0xFF3E3A4E),
+    sky: [Color(0xFF0A1028), Color(0xFF28325F), Color(0xFF6E76A8), Color(0xFFCBC8E2)],
+    light: Color(0xFFEAF0FF),
+    lightX: 0.78,
+    lightY: 170,
+    lightSize: 40,
+    moon: true,
+    shafts: true,
+    layers: [Color(0xFFA9ADD0), Color(0xFF7276A0), Color(0xFF3E426C), Color(0xFF151834)],
+    fog: Color(0xFFD6DAF2),
+    ground: Color(0xFF0B0D1D),
+    rim: Color(0xFFCADAFF),
+    glow: Color(0xFFE2EAFF),
+    style: LayerStyle.peaks,
+    layerAmp: 1.7,
+    snow: true,
+    motes: 35,
+    shaftStrength: 0.45,
     weatherPool: [WeatherType.wind],
     badWeatherBonus: 0.25,
   ),
+  // Nacht über den Wolken: Polarlicht, Sterne, verschneiter Grat
   Biome.summit: BiomeDef(
     name: 'Gipfel',
-    sky: [Color(0xFF070A1F), Color(0xFF1A1F4A), Color(0xFF3A3A6E), Color(0xFF7A6A9A)],
-    sun: Color(0xFFE8ECFF),
-    ridges: [Color(0xFF5A5E8A), Color(0xFF45487A), Color(0xFF34365E)],
-    ridgeAmp: 1.5,
-    ridgeDrop: 70,
-    jagged: true,
-    snowCaps: 3,
+    sky: [Color(0xFF02040E), Color(0xFF091431), Color(0xFF1A2A5A), Color(0xFF3C4C84)],
+    light: Color(0xFFF2F6FF),
+    lightX: 0.2,
+    lightY: 120,
+    lightSize: 34,
+    moon: true,
     stars: true,
-    grass: Color(0xFFE8F0FF),
-    grassDark: Color(0xFFB8C8E8),
-    soil: Color(0xFF4A4E6E),
-    tuft: Color(0xFFFFFFFF),
-    pebble: Color(0xFF6A6E8E),
+    aurora: true,
+    layers: [Color(0xFF6474AC), Color(0xFF3E4A7E), Color(0xFF20284E), Color(0xFF0A0D20)],
+    fog: Color(0xFF8FA6E0),
+    ground: Color(0xFF0A0E22),
+    rim: Color(0xFFE8F4FF),
+    glow: Color(0xFFBFF8E6),
+    style: LayerStyle.peaks,
+    layerAmp: 1.4,
+    layerDrop: 80,
+    snow: true,
+    motes: 50,
     weatherPool: [WeatherType.wind],
     badWeatherBonus: 0.4,
   ),

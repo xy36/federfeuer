@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:federfeuer/game/federfeuer_game.dart';
 import 'package:federfeuer/game/run_state.dart';
 import 'package:federfeuer/main.dart' show buildOverlayMap;
+import 'package:federfeuer/ui/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'helpers/fonts.dart';
@@ -13,7 +14,7 @@ import 'helpers/fonts.dart';
 void main() {
   setUpAll(loadGameFonts);
 
-  for (final size in const [Size(1280, 720), Size(844, 390)]) {
+  for (final size in const [Size(1280, 720), Size(844, 390), Size(1920, 1080), Size(2560, 1440)]) {
     testWidgets('Menüs ohne Überlauf bei ${size.width.round()}×${size.height.round()}', (tester) async {
       SharedPreferences.setMockInitialValues({'unlockedDifficulty': 3, 'selectedDifficulty': 2, 'bestWave_2': 9});
       tester.view.physicalSize = size;
@@ -32,6 +33,13 @@ void main() {
 
       await frames();
       expect(game.overlays.isActive('menu'), isTrue);
+      // Menü füllt den ganzen Bildschirm (auch hochskaliert) – nicht nur eine Ecke.
+      final ui = find.byType(UiScale);
+      expect(tester.getSize(ui.first), size);
+      expect(tester.getTopLeft(ui.first), Offset.zero);
+      final panel = tester.getRect(find.byType(Panel).first);
+      expect(panel.width, closeTo(size.width, 1));
+      expect(panel.height, closeTo(size.height, 1));
 
       game.startRun('pistol');
       await frames();

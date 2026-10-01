@@ -4,7 +4,10 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../config.dart';
+import '../federfeuer_game.dart';
+import '../perf.dart';
 import 'draw.dart';
+import 'light.dart';
 import 'transient.dart';
 
 class _Spark {
@@ -24,7 +27,6 @@ class Burst extends Component with Transient {
 
   final Color color;
   final _sparks = <_Spark>[];
-  final _paint = Paint();
 
   @override
   void update(double dt) {
@@ -43,11 +45,16 @@ class Burst extends Component with Transient {
 
   @override
   void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.effects)) return;
+    // Leuchtende Funken, additiv in einem Aufruf
+    final transforms = <RSTransform>[], colors = <Color>[];
     for (final s in _sparks) {
       if (s.life <= 0) continue;
-      _paint.color = color.withAlpha((255 * clampD(s.life / 0.6, 0, 1)).round());
-      c.drawCircle(Offset(s.x, s.y), s.r, _paint);
+      final k = clampD(s.life / 0.6, 0, 1);
+      transforms.add(Glow.at(s.x, s.y, s.r * 4));
+      colors.add(color.withAlpha((255 * k).round()));
     }
+    Glow.drawMany(c, transforms, colors);
   }
 }
 
@@ -57,7 +64,7 @@ class Ring extends PositionComponent with Transient {
   double life = 0.25;
   final _paint = Paint()
     ..style = PaintingStyle.stroke
-    ..strokeWidth = 4;
+    ..blendMode = BlendMode.plus;
 
   @override
   void update(double dt) {
@@ -68,19 +75,40 @@ class Ring extends PositionComponent with Transient {
 
   @override
   void render(Canvas c) {
-    final k = clampD(life / 0.25, 0, 1);
-    _paint.color = Color.fromRGBO(255, 159, 28, k);
-    c.drawCircle(Offset.zero, radius * (1 - k * 0.6), _paint);
+    if (perfSkip.contains(RenderPart.effects)) return;
+    final k = clampD(life / 0.25, 0, 1), rr = radius * (1 - k * 0.6);
+    // Breiter, schwacher Strich als Schein, schmaler heller Strich als Kern
+    _paint
+      ..strokeWidth = 12
+      ..color = Color.fromRGBO(255, 159, 28, 0.3 * k);
+    c.drawCircle(Offset.zero, rr, _paint);
+    _paint
+      ..strokeWidth = 3
+      ..color = Color.fromRGBO(255, 210, 140, k);
+    c.drawCircle(Offset.zero, rr, _paint);
   }
 }
 
 /// Aufsteigende Schadens- und Heilzahlen.
-class FloatText extends PositionComponent with Transient {
+class FloatText extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
   FloatText(Vector2 pos, this.text, this.color, this.fontSize) : super(position: pos, priority: 21);
   final String text;
   final Color color;
   final double fontSize;
   double life = 0.8;
+
+  // Zähler für die Obergrenze gleichzeitiger Zahlen
+  @override
+  void onMount() {
+    super.onMount();
+    game.floatTextCount++;
+  }
+
+  @override
+  void onRemove() {
+    game.floatTextCount--;
+    super.onRemove();
+  }
 
   @override
   void update(double dt) {
@@ -92,13 +120,14 @@ class FloatText extends PositionComponent with Transient {
 
   @override
   void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.effects)) return;
     if (life < 0.2) {
       c.save();
       c.scale(life / 0.2);
-      OutlineText.draw(c, text, Offset.zero, size: fontSize, color: color);
+      OutlineText.draw(c, text, Offset.zero, size: fontSize, color: color, display: false, glow: false);
       c.restore();
     } else {
-      OutlineText.draw(c, text, Offset.zero, size: fontSize, color: color);
+      OutlineText.draw(c, text, Offset.zero, size: fontSize, color: color, display: false, glow: false);
     }
   }
 }

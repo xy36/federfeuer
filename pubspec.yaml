@@ -37,6 +37,7 @@ dependencies:
   flame: ^1.38.2
   shared_preferences: ^2.5.5
   gamepads: ^0.1.12
+  window_manager: ^0.5.2
 
 dev_dependencies:
   flutter_test:
@@ -62,9 +63,9 @@ flutter:
 
   # Schriften (SIL Open Font License, siehe assets/fonts/OFL-*.txt)
   fonts:
-    - family: LilitaOne
+    - family: Cinzel
       fonts:
-        - asset: assets/fonts/LilitaOne-Regular.ttf
+        - asset: assets/fonts/Cinzel.ttf
     - family: Nunito
       fonts:
         - asset: assets/fonts/Nunito.ttf

@@ -3,14 +3,20 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 
 import 'game/federfeuer_game.dart';
+import 'platform/desktop_window.dart';
 import 'ui/controls_overlay.dart';
 import 'ui/overlays.dart';
 import 'ui/shop_overlay.dart';
+import 'ui/widgets.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Flame.device.fullScreen();
-  await Flame.device.setLandscape();
+  if (isDesktop) {
+    await DesktopWindow.init();
+  } else {
+    await Flame.device.fullScreen();
+    await Flame.device.setLandscape();
+  }
   runApp(const FederfeuerApp());
 }
 
@@ -32,7 +38,7 @@ class _FederfeuerAppState extends State<FederfeuerApp> {
       // Menüs haben feste Kartengrößen; System-Schriftgröße würde sie sprengen.
       builder: (context, child) => MediaQuery.withNoTextScaling(child: child!),
       home: Scaffold(
-        backgroundColor: const Color(0xFF1D1540),
+        backgroundColor: const Color(0xFF02040E),
         body: SafeArea(
           child: GameWidget<FederfeuerGame>(
             game: _game,
@@ -48,10 +54,10 @@ class _FederfeuerAppState extends State<FederfeuerApp> {
 
 /// Alle Flutter-Overlays des Spiels (Menüs und Touch-Steuerung).
 Map<String, Widget Function(BuildContext, FederfeuerGame)> buildOverlayMap() => {
-      'menu': (context, game) => MenuOverlay(game: game),
-      'levelUp': (context, game) => LevelUpOverlay(game: game),
-      'shop': (context, game) => ShopOverlay(game: game),
-      'pause': (context, game) => PauseOverlay(game: game),
-      'gameOver': (context, game) => GameOverOverlay(game: game),
-      'controls': (context, game) => ControlsOverlay(game: game),
+      'menu': (context, game) => UiScale(child: MenuOverlay(game: game)),
+      'levelUp': (context, game) => UiScale(child: LevelUpOverlay(game: game)),
+      'shop': (context, game) => UiScale(child: ShopOverlay(game: game)),
+      'pause': (context, game) => UiScale(child: PauseOverlay(game: game)),
+      'gameOver': (context, game) => UiScale(child: GameOverOverlay(game: game)),
+      'controls': (context, game) => UiScale(child: ControlsOverlay(game: game)),
     };

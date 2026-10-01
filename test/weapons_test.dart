@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:federfeuer/game/config.dart';
 import 'package:federfeuer/game/run_state.dart';
 
 void main() {
@@ -70,6 +71,29 @@ void main() {
     test('Angebote bleiben gültig', () {
       final r = RunState('pistol')..rollOffers(Random(1));
       expect(r.offers.length, 4);
+    });
+  });
+
+  group('Shop-Preise', () {
+    test('steigen jede Welle, spät deutlich stärker', () {
+      final r = RunState('pistol');
+      var lastW = 0, lastI = 0, lastR = 0;
+      final item = itemById['magnet']!;
+      for (var w = 1; w <= 14; w++) {
+        r.wave = w;
+        final pw = r.weaponPrice('rail', 0), pi = r.itemPrice(item), pr = r.rerollCost;
+        expect(pw, greaterThan(lastW), reason: 'Waffe Welle $w');
+        expect(pi, greaterThanOrEqualTo(lastI), reason: 'Item Welle $w');
+        expect(pr, greaterThanOrEqualTo(lastR), reason: 'Neu würfeln Welle $w');
+        lastW = pw;
+        lastI = pi;
+        lastR = pr;
+      }
+      expect(weaponPriceFactor(14), closeTo(4.588, 1e-3));
+      expect(itemPriceFactor(14), closeTo(5.485, 1e-3));
+      expect(rerollBaseCost(1), 2);
+      expect(rerollBaseCost(9), 12);
+      expect(rerollBaseCost(14), 21);
     });
   });
 }

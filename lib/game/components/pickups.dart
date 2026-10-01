@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../config.dart';
 import '../federfeuer_game.dart';
 import 'draw.dart';
+import 'light.dart';
 import 'transient.dart';
 
 /// Material (Geld + XP) oder Herz (Heilung).
@@ -52,15 +53,21 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
 
   @override
   void render(Canvas c) {
+    final pulse = 0.75 + 0.25 * sin(game.clock * 5 + x * 0.1);
     if (material) {
+      // Leuchtender Mint-Kristall
+      Glow.draw(c, 0, 0, 18, Palette.mint.withAlpha((150 * pulse).round()));
       c.save();
       c.rotate(pi / 4);
       drawRect(c, -4, -4, 8, 8, Palette.mint);
+      drawRect(c, -2, -2, 4, 4, Colors.white);
       c.restore();
     } else {
-      drawCircle(c, -3, -2, 4, Palette.coral);
-      drawCircle(c, 3, -2, 4, Palette.coral);
-      drawTri(c, -7, 0, 7, 0, 0, 8, Palette.coral);
+      Glow.draw(c, 0, 1, 24, Palette.coral.withAlpha((160 * pulse).round()));
+      drawCircle(c, -3, -2, 4, const Color(0xFFFF8FA0));
+      drawCircle(c, 3, -2, 4, const Color(0xFFFF8FA0));
+      drawTri(c, -7, 0, 7, 0, 0, 8, const Color(0xFFFF8FA0));
+      drawCircle(c, -3, -3, 1.6, Colors.white);
     }
   }
 }
@@ -87,10 +94,16 @@ class SpawnMarker extends PositionComponent with HasGameReference<FederfeuerGame
 
   @override
   void render(Canvas c) {
-    final a = 0.5 + 0.5 * sin(t * 20);
-    _paint.color = Color.fromRGBO(255, 77, 109, a);
-    final s = type == EnemyType.boss ? 30.0 : 10.0;
-    c.drawLine(Offset(-s, -s), Offset(s, s), _paint);
-    c.drawLine(Offset(s, -s), Offset(-s, s), _paint);
+    // Fäulnis-Riss: pulsierender dunkler Kern mit violett-rotem Leuchten, der sich öffnet
+    final s = type == EnemyType.boss ? 34.0 : 13.0;
+    final open = 1 - clampD(t / (type == EnemyType.boss ? 2 : 0.9), 0, 1);
+    final a = 0.55 + 0.45 * sin(t * 18);
+    Glow.draw(c, 0, 0, s * (2.4 + open), Color.fromRGBO(255, 77, 140, 0.55 * a));
+    Glow.draw(c, 0, 0, s * 1.4, Color.fromRGBO(180, 76, 255, 0.6));
+    c.drawOval(Rect.fromCenter(center: Offset.zero, width: s * (0.8 + open), height: s * (1.6 + open * 0.8)), fillOf(const Color(0xFF0A0412)));
+    _paint
+      ..color = Color.fromRGBO(255, 110, 160, a)
+      ..blendMode = BlendMode.plus;
+    c.drawOval(Rect.fromCenter(center: Offset.zero, width: s * (0.8 + open), height: s * (1.6 + open * 0.8)), _paint);
   }
 }

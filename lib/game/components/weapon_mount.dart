@@ -7,6 +7,7 @@ import '../config.dart';
 import '../federfeuer_game.dart';
 import '../run_state.dart';
 import 'draw.dart';
+import 'light.dart';
 import 'enemy.dart';
 import 'projectiles.dart';
 
@@ -87,11 +88,28 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
     c.rotate(ang);
     if (cos(ang) < 0) c.scale(1, -1);
     c.translate(-kick * 4, 0);
-    final th = weapon.id == 'rocket' ? 8.0 : 6.0;
-    drawRect(c, -5, -th / 2 - 1.5, d.length + 3, th + 3, Palette.ink);
-    drawRect(c, -3, 1, 5, 8, Palette.ink);
-    drawRect(c, -3.5, -th / 2, d.length, th, tiers[weapon.tier].color);
-    if (weapon.id == 'rocket') drawRect(c, d.length - 4, -th / 2, 4, th, const Color(0xFFFF9F1C));
+    // Schwebender Lichtsplitter in Stufenfarbe, Spitze zeigt aufs Ziel
+    final col = tiers[weapon.tier].color;
+    final len = d.length + 2, w = weapon.id == 'rocket' ? 6.5 : (weapon.id == 'shotgun' ? 5.5 : 4.5);
+    final bob = sin(game.clock * 3 + index) * 1.5;
+    c.translate(0, bob);
+    Glow.draw(c, len * 0.35, 0, len + 8, col.withAlpha(110));
+    final shard = Path()
+      ..moveTo(-len * 0.35, 0)
+      ..lineTo(len * 0.1, -w)
+      ..lineTo(len, 0)
+      ..lineTo(len * 0.1, w)
+      ..close();
+    c.drawPath(shard, fillOf(Color.lerp(col, Colors.white, 0.25)!));
+    final core = Path()
+      ..moveTo(-len * 0.15, 0)
+      ..lineTo(len * 0.15, -w * 0.4)
+      ..lineTo(len * 0.8, 0)
+      ..lineTo(len * 0.15, w * 0.4)
+      ..close();
+    c.drawPath(core, fillOf(Colors.white.withAlpha(230)));
+    // Mündungsblitz beim Schuss
+    if (kick > 0) Glow.draw(c, d.length + 2, 0, 10 + 14 * kick, Color.lerp(col, Colors.white, 0.6)!.withAlpha((230 * kick).round()));
     c.restore();
   }
 }
