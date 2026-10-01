@@ -24,6 +24,10 @@ class Progress {
   /// Bestleistung pro Stufe: erreichte Welle, [kMaxWave] + 1 = gewonnen.
   final Map<int, int> best = {};
 
+  /// Statistik über alle Runs.
+  int runs = 0, wins = 0, kills = 0, bestLevel = 0;
+  static const _runsKey = 'statRuns', _winsKey = 'statWins', _killsKey = 'statKills', _levelKey = 'statBestLevel';
+
   /// Debug-Modus: alle Stufen wählbar. Wird nicht gespeichert.
   bool debugUnlockAll = false;
 
@@ -38,7 +42,11 @@ class Progress {
 
   /// Trägt einen beendeten Run ein. Gibt die dabei neu freigeschaltete Stufe
   /// zurück (oder null).
-  int? recordRun({required int difficulty, required int wave, required bool won}) {
+  int? recordRun({required int difficulty, required int wave, required bool won, int kills = 0, int level = 0}) {
+    runs++;
+    if (won) wins++;
+    this.kills += kills;
+    bestLevel = max(bestLevel, level);
     final reached = won ? kMaxWave + 1 : wave;
     best[difficulty] = max(bestFor(difficulty), reached);
     if (won && difficulty == unlocked && unlocked < kDifficultyCount) {
@@ -57,6 +65,10 @@ class Progress {
         final v = prefs.getInt(_bestKey(d));
         if (v != null) best[d] = v;
       }
+      runs = prefs.getInt(_runsKey) ?? 0;
+      wins = prefs.getInt(_winsKey) ?? 0;
+      kills = prefs.getInt(_killsKey) ?? 0;
+      bestLevel = prefs.getInt(_levelKey) ?? 0;
       // Bestleistung aus der Zeit vor den Schwierigkeitsstufen gilt für Stufe 1.
       final legacy = prefs.getInt(_legacyBestKey);
       if (legacy != null) best[1] = max(bestFor(1), legacy);
@@ -73,6 +85,10 @@ class Progress {
       for (final e in best.entries) {
         await prefs.setInt(_bestKey(e.key), e.value);
       }
+      await prefs.setInt(_runsKey, runs);
+      await prefs.setInt(_winsKey, wins);
+      await prefs.setInt(_killsKey, kills);
+      await prefs.setInt(_levelKey, bestLevel);
       await prefs.remove(_legacyBestKey);
     } catch (e) {
       debugPrint('Fortschritt konnte nicht gespeichert werden: $e');

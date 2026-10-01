@@ -27,6 +27,10 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
   @override
   void update(double dt) {
     final run = game.run;
+    if (run == null && game.phase == Phase.menu) {
+      _menuFlight(dt);
+      return;
+    }
     if (run == null || !game.playing) return;
 
     final dir = (game.inRight ? 1 : 0) - (game.inLeft ? 1 : 0);
@@ -71,6 +75,24 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     }
   }
 
+  /// Im Titelbildschirm zieht der Vogel ruhige Bögen unter dem Menü.
+  void _menuFlight(double dt) {
+    if (dt <= 0) return;
+    final t = game.clock;
+    final tx = game.camX + game.viewW * (0.5 + 0.36 * sin(t * 0.21));
+    final ty = 410 + sin(t * 0.57) * 26 + sin(t * 1.3) * 8;
+    vel.setValues((tx - x) / dt, (ty - y) / dt);
+    if (vel.x.abs() > 5) face = vel.x.sign;
+    position.setValues(tx, ty);
+    anim += dt * (vel.y < 0 ? 22 : 9);
+    _trailT -= dt;
+    if (_trailT <= 0) {
+      _trailT = 0.025;
+      _trail.insert(0, position.clone());
+      if (_trail.length > 16) _trail.removeLast();
+    }
+  }
+
   // ---------------- Darstellung: leuchtender Geistvogel ----------------
 
   /// Letzte Positionen für den Lichtschweif (Weltkoordinaten).
@@ -91,7 +113,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
   @override
   void render(Canvas c) {
-    if (game.run == null) return;
+    if (game.run == null && game.phase != Phase.menu) return;
     final blink = iframe > 0 && (iframe * 20).floor().isOdd;
 
     // Licht auf dem Boden, schwächer je höher der Vogel fliegt

@@ -58,6 +58,9 @@ class DesktopWindow {
     }
   }
 
+  /// Spiel beenden (Menüpunkt „Beenden“ am PC).
+  static Future<void> quit() => windowManager.close();
+
   static Future<void> toggle() async => setFullScreen(!await windowManager.isFullScreen());
 
   /// F11 oder Alt+Enter – global, egal welches Element gerade den Fokus hat.

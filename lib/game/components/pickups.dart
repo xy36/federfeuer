@@ -11,12 +11,18 @@ import 'transient.dart';
 
 /// Material (Geld + XP) oder Herz (Heilung).
 class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  Drop(Vector2 pos, {required this.material, required Random rng})
+  Drop(Vector2 pos, {required this.material, required Random rng, this.fallSpeed = 70})
       : vel = Vector2((rng.nextDouble() - 0.5) * 80, material ? -20 - rng.nextDouble() * 60 : -60),
+        _phase = rng.nextDouble() * 6.28,
         super(position: pos, priority: 1);
 
   final bool material;
+
+  /// Höchste Sinkgeschwindigkeit (je Schwierigkeit); 0 = schwebt am Todesort.
+  final double fallSpeed;
   final Vector2 vel;
+  final double _phase;
+  double _t = 0;
   bool taken = false, _pulled = false;
 
   /// Schon im Sammelradius erfasst und auf dem Weg zum Spieler.
@@ -34,11 +40,19 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
       _pulled = true;
       position.x += dx / dist * 520 * dt;
       position.y += dy / dist * 520 * dt;
-    } else {
-      vel.y = min(vel.y + 300 * dt, 70.0 * game.weather.dropFallFactor);
+    } else if (fallSpeed > 0) {
+      // Beschleunigung passend zur Endgeschwindigkeit, damit langsame Drops sanft absinken
+      vel.y = min(vel.y + fallSpeed * 4.3 * dt, fallSpeed * game.weather.dropFallFactor);
       vel.x *= pow(0.1, dt);
       position.x += vel.x * dt;
       position.y = min(kGround - 5, y + vel.y * dt);
+    } else {
+      // Kurzer Sprung beim Tod, dann schwebend mit leichtem Wippen
+      _t += dt;
+      final damp = pow(0.02, dt).toDouble();
+      vel.scale(damp);
+      position.x += vel.x * dt;
+      position.y = clampD(y + vel.y * dt + cos(_t * 2.2 + _phase) * 6 * dt, kCeil + 12, kGround - 5);
     }
     if (dist < game.player.r + 8) {
       taken = true;

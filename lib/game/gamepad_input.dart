@@ -31,8 +31,10 @@ class GamepadInput {
   /// Wurde in dieser Sitzung schon ein Controller benutzt?
   bool used = false;
 
-  bool get left => _buttons.contains(GamepadButton.dpadLeft) || _stickX < -deadZone;
-  bool get right => _buttons.contains(GamepadButton.dpadRight) || _stickX > deadZone;
+  bool get left =>
+      _buttons.contains(GamepadButton.dpadLeft) || _stickX < -deadZone;
+  bool get right =>
+      _buttons.contains(GamepadButton.dpadRight) || _stickX > deadZone;
   bool get fly =>
       _buttons.contains(GamepadButton.a) ||
       _buttons.contains(GamepadButton.rightBumper) ||
@@ -41,9 +43,12 @@ class GamepadInput {
 
   void start() {
     try {
-      _sub = Gamepads.normalizedEvents.listen(handle, onError: (Object e) {
-        debugPrint('Controller-Fehler: $e');
-      });
+      _sub = Gamepads.normalizedEvents.listen(
+        handle,
+        onError: (Object e) {
+          debugPrint('Controller-Fehler: $e');
+        },
+      );
       _disconnectSub = Gamepads.onDisconnected.listen((_) => clear());
     } catch (e) {
       // Plattform ohne Plugin-Implementierung (z. B. Tests).

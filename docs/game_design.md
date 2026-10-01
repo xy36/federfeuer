@@ -157,18 +157,18 @@ Am Wellenende verpuffen alle Gegner und Projektile. Material, das schon zum Spie
 
 Es gibt fünf Stufen. Zu Beginn ist nur Küken spielbar; wer eine Stufe gewinnt, schaltet die nächste frei. Gewählt wird im Startmenü, die Wahl bleibt gespeichert.
 
-| Stufe | Name | Gegner-HP | Gegner-Schaden | Spawnrate | Schlechtwetter (Grundchance) |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Küken | × 1,0 | × 1,0 | × 1,0 | 20 % |
-| 2 | Spatz | × 1,15 | × 1,1 | × 1,1 | 35 % |
-| 3 | Falke | × 1,3 | × 1,25 | × 1,2 | 50 % |
-| 4 | Adler | × 1,5 | × 1,4 | × 1,3 | 65 % |
-| 5 | Phönix | × 1,75 | × 1,6 | × 1,4 | 80 % |
+| Stufe | Name | Gegner-HP | Gegner-Schaden | Spawnrate | Schlechtwetter (Grundchance) | Drops |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Küken | × 1,0 | × 1,0 | × 1,0 | 20 % | schweben |
+| 2 | Spatz | × 1,15 | × 1,1 | × 1,1 | 35 % | schweben |
+| 3 | Falke | × 1,3 | × 1,25 | × 1,2 | 50 % | sinken sehr langsam (12) |
+| 4 | Adler | × 1,5 | × 1,4 | × 1,3 | 65 % | sinken (35) |
+| 5 | Phönix | × 1,75 | × 1,6 | × 1,4 | 80 % | fallen zu Boden (70) |
 
 - **HP und Schaden** werden nach der Wellenskalierung multipliziert und gelten auch für den Boss (Schaden gerundet).
 - **Spawnrate:** Das Spawn-Intervall wird durch den Faktor geteilt.
 - **Schlechtwetter:** 20 % + 15 % pro Stufe über 1, dazu der Zuschlag der Welt (siehe „Wetter“).
-- **Fortschritt:** Gespeichert werden die höchste freigeschaltete Stufe, die gewählte Stufe und die Bestleistung pro Stufe. Die Bestleistung aus der Zeit vor den Stufen zählt für Küken.
+- **Fortschritt:** Gespeichert werden die höchste freigeschaltete Stufe, die gewählte Stufe, die Bestleistung pro Stufe und eine Statistik (Runs, Siege, besiegte Gegner gesamt, höchstes Level). Die Bestleistung aus der Zeit vor den Stufen zählt für Küken.
 - **Debug-Modus:** In Debug-Builds (oder mit `--dart-define=FEDERFEUER_DEBUG=true`) gibt es im Startmenü einen Schalter, der alle Stufen freigibt. Er wird nicht gespeichert; Siege im Debug-Modus zählen trotzdem für den Fortschritt.
 
 ## Wetter
@@ -207,7 +207,7 @@ Darstellung: Regenschleier mit Pfützen am Boden, die sich füllen und danach wi
  
 Material ist gleichzeitig Währung und Erfahrung: Jedes aufgesammelte Stück gibt 1 Geld und 1 XP. Für Level L braucht der Spieler (L + 3)² XP; jedes Level gibt sofort +1 Max-HP und eine Verbesserung nach der Welle.
  
-- **Drops:** Gegner lassen Material fallen, das langsam zu Boden sinkt. Im Sammelradius (70 + Bonus) fliegt es zum Spieler. 4 % Chance auf ein Herz (+3 HP).
+- **Drops:** Gegner lassen Material dort, wo sie sterben. Es springt kurz auf; auf Küken und Spatz bleibt es dann schwebend an dieser Stelle (leichtes Wippen) – man holt es sich im Flug. Ab Falke sinkt es zu Boden, je höher die Stufe desto schneller (höchstens 12 / 35 / 70 Einheiten pro Sekunde, bei Regen × 1,5), und bleibt dort liegen; wer es spät noch will, muss tief zu den Käfern hinunter. Im Sammelradius (70 + Bonus) fliegt es zum Spieler. 4 % Chance auf ein Herz (+3 HP), das sich genauso verhält.
 - **Level-up-Auswahl:** 4 zufällige Optionen, jede mit 20 % Chance „selten“ (doppelter Wert).
  
 | Wert | Start | Level-up normal | Wirkung |
@@ -269,10 +269,15 @@ Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays ü
 - **HUD oben Mitte:** „WELLE X“ klein, darunter der Countdown (rosarot unter 5 s) und eine feine Lichtlinie bis zum Ziel mit leuchtendem Punkt für den Spieler und kleiner Lichtsäule am Ende; in Welle 15 stattdessen „DER GEIERKÖNIG“ mit magentafarbener HP-Kapsel.
 - **Wetteranzeige:** Unter Timer bzw. Boss-Leiste steht das aktuelle Wetter (bei Wind mit Richtungszeichen, z. B. „Wind ›“); das Wellenbanner nennt es ebenfalls.
 - **Einblendungen:** Wellenbanner zu Beginn (Weltname in der Kantenfarbe der Welt darüber), schwebende Schadenszahlen (weiß, Krit gelb, Spieler rot, Heilung mint; höchstens 40 gleichzeitig, mit scharfem Schatten statt Schein), „LEVEL UP“ am Spieler. Texte im Spiel haben einen weichen Schein in ihrer Farbe statt einer Kontur.
-- **Startmenü:** Zweispaltig. Links Logo, Kurzerklärung, Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe), Tastenhinweise und in Debug-Builds der Debug-Schalter. Rechts drei Waffenkarten; ein Tipp auf die Karte startet den Run. Auf niedrigen Bildschirmen (Handy quer) ist das Logo einzeilig und die Kurzerklärung entfällt.
+- **Titelbildschirm:** großes, sanft atmend leuchtendes „FEDERFEUER“ über der lebendigen Felder-Welt (Kamera gleitet, der Geistvogel zieht ruhige Bögen unter dem Menü), darunter „Flieg durch das Licht bis zum Gipfel“ und die Menüpunkte als leuchtender Text: Spielen, Einstellungen, Rekorde, Credits, Debug (nur Debug-Builds), Beenden (nur PC). Der gewählte Punkt leuchtet weiß mit Lichtkugel davor. Unten links die Version, unten rechts die Bedienhinweise. Esc bzw. Controller-B führt von jeder Unterseite zurück zum Titel.
+- **Run vorbereiten (Spielen):** Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe), Kurzerklärung und drei Waffenkarten; ein Tipp auf die Karte startet den Run.
+- **Einstellungen:** Vollbild/Fenster (PC), Bildschirmwackeln an/aus, FPS-Anzeige an/aus (beides gespeichert) und eine Übersicht der Steuerung für Tastatur, Controller und Touch.
+- **Rekorde:** Bestleistung je Schwierigkeitsstufe (geschafft, erreichte Welle, gesperrt) und Statistik-Kacheln: Runs, Siege, besiegte Gegner, höchstes Level.
+- **Credits:** Engine, Schriften mit Lizenzhinweis (SIL OFL 1.1), Bibliotheken, Version.
+- **Debug (nur Debug-Builds):** Alles freischalten, Performance-Test, Render-Analyse.
 - **Level-up:** 4 Karten mit großem Wert (z. B. „+4 %“); die ganze Karte ist wählbar. Seltene Karten haben ein lila Kopfband und das Badge „SELTEN“.
 - **Shop:** Kopfzeile mit Hinweisen (Zeitbonus, nächste Welt) und Geld. Angebotskarten mit Kopfband in Stufenfarbe (Items apricot), Badge mit Stufe; grün „STUFE … · PAAR“, wenn der Spieler die Waffe in gleicher Stufe schon hat, bzw. „⤴ STUFE …“, wenn der Kauf bei vollen Slots direkt verschmilzt; und Preis-Etikett als Fußzeile; zu teure Karten sind ausgegraut, gekaufte werden zu einem leeren Platz. Darunter sechs Waffenslots (leere Slots sichtbar) mit Verkaufen-Knopf und – wenn ein Partner gleicher Stufe da ist – grünem Verschmelzen-Knopf („⤴ II“), Items als Etiketten, Werte in zwei Spalten, rechts unten der Start der nächsten Welle.
-- **Pause & Game Over:** Pause zeigt Welle, Welt und Stufe, dazu Weiterspielen/Aufgeben. Game Over zeigt „SIEG!“ bzw. „ABGESTÜRZT“, Kacheln für Welle, Gegner und Level, die Stufe, ggf. die neu freigeschaltete Stufe und „Neue Runde“.
+- **Pause & Game Over:** Pause zeigt Welle, Welt und Stufe, dazu Weiterspielen/Aufgeben. Game Over zeigt „SIEG!“ bzw. „ABGESTÜRZT“, Kacheln für Welle, Gegner und Level, die Stufe, ggf. die neu freigeschaltete Stufe, „Neue Runde“ (führt direkt zu „Run vorbereiten“) und „Hauptmenü“.
 - **Menü-Navigation:** Alle Buttons sind per Tastatur (Pfeile/Tab, Enter/Leertaste) und Controller (Steuerkreuz oder Stick, A bestätigt) bedienbar; der fokussierte Knopf bzw. die fokussierte Karte hebt sich an, leuchtet heller und bekommt einen weißen Lichtrand (bei Mauszeiger darüber ohne Rand). Mit Controller ist in jedem neuen Menü sofort der erste Button fokussiert. In den ersten 0,5 s nach dem Öffnen eines Menüs wird Controller-A ignoriert, damit ein Tippen zum Fliegen nichts versehentlich auswählt.
  
 Stil: leuchtendes Glas passend zur Spielwelt – ruhig und edel statt Arcade-Sticker.
@@ -309,20 +314,21 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `game/weather.dart` | Wetterzustand, Würfeln pro Welle, Modifikatoren |
 | `platform/desktop_window.dart` | Fenster und Vollbild am PC (window_manager), F11/Alt+Enter, gespeicherter Modus |
 | `game/perf.dart` | Debug: Frame-Messung, FPS-Anzeige, Ergebnisse von Performance-Test und Render-Analyse, abschaltbare Bildteile |
-| `game/progress.dart` | Fortschritt über Runs: freigeschaltete Stufen, Bestleistung pro Stufe, Debug-Modus |
+| `game/progress.dart` | Fortschritt über Runs: freigeschaltete Stufen, Bestleistung pro Stufe, Statistik, Debug-Modus |
+| `game/settings.dart` | Gespeicherte Einstellungen (Bildschirmwackeln, FPS-Anzeige) |
 | `game/gamepad_input.dart` | Controller-Eingaben: Bewegung, Fliegen, Pause, Menü-Navigation |
 | `components/weather_layer.dart` | Regen, Windlinien und Blätter im Viewport, Pfützen am Boden |
-| `ui/*.dart` | Menü, Level-up, Shop, Pause, Game Over, Touch-Steuerung; `widgets.dart` enthält die Bausteine (Panel, Sticker, Knöpfe, Karten, Etiketten) |
+| `ui/*.dart` | Startmenü mit Unterseiten (`menu.dart`), Level-up, Shop, Pause, Game Over, Touch-Steuerung; `widgets.dart` enthält die Bausteine (Panel, Sticker, Knöpfe, Karten, Etiketten) |
  
 Phasen: `menu → play → cleared → levelUp → shop → play … → over`; `cleared` ist die kurze Einblendung nach einer Welle. Außerhalb von `play` läuft die Engine mit dt = 0 weiter, damit Entfernen/Hinzufügen von Komponenten verarbeitet wird, ohne dass sich etwas bewegt. Temporäre Komponenten tragen das Mixin `Transient` und werden beim Wellenwechsel gesammelt entfernt.
 
 Debug-Werkzeuge (in Debug-Builds oder mit `--dart-define=FEDERFEUER_DEBUG=true`):
 
 - **Tasten 1 / 2 / 3:** Wetter Klar / Wind / Regen.
-- **F3:** FPS-Anzeige oben rechts – FPS, schlechteste Frame-Zeit der letzten 120 Frames, Build- und Raster-Zeit der Engine, Anzahl Gegner, Kugeln und Komponenten.
-- **Debug-Modus im Startmenü:** alle Schwierigkeitsstufen frei.
-- **Performance-Test im Startmenü:** schwerste Szene – Wald mit Regen, Stufe Phönix, dauerhaft 110 Gegner rund um den Spieler, sechs Waffen der Stufe IV, Held unverwundbar. Nach 3 s Aufwärmen wird 30 s gemessen; Ergebnis (Ø FPS, 1%-Low, schlechtester Frame, Raster/Build Ø und max) oben rechts und in der Konsole. Aussagekräftig nur im Profile- oder Release-Build.
-- **Render-Analyse im Startmenü:** dieselbe Lastszene, abschnittsweise gemessen (3 s Aufwärmen, je Abschnitt 1 s Einschwingen + 4 s Messung): zuerst alles an, dann jeweils ohne einen Bildteil (Hintergrund, Kulisse, Boden, Vordergrund, Atmosphäre, Wetter, Gegner-Körper, Gegner-Leuchten, Kugeln, Effekte, HUD). Ergebnis: Rasterzeit je Abschnitt und Ersparnis je Bildteil, größte zuerst – oben rechts und in der Konsole.
+- **F3:** FPS-Anzeige oben rechts (für alle Spieler auch über Einstellungen → FPS-Anzeige) – FPS, schlechteste Frame-Zeit der letzten 120 Frames, Build- und Raster-Zeit der Engine, Anzahl Gegner, Kugeln und Komponenten.
+- **Menüseite „Debug“ – Alles freischalten:** alle Schwierigkeitsstufen frei.
+- **Menüseite „Debug“ – Performance-Test:** schwerste Szene – Wald mit Regen, Stufe Phönix, dauerhaft 110 Gegner rund um den Spieler, sechs Waffen der Stufe IV, Held unverwundbar. Nach 3 s Aufwärmen wird 30 s gemessen; Ergebnis (Ø FPS, 1%-Low, schlechtester Frame, Raster/Build Ø und max) oben rechts und in der Konsole. Aussagekräftig nur im Profile- oder Release-Build.
+- **Menüseite „Debug“ – Render-Analyse:** dieselbe Lastszene, abschnittsweise gemessen (3 s Aufwärmen, je Abschnitt 1 s Einschwingen + 4 s Messung): zuerst alles an, dann jeweils ohne einen Bildteil (Hintergrund, Kulisse, Boden, Vordergrund, Atmosphäre, Wetter, Gegner-Körper, Gegner-Leuchten, Kugeln, Effekte, HUD). Ergebnis: Rasterzeit je Abschnitt und Ersparnis je Bildteil, größte zuerst – oben rechts und in der Konsole.
  
 ## Offene Punkte & Roadmap
  
@@ -333,6 +339,7 @@ Offene Fragen:
 - ~~Soll es bei 10 Wellen bleiben oder wie bei Brotato 20 Wellen mit Boss in der Mitte und am Ende?~~ **Entschieden:** 15 Wellen, Boss am Ende (Welle 15); jede Welle dauert länger und ist schwerer.
 - Bleibt die Grafik prozedural gezeichnet, oder kommen Sprites/Spritesheets? (Der leuchtende Stil ist bisher komplett prozedural umgesetzt.)
 - Monetarisierung: Einmalkauf, Free-to-play oder rein privat?
+- Credits: Wer steht als Entwickler/Studio im Spiel (Credits-Seite, Store)?
  
 Phase 1 – Fundament:
  
