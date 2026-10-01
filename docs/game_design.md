@@ -345,7 +345,7 @@ Phase 1 – Fundament:
  
 - [x] Flutter-Port lokal bauen und `flutter analyze` fehlerfrei bekommen
 - [x] Bestleistung mit `shared_preferences` speichern (pro Stufe, Schlüssel `bestWave_<Stufe>`)
-- [ ] Soundeffekte und Musik (`flame_audio`)
+- [ ] Soundeffekte und Musik – vertagt, bis Waffen, Gegner und Inhalte feststehen. Bereits entschieden: Technik `flutter_soloud` (geringe Latenz, viele gleichzeitige Effekte; statt `flame_audio`). Musik und Effekte sollen per KI erzeugt werden – dafür nur Tarife mit kommerziellen Nutzungsrechten, Prompt/Datum/Werkzeug je Datei dokumentieren, KI-Hinweis bei Steam angeben. Klangkonzept: ruhige, atmosphärische Musik je Welt (plus Titel, Boss, Sieg/Niederlage), Effekte für Waffen, Treffer, Tod, Sammeln (steigende Tonhöhe), Level-up, Wellen, Ziel, Spawn, Boss, Menü; Wind/Regen als Ambiente; Lautstärkeregler in den Einstellungen.
 - [ ] Performance-Test mit 110 Gegnern auf einem Mittelklasse-Android (Werkzeug vorhanden: „Performance-Test“ im Startmenü, siehe Debug-Werkzeuge)
  
 Phase 2 – Inhalte:
