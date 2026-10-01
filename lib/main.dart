@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'game/federfeuer_game.dart';
 import 'platform/desktop_window.dart';
 import 'ui/controls_overlay.dart';
+import 'ui/menu.dart';
 import 'ui/overlays.dart';
 import 'ui/shop_overlay.dart';
 import 'ui/widgets.dart';
@@ -54,7 +55,13 @@ class _FederfeuerAppState extends State<FederfeuerApp> {
 
 /// Alle Flutter-Overlays des Spiels (Menüs und Touch-Steuerung).
 Map<String, Widget Function(BuildContext, FederfeuerGame)> buildOverlayMap() => {
-      'menu': (context, game) => UiScale(child: MenuOverlay(game: game)),
+      'menu': (context, game) => UiScale(
+            child: MenuOverlay(
+              key: ValueKey(game.menuGeneration),
+              game: game,
+              initialPage: game.menuOpensPlay ? MenuPage.play : MenuPage.title,
+            ),
+          ),
       'levelUp': (context, game) => UiScale(child: LevelUpOverlay(game: game)),
       'shop': (context, game) => UiScale(child: ShopOverlay(game: game)),
       'pause': (context, game) => UiScale(child: PauseOverlay(game: game)),

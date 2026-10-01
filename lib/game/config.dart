@@ -261,7 +261,7 @@ const Map<EnemyType, EnemyDef> enemyDefs = {
 // ---------------- Schwierigkeitsstufen ----------------
 
 class DifficultyDef {
-  const DifficultyDef(this.level, this.name, this.hp, this.dmg, this.spawn);
+  const DifficultyDef(this.level, this.name, this.hp, this.dmg, this.spawn, {this.dropFallSpeed = 0});
 
   /// 1–[kDifficultyCount]; steuert auch die Schlechtwetter-Chance (+15 % pro Stufe).
   final int level;
@@ -269,14 +269,20 @@ class DifficultyDef {
 
   /// Faktoren auf Gegner-HP und -Schaden (auch Boss) und auf die Spawnrate.
   final double hp, dmg, spawn;
+
+  /// Wie schnell Material und Herzen zu Boden sinken (Welteinheiten/s);
+  /// 0 = sie schweben dort, wo der Gegner starb.
+  final double dropFallSpeed;
+
+  bool get dropsFall => dropFallSpeed > 0;
 }
 
 const difficultyDefs = [
   DifficultyDef(1, 'Küken', 1.0, 1.0, 1.0),
   DifficultyDef(2, 'Spatz', 1.15, 1.1, 1.1),
-  DifficultyDef(3, 'Falke', 1.3, 1.25, 1.2),
-  DifficultyDef(4, 'Adler', 1.5, 1.4, 1.3),
-  DifficultyDef(5, 'Phönix', 1.75, 1.6, 1.4),
+  DifficultyDef(3, 'Falke', 1.3, 1.25, 1.2, dropFallSpeed: 12),
+  DifficultyDef(4, 'Adler', 1.5, 1.4, 1.3, dropFallSpeed: 35),
+  DifficultyDef(5, 'Phönix', 1.75, 1.6, 1.4, dropFallSpeed: 70),
 ];
 
 const int kDifficultyCount = 5;

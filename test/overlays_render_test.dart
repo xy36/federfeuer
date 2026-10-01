@@ -37,9 +37,19 @@ void main() {
       final ui = find.byType(UiScale);
       expect(tester.getSize(ui.first), size);
       expect(tester.getTopLeft(ui.first), Offset.zero);
-      final panel = tester.getRect(find.byType(Panel).first);
-      expect(panel.width, closeTo(size.width, 1));
-      expect(panel.height, closeTo(size.height, 1));
+      expect(find.text('FEDERFEUER'), findsOneWidget);
+
+      // Jede Unterseite öffnen, füllt den Bildschirm, Zurück führt zum Titel
+      for (final item in ['SPIELEN', 'EINSTELLUNGEN', 'REKORDE', 'CREDITS']) {
+        await tester.tap(find.text(item));
+        await frames();
+        final panel = tester.getRect(find.byType(Panel).first);
+        expect(panel.width, closeTo(size.width, 1), reason: item);
+        expect(panel.height, closeTo(size.height, 1), reason: item);
+        game.menuBack!();
+        await frames();
+        expect(find.text('FEDERFEUER'), findsOneWidget, reason: 'zurück von $item');
+      }
 
       game.startRun('pistol');
       await frames();

@@ -23,6 +23,7 @@ import 'config.dart';
 import 'gamepad_input.dart';
 import 'perf.dart';
 import 'progress.dart';
+import 'settings.dart';
 import '../platform/desktop_window.dart';
 import 'run_state.dart';
 import 'weather.dart';
@@ -76,6 +77,10 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   double clock = 0;
   RunState? run;
   final progress = Progress();
+  final settings = Settings();
+
+  /// Vom Startmenü gesetzt: eine Seite zurück (Esc, Controller-B).
+  VoidCallback? menuBack;
 
   // ---------------- Debug: Performance ----------------
 
@@ -145,12 +150,13 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       Foreground(),
     ]);
     camera.viewport.addAll([Atmosphere(), _weatherLayer, Hud()]);
-    if (kDebugTools) {
-      camera.viewport.add(PerfOverlay());
-      perf.start();
-      HardwareKeyboard.instance.addHandler(_onDebugKey);
-    }
+    // FPS-Anzeige gibt es für alle (Einstellungen); F3 und Tests nur mit Debug-Werkzeugen.
+    camera.viewport.add(PerfOverlay());
+    perf.start();
+    if (kDebugTools) HardwareKeyboard.instance.addHandler(_onDebugKey);
     await progress.load();
+    await settings.load();
+    showPerf = settings.showFps;
     pad.start();
     overlays.add('menu');
   }
@@ -303,18 +309,26 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final r = run!;
     phase = Phase.over;
     won = win;
-    newlyUnlocked = progress.recordRun(difficulty: r.difficulty, wave: r.wave, won: win);
+    newlyUnlocked = progress.recordRun(difficulty: r.difficulty, wave: r.wave, won: win, kills: r.kills, level: r.level);
     progress.save();
     _setOverlays([]);
     Future.delayed(Duration(milliseconds: win ? 0 : 700), () {
       if (phase != Phase.over) return;
       overlays.add('gameOver');
       _menuShownAt = DateTime.now();
-      _focusMenuSoon();
+      focusMenuSoon();
     });
   }
 
-  void toMenu() {
+  /// Öffnet das Startmenü direkt auf „Run vorbereiten“ statt auf dem Titel.
+  bool menuOpensPlay = false;
+
+  /// Zählt jedes Öffnen des Startmenüs – das Menü startet damit immer frisch.
+  int menuGeneration = 0;
+
+  void toMenu({bool play = false}) {
+    menuOpensPlay = play;
+    menuGeneration++;
     godMode = benchmarkRunning = analysisRunning = false;
     perfSkip.clear();
     perf.recording = false;
@@ -332,6 +346,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       m.removeFromParent();
     }
     _mounts.clear();
+    // Schon offenes Menü neu aufbauen lassen (neuer Key → frischer Zustand)
+    overlays.remove('menu');
     _setOverlays(['menu']);
   }
 
@@ -347,14 +363,14 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     focusNode.requestFocus();
     if (!playing && active.isNotEmpty) {
       _menuShownAt = DateTime.now();
-      _focusMenuSoon();
+      focusMenuSoon();
     }
   }
 
   // ---------------- Menü-Navigation (Tastatur & Controller) ----------------
 
   /// Mit Controller wird im neuen Menü direkt der erste Button fokussiert.
-  void _focusMenuSoon() {
+  void focusMenuSoon() {
     if (!pad.used) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!playing) _focusFirstMenuItem();
@@ -399,6 +415,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void _padBack() {
     if (phase == Phase.paused) togglePause();
+    if (phase == Phase.menu) menuBack?.call();
   }
 
   void _padStart() {
@@ -513,10 +530,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void _updateCamera(double dt) {
     camX += (_targetCam() - camX) * min(1.0, dt * 6);
-    _placeCamera(
-      (rng.nextDouble() - 0.5) * shake,
-      (rng.nextDouble() - 0.5) * shake,
-    );
+    final k = settings.screenShake ? shake : 0.0;
+    _placeCamera((rng.nextDouble() - 0.5) * k, (rng.nextDouble() - 0.5) * k);
   }
 
   void _placeCamera(double sx, double sy) {
@@ -695,11 +710,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     burst(e.position, const Color(0xFFC77DFF), 12, 170);
     for (var i = 0; i < enemyDefs[e.type]!.drop; i++) {
       world.add(
-        Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng),
+        Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng, fallSpeed: run!.difficultyDef.dropFallSpeed),
       );
     }
     if (rng.nextDouble() < 0.04) {
-      world.add(Drop(e.position.clone(), material: false, rng: rng));
+      world.add(Drop(e.position.clone(), material: false, rng: rng, fallSpeed: run!.difficultyDef.dropFallSpeed));
     }
   }
 
@@ -863,7 +878,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (event is KeyDownEvent &&
         (event.logicalKey == LogicalKeyboardKey.keyP ||
             event.logicalKey == LogicalKeyboardKey.escape)) {
-      togglePause();
+      if (phase == Phase.menu) {
+        menuBack?.call();
+      } else {
+        togglePause();
+      }
     }
     if (kDebugTools && event is KeyDownEvent && playing) {
       // Debug: Wetter direkt umschalten
