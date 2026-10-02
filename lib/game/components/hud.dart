@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../federfeuer_game.dart';
+import '../input_bindings.dart';
 import '../perf.dart';
 import 'draw.dart';
 import 'enemy.dart';
 import 'light.dart';
+import '../../ui/widgets.dart' show isTouchPlatform;
 
 /// HUD im Viewport (Bildschirmkoordinaten): leuchtende Glaskapseln und feine Lichtlinien.
 class Hud extends Component with HasGameReference<FederfeuerGame> {
@@ -119,6 +121,79 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       if (!g.weather.isClear) {
         OutlineText.draw(c, g.weather.label, Offset(cx, s.y * 0.42 + big * 0.95), size: small, color: _xp, display: false);
       }
+      // Erste Welle mit Controller: Belegung kurz einblenden
+      if (r.wave == 1 && g.pad.used) {
+        final b = g.settings.bindings;
+        String p(InputAction a) => b.firstPad(a).let(padLabel) ?? '–';
+        OutlineText.draw(
+          c,
+          '${p(InputAction.fly)} halten: fliegen  ·  ${p(InputAction.action1)} / ${p(InputAction.action2)}: Aktionen  ·  ${p(InputAction.pause)}: Pause',
+          Offset(cx, s.y * 0.42 + big * 0.95 + small * 1.4),
+          size: small * 0.8,
+          color: Palette.sun,
+          display: false,
+        );
+      }
+    }
+
+    // Aktionstasten unten links: Symbol mit Abklingbogen, Stufe II mit Punkt
+    if (g.playing) {
+      const ar = 20.0;
+      final ay = s.y - pad - ar - (isTouchPlatform && !g.pad.used ? 100 : 0);
+      for (var i = 0; i < r.actions.length; i++) {
+        final act = r.actions[i];
+        final ax = pad + ar + i * 150;
+        final ready = g.actionReady(i);
+        final col = act.id.evolved ? const Color(0xFFFFC94A) : Palette.sun;
+        // „Bereit!“: kurzer Sprung und nach außen laufender Lichtring, danach sanftes Pulsieren
+        final f = g.actionReadyFlash[i] / FederfeuerGame.actionReadyFlashTime; // 1 → 0
+        final pop = f > 0 ? 1 + 0.35 * sin(f * pi) : 1.0;
+        final pulse = ready ? 0.5 + 0.5 * sin(g.clock * 4) : 0.0;
+        final rr = ar * pop;
+        Glow.draw(c, ax, ay, ar * (ready ? 2.6 + 0.6 * pulse + 2 * f : 2),
+            (ready ? col : _muted).withAlpha(ready ? (90 + 60 * pulse + 100 * f).round().clamp(0, 255) : 50));
+        if (f > 0) {
+          _line
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3 * f
+            ..color = col.withValues(alpha: f);
+          c.drawCircle(Offset(ax, ay), ar * (1 + 1.6 * (1 - f)), _line);
+        }
+        c.drawCircle(Offset(ax, ay), rr, fillOf(ready ? Color.lerp(_glass, col, 0.15 + 0.1 * pulse)! : _glass));
+        _edgePaint
+          ..color = ready ? col : _edge
+          ..strokeWidth = ready ? 2 : 1;
+        c.drawCircle(Offset(ax, ay), rr, _edgePaint);
+        _edgePaint.strokeWidth = 1;
+        if (!ready) {
+          _line
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3
+            ..color = _xp;
+          c.drawArc(Rect.fromCircle(center: Offset(ax, ay), radius: ar - 3), -pi / 2,
+              2 * pi * (1 - g.actionCds[i] / act.cooldown), false, _line);
+        }
+        OutlineText.draw(c, act.id.icon, Offset(ax, ay + 1), size: (17 * pop).roundToDouble(), display: false, glow: false);
+        if (f > 0) {
+          OutlineText.draw(c, 'BEREIT!', Offset(ax, ay - ar - 12 - 6 * (1 - f)),
+              // Deckkraft in Zehnteln, damit der Text-Cache nicht für jeden Frame neu rendert
+              size: 12, color: col.withValues(alpha: (min(1.0, f * 2) * 10).round() / 10), display: false);
+        }
+        if (act.level > 0) drawCircle(c, ax + ar * 0.72, ay - ar * 0.72, 4, col);
+        OutlineText.draw(c, ready ? act.label : '${g.actionCds[i].ceil()}', Offset(ax + ar + 8, ay - 7),
+            size: 12, color: ready ? col : _muted, center: false, display: false);
+        final slot = i == 0 ? InputAction.action1 : InputAction.action2, bind = g.settings.bindings;
+        final key = g.pad.used
+            ? bind.firstPad(slot).let(padLabel)
+            : bind.firstKey(slot).let(keyLabel);
+        OutlineText.draw(c, key ?? '–', Offset(ax + ar + 8, ay + 9),
+            size: 10, color: _muted, center: false, display: false);
+      }
+    }
+
+    // Lichtblitz: kurzes weißes Aufleuchten
+    if (g.flashT > 0) {
+      c.drawRect(Rect.fromLTWH(0, 0, s.x, s.y), fillOf(Colors.white.withAlpha((200 * g.flashT / 0.35).round())));
     }
 
     // Leuchtende Pfeile für Gegner außerhalb des Bildes
@@ -176,5 +251,12 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       ..lineTo(x + dir * 11, y + 7)
       ..close();
     c.drawPath(_arrow, fillOf(const Color(0xFFFF8AB0)));
+  }
+}
+
+extension _Let<T extends Object> on T? {
+  R? let<R>(R Function(T) f) {
+    final v = this;
+    return v == null ? null : f(v);
   }
 }

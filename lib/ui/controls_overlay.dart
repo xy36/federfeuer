@@ -46,8 +46,29 @@ class ControlsOverlay extends StatelessWidget {
         Positioned(
           right: 18,
           bottom: 14,
-          child: HoldButton(label: 'Flug', size: 100, fontSize: 16, onChanged: (v) => game.touchFly = v),
+          child: HoldButton(label: game.player.character.freeFlight ? '▲' : 'Flug', size: 100, fontSize: 16, onChanged: (v) => game.touchFly = v),
         ),
+      // Kolibri fliegt frei: eigener Knopf nach unten über „Flug“
+      if (touch && game.player.character.freeFlight)
+        Positioned(
+          right: 36,
+          bottom: 124,
+          child: HoldButton(label: '▼', size: 64, fontSize: 22, onChanged: (v) => game.touchDown = v),
+        ),
+      if (touch)
+        for (var i = 0; i < (game.run?.actions.length ?? 0); i++)
+          Positioned(
+            right: 130 + i * 76.0,
+            bottom: 24,
+            child: HoldButton(
+              label: game.run!.actions[i].id.icon,
+              size: 64,
+              fontSize: 24,
+              onChanged: (v) {
+                if (v) game.useAction(i);
+              },
+            ),
+          ),
     ]);
   }
 }

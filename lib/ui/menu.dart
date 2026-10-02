@@ -2,18 +2,23 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:gamepads/gamepads.dart';
 
 import '../game/config.dart';
 import '../game/federfeuer_game.dart';
+import '../game/gamepad_input.dart' show controllerActive;
 import '../game/progress.dart';
 import '../platform/desktop_window.dart';
+import 'bird_preview.dart';
+import 'compendium.dart';
+import 'controls_editor.dart';
 import 'overlays.dart' show FullScreenButton;
 import 'widgets.dart';
 
 /// Version im Titelbildschirm (bei Releases mit `pubspec.yaml` abgleichen).
 const kGameVersion = '1.0.0';
 
-enum MenuPage { title, play, settings, records, credits, debug }
+enum MenuPage { title, play, settings, records, compendium, credits, debug }
 
 /// Startmenü: Titelbildschirm mit Unterseiten. Esc bzw. Controller-B führt zurück.
 class MenuOverlay extends StatefulWidget {
@@ -57,6 +62,7 @@ class _MenuOverlayState extends State<MenuOverlay> {
       MenuPage.play => _PlayPage(game: game, back: _back),
       MenuPage.settings => _SettingsPage(game: game, back: _back),
       MenuPage.records => _RecordsPage(game: game, back: _back),
+      MenuPage.compendium => _SubPage(title: 'KOMPENDIUM', back: _back, maxWidth: 900, child: CompendiumView(game: game)),
       MenuPage.credits => _CreditsPage(back: _back),
       MenuPage.debug => _DebugPage(game: game, back: _back),
     };
@@ -99,6 +105,7 @@ class _TitlePage extends StatelessWidget {
                 _TitleItem(label: 'Spielen', onPressed: () => go(MenuPage.play)),
                 _TitleItem(label: 'Einstellungen', onPressed: () => go(MenuPage.settings)),
                 _TitleItem(label: 'Rekorde', onPressed: () => go(MenuPage.records)),
+                _TitleItem(label: 'Kompendium', onPressed: () => go(MenuPage.compendium)),
                 _TitleItem(label: 'Credits', onPressed: () => go(MenuPage.credits)),
                 if (kDebugTools) _TitleItem(label: 'Debug', onPressed: () => go(MenuPage.debug)),
                 if (isDesktop) _TitleItem(label: 'Beenden', onPressed: DesktopWindow.quit),
@@ -113,8 +120,13 @@ class _TitlePage extends StatelessWidget {
           Positioned(
             right: 18,
             bottom: 12,
-            child: Text(isTouchPlatform ? 'Tippen zum Wählen' : '↑↓ wählen  ·  Enter / A bestätigen  ·  Esc / B zurück',
-                style: bodyText(11, color: const Color(0x809FB0D0))),
+            child: ValueListenableBuilder<bool>(
+              valueListenable: controllerActive,
+              builder: (context, pad, _) => pad
+                  ? const ControllerHints([(GamepadButton.a, 'Bestätigen'), (null, 'Wählen')], center: false)
+                  : Text(isTouchPlatform ? 'Tippen zum Wählen' : '↑↓ wählen  ·  Enter bestätigen  ·  Esc zurück',
+                      style: bodyText(11, color: const Color(0x809FB0D0))),
+            ),
           ),
         ]),
       ),
@@ -222,6 +234,7 @@ class _SubPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Panel(
         maxWidth: maxWidth,
+        hints: const [(GamepadButton.a, 'Auswählen'), (GamepadButton.b, 'Zurück'), (null, 'Navigieren')],
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
             Expanded(child: OutlinedLabel(title, size: 28)),
@@ -296,26 +309,20 @@ class _PlayPage extends StatefulWidget {
 class _PlayPageState extends State<_PlayPage> {
   FederfeuerGame get game => widget.game;
 
-  static const _weaponAccent = {
-    'pistol': Palette.sun,
-    'smg': Palette.cyan,
-    'shotgun': Palette.coral,
-  };
-
   @override
   Widget build(BuildContext context) {
     return _SubPage(
       title: 'RUN VORBEREITEN',
       back: widget.back,
-      maxWidth: 940,
+      maxWidth: 980,
       child: LayoutBuilder(builder: (context, box) {
-        final wide = box.maxWidth >= 700;
-        final left = _difficulty(), right = _weapons();
-        if (!wide) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [left, right]);
+        final wide = box.maxWidth >= 720;
+        final left = _difficulty(), right = _characters();
+        if (!wide) return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [right, left]);
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(flex: 9, child: left),
+          Expanded(flex: 8, child: left),
           const SizedBox(width: 24),
-          Expanded(flex: 13, child: right),
+          Expanded(flex: 14, child: right),
         ]);
       }),
     );
@@ -385,50 +392,114 @@ class _PlayPageState extends State<_PlayPage> {
     );
   }
 
-  Widget _weapons() {
+  Widget _characters() {
+    final p = game.progress;
+    final sel = characterById[p.selectedCharacter]!;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      sectionTitle('Startwaffe wählen'),
-      LayoutBuilder(builder: (context, box) {
-        // Drei Karten nebeneinander, solange sie nicht zu schmal werden.
-        final w = ((box.maxWidth - 24) / 3).clamp(128.0, 176.0);
-        return Wrap(spacing: 12, runSpacing: 4, children: [
-          for (final id in ['pistol', 'smg', 'shotgun']) _weaponCard(id, w),
-        ]);
-      }),
+      sectionTitle('Vogel wählen'),
+      Wrap(spacing: 6, runSpacing: 6, children: [
+        for (final c in characterDefs) _characterTile(c, selected: c.id == sel.id, unlocked: p.hasCharacter(c.id)),
+      ]),
+      const SizedBox(height: 10),
+      _characterDetail(sel),
     ]);
   }
 
-  Widget _weaponCard(String id, double width) {
-    final d = weaponDefs[id]!;
-    return ChoiceCard(
-      accent: _weaponAccent[id]!,
-      icon: d.icon,
-      title: d.name,
-      width: width,
-      height: 222,
-      body: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(d.desc, maxLines: 2, overflow: TextOverflow.ellipsis, style: bodyText(12, color: Ui.cardMuted)),
-        const Spacer(),
-        _statLine('Schaden', '${fmtNum(d.dmg)}${d.count > 1 ? ' ×${d.count}' : ''}'),
-        _statLine('Tempo', '${d.cooldown.toStringAsFixed(2)} s'),
-        _statLine('Reichweite', '${d.range.round()}'),
-        const SizedBox(height: 8),
-      ]),
-      footer: const CardFooter(Text('Starten ▶'), color: Palette.mint),
-      onPressed: () => game.startRun(id),
+  Widget _characterTile(CharacterDef c, {required bool selected, required bool unlocked}) {
+    return Pressable(
+      onPressed: () => setState(() {
+        if (unlocked) {
+          game.progress.selectedCharacter = c.id;
+          game.progress.save();
+        } else {
+          _locked = c;
+        }
+      }),
+      builder: (context, s) => Sticker(
+        state: s,
+        color: selected ? c.glow : (unlocked ? Ui.card : const Color(0xFF59607A)),
+        radius: 12,
+        depth: 3,
+        padding: const EdgeInsets.all(2),
+        child: Stack(alignment: Alignment.center, children: [
+          BirdPreview(character: c, size: 50, locked: !unlocked),
+          if (!unlocked) const Text('🔒', style: TextStyle(fontSize: 14)),
+        ]),
+      ),
     );
   }
+
+  /// Zuletzt angetippter gesperrter Vogel: zeigt dessen Aufgabe.
+  CharacterDef? _locked;
+
+  Widget _characterDetail(CharacterDef c) {
+    final p = game.progress;
+    final lock = _locked;
+    final w = c.startWeapon == null ? null : weaponDefs[c.startWeapon]!;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Ui.slot,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: c.glow.withAlpha(140), width: 1.4),
+        boxShadow: [BoxShadow(color: c.glow.withAlpha(40), blurRadius: 18)],
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          BirdPreview(character: c, size: 76, animate: true),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(c.name, style: displayStyle(20, Color.lerp(c.glow, Colors.white, 0.4)!)),
+              Text('${c.species} · ${c.role}', style: mutedStyle),
+              const SizedBox(height: 6),
+              _trait('Stärke', c.strength, Palette.mint),
+              _trait('Nachteil', c.weakness, Palette.coral),
+              _trait('Fliegt', c.flight, Palette.cyan),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          if (w != null) Pill(w.name, icon: w.icon, color: w.cls.color.withAlpha(60)),
+          if (w == null) const Pill('keine Startwaffe', icon: '✋'),
+          if (c.startAction != null) Pill(c.startAction!.label, icon: c.startAction!.icon, color: const Color(0x33FFD23F)),
+          if (c.maxWeapons != 6) Pill('${c.maxWeapons} Waffenslots', icon: '🎒'),
+        ]),
+        if (lock != null && !p.hasCharacter(lock.id)) ...[
+          const SizedBox(height: 8),
+          _unlockHint(lock),
+        ],
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GameButton(label: 'Starten', icon: '▶', size: 17, color: Palette.mint, onPressed: () => game.startRun()),
+        ),
+      ]),
+    );
+  }
+
+  Widget _unlockHint(CharacterDef c) {
+    final prog = game.progress.unlockProgress(c.unlock);
+    return Text(
+      '🔒 ${c.name}: ${c.unlock.text}${prog == null ? '' : ' (${prog.$1} / ${prog.$2})'}',
+      style: bodyText(12.5, color: Ui.muted),
+    );
+  }
+
+  Widget _trait(String label, String text, Color col) => Padding(
+        padding: const EdgeInsets.only(bottom: 2),
+        child: Text.rich(TextSpan(children: [
+          TextSpan(text: '$label  ', style: bodyText(12, color: col, weight: 900)),
+          TextSpan(text: text, style: bodyText(12.5, color: Ui.text)),
+        ])),
+      );
 
   void _select(int level) {
     setState(() => game.progress.selected = level);
     game.progress.save();
   }
 }
-
-Widget _statLine(String label, String value) => Row(children: [
-      Expanded(child: Text(label, style: bodyText(12, color: Ui.cardMuted))),
-      Text(value, style: bodyText(12.5, color: Ui.cardText, weight: 900)),
-    ]);
 
 // ---------------- Einstellungen ----------------
 
@@ -486,23 +557,7 @@ class _SettingsPageState extends State<_SettingsPage> {
           },
         ),
         sectionTitle('Steuerung'),
-        Text('Tastatur', style: displayStyle(14)),
-        const SizedBox(height: 6),
-        Wrap(children: [
-          _keyHint('A / D  ·  ← →', 'bewegen'),
-          _keyHint('Leertaste  ·  W  ·  ↑', 'halten: fliegen'),
-          _keyHint('P  ·  Esc', 'Pause'),
-          if (isDesktop) _keyHint('F11  ·  Alt+Enter', 'Vollbild'),
-        ]),
-        const SizedBox(height: 6),
-        Text('Controller', style: displayStyle(14)),
-        const SizedBox(height: 6),
-        Wrap(children: [
-          _keyHint('Linker Stick  ·  Steuerkreuz', 'bewegen'),
-          _keyHint('A  ·  RB  ·  RT', 'halten: fliegen'),
-          _keyHint('Start', 'Pause'),
-          _keyHint('B', 'zurück'),
-        ]),
+        ControlsEditor(game: game),
         if (isTouchPlatform) ...[
           const SizedBox(height: 6),
           Text('Touch', style: displayStyle(14)),
@@ -510,6 +565,8 @@ class _SettingsPageState extends State<_SettingsPage> {
           Wrap(children: [
             _keyHint('◀ ▶', 'bewegen'),
             _keyHint('Flug', 'halten: fliegen'),
+            _keyHint('▼', 'Kolibri: runter'),
+            _keyHint('Symbole', 'Aktionen'),
             _keyHint('II', 'Pause'),
           ]),
         ],
@@ -543,7 +600,32 @@ class _RecordsPage extends StatelessWidget {
           StatTile(value: '${p.wins}', label: 'Siege', color: Palette.mint),
           StatTile(value: '${p.kills}', label: 'Gegner', color: Palette.coral),
           StatTile(value: '${p.bestLevel}', label: 'Höchstes Level', color: Palette.cyan),
+          StatTile(value: '${p.burnKills}', label: 'Verbrannt', color: const Color(0xFFFF8A3D)),
+          StatTile(value: '${p.material}', label: 'Material', color: Palette.mint),
         ]),
+        sectionTitle('Vögel'),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          for (final c in characterDefs) _characterRecord(p, c),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _characterRecord(Progress p, CharacterDef c) {
+    final has = p.characters.contains(c.id) || c.unlock.kind == UnlockKind.start;
+    final prog = p.unlockProgress(c.unlock);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(children: [
+        BirdPreview(character: c, size: 34, locked: !has),
+        const SizedBox(width: 8),
+        SizedBox(width: 150, child: Text(c.name, style: displayStyle(14, has ? Ui.text : Ui.muted))),
+        Expanded(
+          child: Text(
+            has ? 'freigeschaltet' : '${c.unlock.text}${prog == null ? '' : ' (${prog.$1} / ${prog.$2})'}',
+            style: bodyText(12.5, color: has ? Palette.mint : Ui.muted),
+          ),
+        ),
       ]),
     );
   }
@@ -639,7 +721,7 @@ class _DebugPageState extends State<_DebugPage> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _ToggleRow(
           label: 'Alles freischalten',
-          hint: 'Alle Schwierigkeitsstufen wählbar (wird nicht gespeichert)',
+          hint: 'Alle Schwierigkeitsstufen und Vögel wählbar (wird nicht gespeichert)',
           value: p.debugUnlockAll,
           onChanged: (v) => setState(() => p.debugUnlockAll = v),
         ),

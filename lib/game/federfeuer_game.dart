@@ -17,10 +17,12 @@ import 'components/player.dart';
 import 'components/projectiles.dart';
 import 'components/scenery.dart';
 import 'components/transient.dart';
+import 'components/weapon_fx.dart';
 import 'components/weapon_mount.dart';
 import 'components/weather_layer.dart';
 import 'config.dart';
 import 'gamepad_input.dart';
+import 'input_bindings.dart';
 import 'perf.dart';
 import 'progress.dart';
 import 'settings.dart';
@@ -106,18 +108,32 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   int? newlyUnlocked;
   bool won = false;
 
+  /// Beim letzten Run neu freigeschaltete Vögel (für Game Over).
+  List<CharacterDef> newCharacters = const [];
+
   // Eingabe
-  bool keyLeft = false, keyRight = false, keyFly = false;
-  bool touchLeft = false, touchRight = false, touchFly = false;
+  bool keyLeft = false, keyRight = false, keyFly = false, keyDown = false;
+  bool touchLeft = false, touchRight = false, touchFly = false, touchDown = false;
   late final pad = GamepadInput(
     onNavigate: _padNavigate,
     onConfirm: _padConfirm,
     onBack: _padBack,
     onStart: _padStart,
+    onAction: useAction,
+    bindings: settings.bindings,
   );
+
+  /// Neubelegung in den Einstellungen läuft: Tastatur-Eingaben gehen nicht ans Spiel oder Menü.
+  bool inputCapture = false;
   bool get inLeft => keyLeft || touchLeft || pad.left;
   bool get inRight => keyRight || touchRight || pad.right;
   bool get inFly => keyFly || touchFly || pad.fly;
+  bool get inDown => keyDown || touchDown || pad.down;
+
+  /// Freier Flug (Kolibri): Richtung −1 … 1 aus Tasten, Touch und Stick (analog). Senkrecht: oben = negativ.
+  double get inHorizontal =>
+      clampD((keyRight || touchRight ? 1 : 0) - (keyLeft || touchLeft ? 1 : 0) + pad.horizontal, -1, 1);
+  double get inVertical => clampD((keyDown || touchDown ? 1 : 0) - (keyFly || touchFly ? 1 : 0) + pad.vertical, -1, 1);
   bool get playing => phase == Phase.play;
 
   // Kamera (Weltkoordinaten)
@@ -184,8 +200,18 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   // ---------------- Ablauf ----------------
 
-  void startRun(String weaponId, {int? difficulty}) {
-    run = RunState(weaponId, difficulty: difficulty ?? progress.selected);
+  /// Startet einen Run. [weaponOverride] ersetzt die Startwaffe des Charakters (Tests, Benchmark).
+  void startRun([String? weaponOverride, int? difficulty, String? character]) {
+    run = RunState(
+      weaponOverride,
+      difficulty: difficulty ?? progress.selected,
+      characterId: character ?? progress.selectedCharacter,
+      rng: rng,
+    );
+    player.character = run!.character;
+    progress.noteRun(run!);
+    actionCds.fillRange(0, actionCds.length, 0);
+    actionReadyFlash.fillRange(0, actionReadyFlash.length, 0);
     newlyUnlocked = null;
     perfResult = null;
     godMode = benchmarkRunning = analysisRunning = false;
@@ -205,6 +231,12 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final boss = isBossWave(r.wave);
     worldW = worldWidth(r.wave);
     biome = biomeForWave(r.wave);
+    r.biome = biome;
+    timeSlowT = shieldT = stormT = slideT = flashT = freezeT = 0;
+    timeBubbleT = vacuumT = goldenT = hoardT = _boomT = _rocketT = 0;
+    _cometT = _bounceT = _magnetT = _strobeT = 0;
+    _drums = _strobes = 0;
+    lightShieldCd = 0;
     _puddles.setArenaWidth(worldW);
     goalX = boss ? null : worldW - kGoalInset;
     if (goalX != null) world.add(Goal(goalX!));
@@ -222,7 +254,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     banner = 2;
     winT = 0;
     shake = 0;
-    touchLeft = touchRight = touchFly = false;
+    touchLeft = touchRight = touchFly = touchDown = false;
     if (r.wave == kMaxWave) {
       final side = rng.nextBool() ? -500.0 : 500.0;
       world.add(
@@ -238,6 +270,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void nextWave() {
+    progress.noteRun(run!);
+    if (progress.seenDirty) progress.save();
     run!.wave++;
     startWave();
   }
@@ -245,7 +279,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   /// Ziel erreicht: Welle bestanden, Bonus für die Restzeit.
   void reachGoal() {
     final r = run!;
-    final bonus = (max(0.0, waveTime) / kGoalBonusSeconds).floor();
+    final bonus = (max(0.0, waveTime) / kGoalBonusSeconds).floor() * (r.has(ItemEffect.compass) ? 2 : 1);
     r.goalBonus = bonus;
     r.gain(bonus);
     endWave();
@@ -258,16 +292,22 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     for (final d in world.children.whereType<Drop>()) {
       if (d.material && !d.taken && d.pulled) r.gain(1);
     }
+    // Sparschwein: Zinsen
+    final interest = r.interest();
+    if (interest > 0) {
+      r.money += interest;
+      r.materialCollected += interest;
+    }
     for (final e in enemies) {
       if (!e.dead) burst(e.position, const Color(0xFFC77DFF), 8, 140);
     }
     for (final c in world.children
-        .where((c) => c is Enemy || c is EnemyBullet || c is Bullet || c is SpawnMarker || c is Drop)
+        .where((c) => c is Enemy || c is EnemyBullet || c is Bullet || c is SpawnMarker || c is Drop || c is CombatEffect)
         .toList()) {
       c.removeFromParent();
     }
     enemies.clear();
-    touchLeft = touchRight = touchFly = false;
+    touchLeft = touchRight = touchFly = touchDown = false;
     phase = Phase.cleared;
     clearT = kWaveClearDelay;
     _setOverlays([]);
@@ -295,7 +335,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void togglePause() {
     if (phase == Phase.play) {
       phase = Phase.paused;
-      touchLeft = touchRight = touchFly = false;
+      touchLeft = touchRight = touchFly = touchDown = false;
       _setOverlays(['pause']);
     } else if (phase == Phase.paused) {
       phase = Phase.play;
@@ -309,7 +349,18 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final r = run!;
     phase = Phase.over;
     won = win;
-    newlyUnlocked = progress.recordRun(difficulty: r.difficulty, wave: r.wave, won: win, kills: r.kills, level: r.level);
+    newlyUnlocked = progress.recordRun(
+      difficulty: r.difficulty,
+      wave: r.wave,
+      won: win,
+      kills: r.kills,
+      level: r.level,
+      character: r.character.id,
+      burnKills: r.burnKills,
+      material: r.materialCollected,
+    );
+    newCharacters = progress.checkUnlocks(r, won: win);
+    progress.noteRun(r);
     progress.save();
     _setOverlays([]);
     Future.delayed(Duration(milliseconds: win ? 0 : 700), () {
@@ -478,6 +529,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
     final r = run!;
     if (benchmarkRunning) _benchmarkTick(dt);
+    _tickActions(dt);
 
     banner = max(0.0, banner - dt);
     shake = max(0.0, shake - dt * 40);
@@ -548,7 +600,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (w >= 5) pool.add((EnemyType.rock, 2 + w * 0.3));
     final total = pool.fold(0.0, (a, b) => a + b.$2);
 
-    var n = 1 + (w / 2.5).floor() + (rng.nextDouble() < 0.4 ? 1 : 0);
+    var n = 1 + (w / 2.5).floor() + (rng.nextDouble() < 0.4 ? 1 : 0) + (w <= kEarlySpawnWaves ? kEarlySpawnBonus : 0);
     final cx = isBossWave(w) ? _bossWaveSpawnX() : _spawnXNearPlayer();
     while (n-- > 0) {
       var roll = rng.nextDouble() * total;
@@ -608,6 +660,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void addEnemy(EnemyType type, Vector2 pos) {
+    progress.seeEnemy(type);
     final e = Enemy(type, pos, run!.wave, run!.difficultyDef, rng);
     enemies.add(e);
     world.add(e);
@@ -639,9 +692,25 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   // ---------------- Kampf ----------------
 
-  void hurtPlayer(double amount) {
+  void hurtPlayer(double amount, {Enemy? source}) {
     final r = run;
     if (r == null || !playing || player.iframe > 0 || winT > 0 || godMode) return;
+    // Seifenblasenschild schluckt alles
+    if (shieldT > 0) return;
+    // Lichtschild: blockt alle 8 s einen Treffer
+    if (r.has(ItemEffect.lightShield) && lightShieldCd <= 0) {
+      lightShieldCd = 8;
+      player.iframe = 0.4;
+      floatText(player.position - Vector2(0, 20), 'Geblockt', Palette.sun, 14);
+      burst(player.position, Palette.sun, 10, 180);
+      return;
+    }
+    // Gummiente: 10 % der Treffer ignorieren
+    if (r.has(ItemEffect.duck) && rng.nextDouble() < 0.1) {
+      player.iframe = 0.3;
+      floatText(player.position - Vector2(0, 20), 'Quietsch!', const Color(0xFFFFE066), 14);
+      return;
+    }
     final a = r.stat(Stat.armor);
     final f = a >= 0 ? 15 / (15 + a) : 1 + (-a) / 15;
     final dmg = max(1, (amount * f).round());
@@ -650,7 +719,20 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     shake = 8;
     floatText(player.position, '-$dmg', Palette.coral, 17);
     burst(player.position, Palette.coral, 8);
+    // Dornenkleid: Berührungsschaden ×3 zurück
+    if (source != null && !source.dead && r.has(ItemEffect.thorns)) {
+      hurtEnemy(source, amount * 3, false, 0);
+    }
     if (r.hp <= 0) {
+      if (r.has(ItemEffect.phoenix) && !r.phoenixUsed) {
+        r.phoenixUsed = true;
+        r.hp = max(1, (r.maxHp * 0.3).roundToDouble());
+        player.iframe = 2;
+        shake = 14;
+        burst(player.position, const Color(0xFFFF9F1C), 40, 300);
+        floatText(player.position - Vector2(0, 30), 'PHÖNIX!', const Color(0xFFFFB347), 22);
+        return;
+      }
       r.hp = 0;
       endRun(false);
     }
@@ -663,32 +745,62 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     floatText(player.position - Vector2(0, 24), '+$n', Palette.mint, 15);
   }
 
+  /// Herz eingesammelt (Rabe Ruß heilt nur halb).
+  void healHeart() => heal(max(1, (3 * run!.character.heartMul).round()));
+
   void gain(int v) {
+    if (goldenT > 0) v *= 2;
+    if (hoardT > 0 && rng.nextDouble() < 0.2) v *= 2;
     if (run!.gain(v)) {
       floatText(player.position - Vector2(0, 40), 'LEVEL UP', Palette.sun, 18);
     }
   }
 
-  void hurtEnemy(Enemy e, double dmg, bool crit, double knock) {
+  /// Geschenk der Elster: ein zufälliges gewöhnliches oder seltenes Werte-Item.
+  void giveGift() {
+    final r = run!;
+    final pool = itemDefs
+        .where((it) => it.effect == ItemEffect.none && it.rarity.index <= Rarity.rare.index && it.mods.isNotEmpty)
+        .toList();
+    final it = pool[rng.nextInt(pool.length)];
+    r.applyMods(it.mods);
+    r.items[it.id] = (r.items[it.id] ?? 0) + 1;
+    floatText(player.position - Vector2(0, 44), '${it.icon} ${it.name}', const Color(0xFF9FD4FF), 15);
+  }
+
+  /// Schaden an einem Gegner. [fx]: Treffereffekte der Waffe, [cls]: Klasse (Brennglas),
+  /// [dot]: Schaden über Zeit (ohne Rückstoß, Lebensraub und Effekte).
+  void hurtEnemy(Enemy e, double dmg, bool crit, double knock, {bool dot = false, WeaponStats? fx, WeaponClass? cls}) {
     if (e.dead) return;
+    final r = run!;
+    if (e.cursed) dmg *= 1 + r.curseBonus;
     e.hp -= dmg;
-    e.flash = 0.08;
-    if (e.type != EnemyType.boss) e.position.x += knock;
+    if (!dot) {
+      e.flash = 0.08;
+      if (!e.boss) e.position.x += knock;
+    }
     floatText(
       Vector2(e.x, e.y - e.r),
       '${dmg.round()}',
-      crit ? Palette.sun : const Color(0xFFFFFFFF),
-      crit ? 18 : 14,
+      dot ? const Color(0xFFFFB37A) : (crit ? Palette.sun : const Color(0xFFFFFFFF)),
+      dot ? 11 : (crit ? 18 : 14),
     );
-    final ls = run!.stat(Stat.lifesteal);
-    if (ls > 0 && rng.nextDouble() * 100 < ls) heal(1);
+    if (!dot) {
+      final ls = r.stat(Stat.lifesteal) + (fx?.lifesteal ?? 0);
+      if (ls > 0 && rng.nextDouble() * 100 < ls) heal(1);
+      if (fx != null) e.applyEffects(fx);
+      if (crit && cls == WeaponClass.light && r.has(ItemEffect.burningGlass)) e.ignite(2, dmg * 0.3);
+      if (crit && r.has(ItemEffect.stardust)) explode(e.position.clone(), 36, dmg * 0.4, false);
+    }
     if (e.hp <= 0) killEnemy(e);
   }
 
   void killEnemy(Enemy e) {
     e.dead = true;
     e.removeFromParent();
-    run!.kills++;
+    final r = run!;
+    r.kills++;
+    if (e.burnT > 0) r.burnKills++;
     if (e.type == EnemyType.boss) {
       burst(e.position, Palette.sun, 60, 320);
       shake = 20;
@@ -699,32 +811,427 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         o.removeFromParent();
         burst(o.position, const Color(0xFFC77DFF), 6);
       }
-      for (final c
-          in world.children
-              .where((c) => c is EnemyBullet || c is SpawnMarker)
-              .toList()) {
+      for (final c in world.children.where((c) => c is EnemyBullet || c is SpawnMarker || c is CombatEffect).toList()) {
         c.removeFromParent();
       }
       return;
     }
     burst(e.position, const Color(0xFFC77DFF), 12, 170);
-    for (var i = 0; i < enemyDefs[e.type]!.drop; i++) {
-      world.add(
-        Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng, fallSpeed: run!.difficultyDef.dropFallSpeed),
-      );
+    final fall = r.difficultyDef.dropFallSpeed;
+    // Goldgier: 15 % doppelte Drops
+    final times = r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1;
+    for (var i = 0; i < enemyDefs[e.type]!.drop * times; i++) {
+      world.add(Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng, fallSpeed: fall));
     }
     if (rng.nextDouble() < 0.04) {
-      world.add(Drop(e.position.clone(), material: false, rng: rng, fallSpeed: run!.difficultyDef.dropFallSpeed));
+      world.add(Drop(e.position.clone(), material: false, rng: rng, fallSpeed: fall));
+    }
+    // Elster: manchmal ein Geschenk
+    if (r.character.giftChance > 0 && rng.nextDouble() < r.character.giftChance) {
+      world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
     }
   }
 
-  void explode(Vector2 at, double radius, double dmg, bool crit) {
+  void explode(Vector2 at, double radius, double dmg, bool crit, {WeaponStats? fx, Color color = const Color(0xFFFF9F1C)}) {
     shake = max(shake, 5);
-    burst(at, const Color(0xFFFF9F1C), 18, 220);
-    world.add(Ring(at.clone(), radius));
-    for (final e in enemies) {
+    burst(at, color, 18, 220);
+    world.add(Ring(at.clone(), radius, color: color));
+    for (final e in [...enemies]) {
       if (!e.dead && e.position.distanceTo(at) < radius + e.r) {
-        hurtEnemy(e, dmg, crit, 0);
+        hurtEnemy(e, dmg, crit, 0, fx: fx);
+      }
+    }
+  }
+
+  // ---------------- Aktionstasten ----------------
+
+  /// Abklingzeit je Aktionsplatz.
+  final actionCds = List<double>.filled(kActionSlots, 0);
+
+  /// Restzeit der „Bereit!“-Einblendung je Aktionsplatz (HUD-Puls, Ring am Vogel).
+  final actionReadyFlash = List<double>.filled(kActionSlots, 0);
+  static const actionReadyFlashTime = 0.8;
+
+  /// Zeitlupe, Seifenblasenschild, Gewitter, Bauchrutscher, Lichtblitz-Einblendung, Schnappschuss,
+  /// Zeitblase, Staubsauger, Goldene Stunde, Elsterschatz.
+  double timeSlowT = 0, shieldT = 0, stormT = 0, slideT = 0, flashT = 0, freezeT = 0;
+  double timeBubbleT = 0, vacuumT = 0, goldenT = 0, hoardT = 0;
+  double lightShieldCd = 0, _stormTick = 0, _boomT = 0, _rocketT = 0, _drumT = 0, _actionPower = 1;
+  int _drums = 0;
+
+  /// Gewitter-Parameter (Gewitterwolke, Gewitterblase, Ewiges Gewitter).
+  double _stormEvery = 0.25, _stormRadius = 460;
+
+  /// Kometenschweif, Prallblase, Elektromagnet, Stroboskop.
+  double _cometT = 0, _bounceT = 0, _magnetT = 0, _magnetTick = 0, _strobeT = 0;
+  int _strobes = 0;
+  bool _slideTrap = false;
+  final _bounceCd = <Enemy, double>{};
+  final _slideHit = <Enemy>{};
+
+  bool actionReady(int slot) {
+    final r = run;
+    return r != null && slot < r.actions.length && actionCds[slot] <= 0;
+  }
+
+  /// Schadensbasis für Aktionen (wächst mit Welle und Schaden %).
+  double get actionDamage {
+    final r = run!;
+    return (8 + 2.5 * r.wave) * (1 + r.stat(Stat.dmg) / 100) * r.worldDamageMul(raining: weather.isRaining);
+  }
+
+  bool _inView(double x) => x > camX - 40 && x < camX + viewW + 40;
+
+  void _pullDrops({bool all = false, bool onlyMaterial = false}) {
+    for (final d in world.children.whereType<Drop>()) {
+      if ((all || _inView(d.x)) && (!onlyMaterial || d.material)) d.pull();
+    }
+  }
+
+  /// Stößt Gegner im Umkreis weg; sie fliehen [fear] Sekunden.
+  void _pushAway(Vector2 from, double radius, double fear, {double dmg = 0, Color color = const Color(0xFFFFE6A0)}) {
+    world.add(Ring(from.clone(), radius, color: color));
+    for (final e in [...enemies]) {
+      if (e.dead) continue;
+      final d = e.position - from;
+      if (d.length > radius + e.r) continue;
+      e.fearT = max(e.fearT, fear);
+      if (!e.boss) e.vel.setFrom((d.length < 1 ? Vector2(1, 0) : d.normalized())..scale(520));
+      if (dmg > 0) hurtEnemy(e, dmg, false, 0);
+    }
+  }
+
+  /// Betäubt Gegner im Umkreis und schadet ihnen (Trommelwirbel).
+  void _shockwave(Vector2 at, double radius, double stun, double dmg) {
+    world.add(Ring(at.clone(), radius, color: const Color(0xFFFFB37A)));
+    shake = max(shake, 6);
+    for (final e in [...enemies]) {
+      if (!e.dead && e.position.distanceTo(at) < radius + e.r) {
+        e.stun(stun);
+        hurtEnemy(e, dmg, false, 0);
+      }
+    }
+  }
+
+  /// Blitze in bis zu [n] zufällige Gegner im Umkreis.
+  void lightningAround(Vector2 at, double radius, int n, double dmg) {
+    final near = enemies.where((e) => !e.dead && e.position.distanceTo(at) < radius).toList()..shuffle(rng);
+    for (final e in near.take(n)) {
+      world.add(Lightning(e.position.clone()));
+      hurtEnemy(e, dmg, false, 0);
+      e.stun(0.3);
+    }
+  }
+
+  /// Kettenblitz: springt von Gegner zu Gegner (höchstens [jumps], je Sprung bis 170 weit).
+  void _chainLightning(Vector2 from, int jumps, double dmg) {
+    var at = from;
+    final hit = <Enemy>{};
+    for (var i = 0; i < jumps; i++) {
+      Enemy? next;
+      var best = 170.0 * 170;
+      for (final e in enemies) {
+        if (e.dead || hit.contains(e)) continue;
+        final d2 = e.position.distanceToSquared(at);
+        if (d2 < best) {
+          best = d2;
+          next = e;
+        }
+      }
+      if (next == null) break;
+      hit.add(next);
+      world.add(Lightning(next.position.clone()));
+      hurtEnemy(next, dmg, false, 0);
+      next.stun(0.4);
+      at = next.position.clone();
+    }
+  }
+
+  void useAction([int slot = 0]) {
+    final r = run;
+    if (r == null || !playing || !actionReady(slot)) return;
+    final act = r.actions[slot];
+    actionCds[slot] = act.cooldown;
+    final pw = act.power;
+    _actionPower = pw;
+    final p = player.position;
+    final base = actionDamage * pw;
+    switch (act.id) {
+      case ActionId.dash:
+        player.dash(0.22 * pw);
+      case ActionId.horn:
+        _pushAway(p, 240 * (pw > 1 ? 1.3 : 1), 2 * pw);
+      case ActionId.bubbleShield:
+        shieldT = 2 * pw;
+      case ActionId.flash:
+        flashT = 0.35;
+        for (final e in enemies) {
+          if (_inView(e.x)) e.stun(1.5 * pw);
+        }
+      case ActionId.storm:
+        _startStorm(3 * pw);
+      case ActionId.magnet:
+        _pullDrops(all: pw > 1, onlyMaterial: true);
+      case ActionId.clock:
+        timeSlowT = 3 * pw;
+      case ActionId.bellySlide:
+        slideT = 0.7;
+        _slideTrap = false;
+        _slideHit.clear();
+        player.slide();
+      case ActionId.drumroll:
+        _shockwave(p, 200 * (pw > 1 ? 1.3 : 1), 1.6, base * 0.5);
+      case ActionId.steal:
+        _pullDrops(all: pw > 1);
+        burst(p, const Color(0xFF9FD4FF), 14, 220);
+      case ActionId.egg:
+        world.add(Egg(p.clone(), player.face, base * 1.6));
+      // ---- Evolutionen
+      case ActionId.sonicBoom:
+        player.dash(0.26);
+        _boomT = 0.26;
+      case ActionId.bubbleRocket:
+        player.dash(0.35, 820);
+        shieldT = max(shieldT, 0.6);
+        _rocketT = 0.35;
+      case ActionId.sunStorm:
+        flashT = 0.35;
+        for (final e in [...enemies]) {
+          if (e.dead || !_inView(e.x)) continue;
+          e.stun(1.5);
+          world.add(Lightning(e.position.clone()));
+          hurtEnemy(e, base * 1.5, false, 0);
+        }
+      case ActionId.snapshot:
+        flashT = 0.25;
+        freezeT = 2;
+        for (final e in enemies) {
+          if (_inView(e.x)) e.stun(2);
+        }
+      case ActionId.timeBubble:
+        timeBubbleT = 3;
+        shieldT = max(shieldT, 3);
+      case ActionId.vacuum:
+        vacuumT = 0.7;
+        _pullDrops();
+      case ActionId.goldenHour:
+        goldenT = 5;
+        _pullDrops(onlyMaterial: true);
+        floatText(p - Vector2(0, 30), 'GOLDENE STUNDE', Palette.sun, 16);
+      case ActionId.thunderHorn:
+        _pushAway(p, 240, 2, color: const Color(0xFFBFE0FF));
+        _chainLightning(p, 7, base);
+      case ActionId.stormEgg:
+        world.add(Egg(p.clone(), player.face, base * 1.6, storm: true));
+      case ActionId.torpedo:
+        player.dash(0.8, 700);
+        slideT = 0.8;
+        _slideTrap = false;
+        _slideHit.clear();
+      case ActionId.drumSolo:
+        _drums = 3;
+        _drumT = 0;
+      case ActionId.magpieHoard:
+        _pullDrops();
+        hoardT = 5;
+        burst(p, const Color(0xFF9FD4FF), 20, 260);
+      case ActionId.comet:
+        player.dash(0.3, 820);
+        _cometT = 0.3;
+        _slideHit.clear();
+      case ActionId.timeJump:
+        player.dash(0.3, 820);
+        timeSlowT = max(timeSlowT, 2.5);
+      case ActionId.bounceBubble:
+        shieldT = max(shieldT, 3);
+        _bounceT = 3;
+        _bounceCd.clear();
+      case ActionId.fanfare:
+        flashT = 0.35;
+        world.add(Ring(p.clone(), 260, color: const Color(0xFFFFE6A0)));
+        for (final e in enemies) {
+          if (!_inView(e.x)) continue;
+          e.stun(2);
+          e.fearT = max(e.fearT, 5);
+        }
+      case ActionId.stormBubble:
+        shieldT = max(shieldT, 3);
+        _startStorm(3, every: 0.4, radius: 260);
+      case ActionId.bubbleTrap:
+        world.add(Ring(p.clone(), 260, color: const Color(0xFFBFF0FF)));
+        for (final e in enemies) {
+          if (!e.dead && e.position.distanceTo(p) < 260 + e.r) {
+            e.applyEffects(const WeaponStats(dmg: 0, cooldown: 1, range: 0, trap: 2.5));
+          }
+        }
+        _pullDrops(onlyMaterial: true);
+      case ActionId.electroMagnet:
+        _magnetT = 1.2;
+        _magnetTick = 0;
+      case ActionId.endlessStorm:
+        _startStorm(6);
+        timeSlowT = max(timeSlowT, 3);
+      case ActionId.goldenEgg:
+        world.add(Egg(p.clone(), player.face, base * 1.6, gold: true));
+      case ActionId.sledRide:
+        player.slide(1.2);
+        slideT = 1.2;
+        shieldT = max(shieldT, 1.2);
+        _slideTrap = true;
+        _slideHit.clear();
+      case ActionId.strobe:
+        _strobes = 3;
+        _strobeT = 0;
+      case ActionId.pickpocket:
+        _pullDrops();
+        timeSlowT = max(timeSlowT, 4);
+        burst(p, const Color(0xFF9FD4FF), 16, 240);
+    }
+  }
+
+  void _startStorm(double time, {double every = 0.25, double radius = 460}) {
+    stormT = time;
+    _stormTick = 0;
+    _stormEvery = every;
+    _stormRadius = radius;
+  }
+
+  /// Laufende Aktionen und Item-Timer pro Frame.
+  void _tickActions(double dt) {
+    for (var i = 0; i < actionCds.length; i++) {
+      final was = actionCds[i];
+      actionCds[i] = max(0.0, was - dt);
+      actionReadyFlash[i] = max(0.0, actionReadyFlash[i] - dt);
+      // Gerade wieder bereit: kurz und deutlich zeigen
+      if (was > 0 && actionCds[i] == 0 && i < (run?.actions.length ?? 0)) {
+        actionReadyFlash[i] = actionReadyFlashTime;
+        final col = run!.actions[i].id.evolved ? const Color(0xFFFFC94A) : Palette.sun;
+        world.add(Ring(player.position.clone(), player.r + 26, color: col));
+        burst(player.position, col, 10, 120);
+      }
+    }
+    timeSlowT = max(0.0, timeSlowT - dt);
+    shieldT = max(0.0, shieldT - dt);
+    flashT = max(0.0, flashT - dt);
+    freezeT = max(0.0, freezeT - dt);
+    goldenT = max(0.0, goldenT - dt);
+    hoardT = max(0.0, hoardT - dt);
+    lightShieldCd = max(0.0, lightShieldCd - dt);
+    final p = player.position;
+    if (stormT > 0) {
+      stormT -= dt;
+      _stormTick -= dt;
+      if (_stormTick <= 0) {
+        _stormTick = _stormEvery;
+        lightningAround(p, _stormRadius, 1, actionDamage * _actionPower);
+      }
+    }
+    if (slideT > 0) {
+      slideT -= dt;
+      for (final e in [...enemies]) {
+        if (e.dead || _slideHit.contains(e)) continue;
+        if (e.position.distanceTo(p) < e.r + player.r + 10) {
+          _slideHit.add(e);
+          hurtEnemy(e, actionDamage * 0.8 * _actionPower, false, player.face * 30);
+          if (_slideTrap) {
+            e.applyEffects(const WeaponStats(dmg: 0, cooldown: 1, range: 0, trap: 2));
+          } else {
+            e.stun(0.8);
+          }
+        }
+      }
+    }
+    if (_boomT > 0) {
+      _boomT -= dt;
+      if (_boomT <= 0) {
+        shake = max(shake, 8);
+        _pushAway(p, 170, 1.5, dmg: actionDamage * 1.2, color: const Color(0xFFFFF0B8));
+      }
+    }
+    if (_rocketT > 0) {
+      _rocketT -= dt;
+      for (final e in enemies) {
+        if (!e.dead && e.position.distanceTo(p) < e.r + player.r + 24) {
+          e.applyEffects(const WeaponStats(dmg: 0, cooldown: 1, range: 0, trap: 2.5));
+        }
+      }
+    }
+    if (timeBubbleT > 0) {
+      timeBubbleT -= dt;
+      for (final e in enemies) {
+        if (!e.dead && e.position.distanceTo(p) < 150 + e.r) e.stun(0.2);
+      }
+    }
+    if (vacuumT > 0) {
+      vacuumT -= dt;
+      for (final e in enemies) {
+        if (e.dead || e.boss) continue;
+        final d = p - e.position;
+        final len = d.length;
+        if (len < 340 && len > player.r + e.r + 6) e.position.addScaled(d / len, 420 * dt);
+      }
+      if (vacuumT <= 0) {
+        shake = max(shake, 9);
+        _pushAway(p, 190, 1.5, dmg: actionDamage * 1.5, color: const Color(0xFFCFFFF0));
+      }
+    }
+    if (_cometT > 0) {
+      _cometT -= dt;
+      for (final e in [...enemies]) {
+        if (e.dead || _slideHit.contains(e) || e.position.distanceTo(p) > e.r + player.r + 26) continue;
+        _slideHit.add(e);
+        burst(e.position, const Color(0xFFFFF0B8), 8, 160);
+        hurtEnemy(e, actionDamage, false, player.face * 20);
+        e.stun(1.2);
+      }
+    }
+    if (_bounceT > 0) {
+      _bounceT -= dt;
+      _bounceCd.updateAll((_, v) => v - dt);
+      _bounceCd.removeWhere((e, v) => v <= 0 || e.dead);
+      for (final e in [...enemies]) {
+        if (e.dead || _bounceCd.containsKey(e)) continue;
+        final d = e.position - p;
+        if (d.length > e.r + player.r + 30) continue;
+        _bounceCd[e] = 0.6;
+        if (!e.boss) e.vel.setFrom((d.length < 1 ? Vector2(1, 0) : d.normalized())..scale(600));
+        e.fearT = max(e.fearT, 0.6);
+        hurtEnemy(e, actionDamage * 0.5, false, 0);
+      }
+    }
+    if (_magnetT > 0) {
+      _magnetT -= dt;
+      _magnetTick -= dt;
+      for (final e in enemies) {
+        if (e.dead || e.boss) continue;
+        final d = p - e.position;
+        final len = d.length;
+        if (len < 340 && len > player.r + e.r + 20) e.position.addScaled(d / len, 380 * dt);
+      }
+      if (_magnetTick <= 0) {
+        _magnetTick = 0.25;
+        lightningAround(p, 220, 1, actionDamage * 0.8);
+      }
+    }
+    if (_strobes > 0) {
+      _strobeT -= dt;
+      if (_strobeT <= 0) {
+        _strobes--;
+        _strobeT = 0.45;
+        flashT = 0.2;
+        for (final e in [...enemies]) {
+          if (e.dead || !_inView(e.x)) continue;
+          e.stun(0.8);
+          hurtEnemy(e, actionDamage * 0.4, false, 0);
+        }
+      }
+    }
+    if (_drums > 0) {
+      _drumT -= dt;
+      if (_drumT <= 0) {
+        _drums--;
+        _drumT = 0.4;
+        _shockwave(p, 210, 1.2, actionDamage * 0.5);
       }
     }
   }
@@ -738,6 +1245,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void floatText(Vector2 at, String text, Color color, double fontSize) {
     if (floatTextCount >= maxFloatTexts) return;
+    floatTextCount++; // sofort zählen, damit mehrere Zahlen im selben Frame die Grenze nicht überspringen
     world.add(FloatText(at.clone()..x += rnd(-6, 6), text, color, fontSize));
   }
 
@@ -747,7 +1255,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   /// sechs Stufe-IV-Waffen, Stufe Phönix, Held unverwundbar. Nach einer Aufwärmphase
   /// wird [benchmarkSeconds] lang gemessen.
   void startBenchmark() {
-    startRun('smg', difficulty: kDifficultyCount);
+    startRun('smg', kDifficultyCount);
     final r = run!;
     r.wave = 12;
     r.weapons.first.tier = 3;
@@ -859,14 +1367,18 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     KeyEvent event,
     Set<LogicalKeyboardKey> keysPressed,
   ) {
-    bool has(LogicalKeyboardKey k) => keysPressed.contains(k);
-    keyLeft = has(LogicalKeyboardKey.keyA) || has(LogicalKeyboardKey.arrowLeft);
-    keyRight =
-        has(LogicalKeyboardKey.keyD) || has(LogicalKeyboardKey.arrowRight);
-    keyFly =
-        has(LogicalKeyboardKey.space) ||
-        has(LogicalKeyboardKey.keyW) ||
-        has(LogicalKeyboardKey.arrowUp);
+    if (inputCapture) return KeyEventResult.handled;
+    // Tastatur benutzt: Controller-Hinweise wieder ausblenden
+    if (event is KeyDownEvent && pad.used) pad.used = false;
+    final b = settings.bindings;
+    keyLeft = b.keyHeld(InputAction.left, keysPressed);
+    keyRight = b.keyHeld(InputAction.right, keysPressed);
+    keyFly = b.keyHeld(InputAction.fly, keysPressed);
+    keyDown = b.keyHeld(InputAction.down, keysPressed);
+    if (playing && event is KeyDownEvent) {
+      if (b.keyMatches(InputAction.action1, event.logicalKey)) useAction(0);
+      if (b.keyMatches(InputAction.action2, event.logicalKey)) useAction(1);
+    }
     // Menüs: Pfeile/Tab holen den Fokus auf den ersten Button,
     // danach übernimmt Flutters Fokus-Navigation (Pfeile, Tab, Enter).
     if (!playing &&
@@ -875,9 +1387,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       _focusFirstMenuItem();
       return KeyEventResult.handled;
     }
+    // Pause: belegte Taste; Esc immer (Pause bzw. zurück im Menü)
     if (event is KeyDownEvent &&
-        (event.logicalKey == LogicalKeyboardKey.keyP ||
-            event.logicalKey == LogicalKeyboardKey.escape)) {
+        (b.keyMatches(InputAction.pause, event.logicalKey) || event.logicalKey == LogicalKeyboardKey.escape)) {
       if (phase == Phase.menu) {
         menuBack?.call();
       } else {

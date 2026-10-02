@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:gamepads/gamepads.dart';
+
+import '../game/gamepad_input.dart' show controllerActive;
+import '../game/input_bindings.dart' show padLabel;
 
 import '../game/config.dart';
 
@@ -98,8 +102,21 @@ class UiScale extends StatelessWidget {
 
 /// Abgedunkelter Hintergrund + zentriertes, scrollbares Glas-Panel.
 class Panel extends StatelessWidget {
-  const Panel({super.key, required this.child, this.maxWidth = 560, this.padding = const EdgeInsets.all(20)});
+  const Panel({
+    super.key,
+    required this.child,
+    this.maxWidth = 560,
+    this.padding = const EdgeInsets.all(20),
+    this.footer,
+    this.hints = const [],
+  });
   final Widget child;
+
+  /// Controller-Hinweise unten im Panel (nur sichtbar, wenn mit Controller gespielt wird).
+  final List<PadHint> hints;
+
+  /// Feste Leiste unter dem Scrollbereich (z. B. „Welle starten“), immer sichtbar.
+  final Widget? footer;
   final double maxWidth;
   final EdgeInsets padding;
 
@@ -135,10 +152,39 @@ class Panel extends StatelessWidget {
                         stops: [0, 0.4],
                       ),
                     ),
-                    child: SingleChildScrollView(
-                      padding: padding,
-                      child: DefaultTextStyle.merge(style: bodyText(14), child: child),
-                    ),
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      Flexible(
+                        child: SingleChildScrollView(
+                          padding: padding,
+                          child: DefaultTextStyle.merge(style: bodyText(14), child: child),
+                        ),
+                      ),
+                      if (footer != null)
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.fromLTRB(padding.left, 8, padding.right, 6),
+                          decoration: const BoxDecoration(
+                            color: Color(0x660A0F24),
+                            border: Border(top: BorderSide(color: Ui.panelLine, width: 1.2)),
+                          ),
+                          child: footer,
+                        ),
+                      if (hints.isNotEmpty)
+                        ValueListenableBuilder<bool>(
+                          valueListenable: controllerActive,
+                          builder: (context, on, _) => !on
+                              ? const SizedBox.shrink()
+                              : Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.fromLTRB(padding.left, 6, padding.right, 8),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0x660A0F24),
+                                    border: Border(top: BorderSide(color: Ui.panelLine, width: 1.2)),
+                                  ),
+                                  child: ControllerHints(hints),
+                                ),
+                        ),
+                    ]),
                   ),
                 ),
               ),
@@ -587,4 +633,116 @@ class StatTile extends StatelessWidget {
       ]),
     );
   }
+}
+
+// ---------------- Controller-Hinweise ----------------
+
+/// Controller-Knopf in Xbox-Farben (A grün, B rot, X blau, Y gelb), Schultertasten als Kapsel.
+class PadGlyph extends StatelessWidget {
+  const PadGlyph(this.button, {super.key});
+  final GamepadButton button;
+
+  static Color? _face(GamepadButton b) => switch (b) {
+        GamepadButton.a => const Color(0xFF5DBB63),
+        GamepadButton.b => const Color(0xFFE05252),
+        GamepadButton.x => const Color(0xFF3D8BFF),
+        GamepadButton.y => const Color(0xFFF2C230),
+        _ => null,
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final face = _face(button);
+    if (face != null) {
+      return Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF14182A),
+          border: Border.all(color: face, width: 2),
+          boxShadow: [BoxShadow(color: face.withAlpha(90), blurRadius: 8)],
+        ),
+        child: Text(padLabel(button), style: bodyText(12, color: face, weight: 900)),
+      );
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: const Color(0xFF14182A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Ui.edge, width: 1.2),
+      ),
+      child: Text(padLabel(button), style: bodyText(12, color: Ui.cardText, weight: 900)),
+    );
+  }
+}
+
+/// Linker Stick als Symbol.
+class StickGlyph extends StatelessWidget {
+  const StickGlyph({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: const Color(0xFF14182A),
+          border: Border.all(color: Ui.edge, width: 2),
+        ),
+        child: Text('L', style: bodyText(11, color: Ui.cardText, weight: 900)),
+      );
+}
+
+/// Hinweis: Knopf (null = Steuerkreuz/Stick) und was er tut.
+typedef PadHint = (GamepadButton?, String);
+
+/// Zeile mit Knopf-Hinweisen; nur sichtbar, solange mit Controller gespielt wird.
+class ControllerHints extends StatelessWidget {
+  const ControllerHints(this.hints, {super.key, this.center = true});
+  final List<PadHint> hints;
+  final bool center;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: controllerActive,
+        builder: (context, on, _) {
+          if (!on || hints.isEmpty) return const SizedBox.shrink();
+          return Wrap(
+            alignment: center ? WrapAlignment.center : WrapAlignment.end,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 14,
+            runSpacing: 4,
+            children: [
+              for (final (b, label) in hints)
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  b == null ? const DpadGlyph() : PadGlyph(b),
+                  const SizedBox(width: 6),
+                  Text(label, style: bodyText(12, color: Ui.muted, weight: 800)),
+                ]),
+            ],
+          );
+        },
+      );
+}
+
+/// Steuerkreuz als Symbol (Navigation).
+class DpadGlyph extends StatelessWidget {
+  const DpadGlyph({super.key});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        width: 24,
+        height: 24,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: const Color(0xFF14182A),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Ui.edge, width: 1.2),
+        ),
+        child: Text('✚', style: bodyText(13, color: Ui.cardText, weight: 900)),
+      );
 }
