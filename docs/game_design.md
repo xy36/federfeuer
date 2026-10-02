@@ -529,7 +529,7 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
  
 Phasen: `menu → play → cleared → levelUp → shop → play … → over`; `cleared` ist die kurze Einblendung nach einer Welle. Außerhalb von `play` läuft die Engine mit dt = 0 weiter, damit Entfernen/Hinzufügen von Komponenten verarbeitet wird, ohne dass sich etwas bewegt. Temporäre Komponenten tragen das Mixin `Transient` und werden beim Wellenwechsel gesammelt entfernt; Kampf-Effekte (`CombatEffect`) verschwinden schon am Wellenende bzw. beim Tod des Bosses.
 
-Debug-Werkzeuge (in Debug-Builds oder mit `--dart-define=FEDERFEUER_DEBUG=true`):
+Debug-Werkzeuge (in Debug-Builds oder mit `--dart-define=FEDERFEUER_DEBUG=true`; die Web-Version auf GitHub Pages wird als Testversion damit gebaut):
 
 - **Tasten 1 / 2 / 3:** Wetter Klar / Wind / Regen.
 - **F3:** FPS-Anzeige oben rechts (für alle Spieler auch über Einstellungen → FPS-Anzeige) – FPS, schlechteste Frame-Zeit der letzten 120 Frames, Build- und Raster-Zeit der Engine, Anzahl Gegner, Kugeln und Komponenten.
