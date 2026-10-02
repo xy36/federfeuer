@@ -114,7 +114,7 @@ class SpawnMarker extends PositionComponent with HasGameReference<FederfeuerGame
     if (!game.playing) return;
     t -= dt;
     if (t <= 0) {
-      game.addEnemy(type, position.clone());
+      game.spawnEnemy(type, position.clone());
       removeFromParent();
     }
   }

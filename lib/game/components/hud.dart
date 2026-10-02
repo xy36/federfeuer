@@ -85,6 +85,11 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       if (boss != null) {
         final bw = min(320.0, s.x * 0.5);
         _capsule(c, Rect.fromLTWH(cx - bw / 2, 38, bw, 10), boss.hp / boss.maxHp, _boss);
+        // Phasengrenzen bei 66 % und 33 %
+        for (final f in [0.33, 0.66]) {
+          drawRect(c, cx - bw / 2 + bw * f - 1, 36, 2, 14, const Color(0xCCFFFFFF));
+        }
+        OutlineText.draw(c, 'PHASE ${boss.bossPhase}', Offset(cx + bw / 2 + 34, 43), size: 11, color: _boss, display: false);
       }
     } else {
       OutlineText.draw(c, 'WELLE ${r.wave}', Offset(cx, 18), size: 12, color: _muted);
@@ -93,6 +98,13 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
           size: 30, color: low ? _hp : const Color(0xFFFFE6A0), display: false);
       final goal = g.goalX;
       if (goal != null) _drawProgress(c, cx, 72, min(220.0, s.x * 0.34), g.player.x / goal);
+      // Torwächter: Name und HP-Kapsel unter der Strecke
+      final gate = g.gate;
+      if (gate != null && !gate.dead) {
+        final bw = min(260.0, s.x * 0.4);
+        OutlineText.draw(c, gate.type.label.toUpperCase(), Offset(cx, 112), size: 12, color: _boss);
+        _capsule(c, Rect.fromLTWH(cx - bw / 2, 122, bw, 9), gate.hp / gate.maxHp, _boss);
+      }
     }
 
     // Wetteranzeige unter Timer bzw. Boss-Leiste
@@ -108,6 +120,15 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       final bonus = r.goalBonus;
       OutlineText.draw(c, bonus != null ? 'Ziel erreicht · +$bonus Zeitbonus' : 'Zeit abgelaufen',
           Offset(cx, s.y * 0.42 + big * 0.95), size: small, color: bonus != null ? Palette.mint : _xp, display: false);
+    }
+
+    // Torwächter erscheint: großer Name in der Bildmitte
+    final gate = g.gate;
+    if (g.gateBanner > 0 && g.banner <= 0 && gate != null && g.playing) {
+      final a = clampD(g.gateBanner, 0, 1);
+      OutlineText.draw(c, 'TORWÄCHTER', Offset(cx, s.y * 0.36), size: small, color: _boss.withValues(alpha: (a * 10).round() / 10));
+      OutlineText.draw(c, gate.type.label.toUpperCase(), Offset(cx, s.y * 0.36 + big * 0.95),
+          size: big, color: _boss.withValues(alpha: (a * 10).round() / 10));
     }
 
     if (g.banner > 0 && g.playing) {

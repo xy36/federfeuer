@@ -84,7 +84,7 @@ Stil der Spielwelt: leuchtend und geschichtet, angelehnt an die Stimmung von „
 Figuren und Effekte:
 
 - **Held:** Lichtkern mit weichem Verlauf in den Farben des Vogels, durchscheinende Lichtflügel, die beim Flügelschlag aufleuchten, Lichtschweif aus den letzten Positionen (Glutkehlchen mit Funken, beim Sturzflug länger und heller), Aura in der Leuchtfarbe des Vogels; er erhellt den Boden unter sich (je höher, desto schwächer). Jede Vogelart hat eigene Merkmale: Fliegerbrille (Kampfspatz), Gabelschwanz (Schwalbe), langer Schnabel (Kolibri, Specht), violette Augen (Rabe), aufrechter Körper (Pinguin), rote Haube (Specht), Federohren und große Augen (Eule), langer Schwanz (Elster), Kamm und Kehllappen (Huhn). Ein aktiver Seifenblasenschild liegt als leuchtende Blase um ihn.
-- **Gegner:** fast schwarze „Fäulnis“-Kreaturen mit violetter Aura und glühenden Augen; Krähe mit zerfransten Flügeln, Käfer mit glühenden Panzerrissen, Spucker mit grün pulsierendem Giftsack, Brocken mit Glutadern (HP-Leiste als Glutstreifen), Geierkönig mit Krone aus magentafarbenen Lichtsplittern und pulsierender Aura. Bei Treffern blitzen die Körper hell auf; beim Tod zerfallen sie in violette Funken.
+- **Gegner:** fast schwarze „Fäulnis“-Kreaturen mit violetter Aura und glühenden Augen; Krähe mit zerfransten Flügeln, Käfer mit glühenden Panzerrissen, Spucker mit grün pulsierendem Giftsack, Brocken mit Glutadern (HP-Leiste als Glutstreifen), Pusteling als stachlige Pollenkugel mit grünem Kern, Vogelscheuche mit Strohhut und Glutaugen, Fledermaus mit schnellen Flügeln, Wetterhahn auf einer Stange mit goldenem Zeigerpfeil, Spinne an einem feinen Faden mit vier roten Augen, Irrlicht als flackernder blasser Lichtkern, Felsadler mit eingeklappten Flügeln im Sturzflug, Lawinenkäfer als Panzer oder rollende Kugel mit Streifen; Torwächter: Strohkönig mit glühendem Kürbisgesicht und Strohkrone, Glocke an einer Kette mit glühenden Rissen und schwingendem Klöppel, Spinnenmutter mit sechs Augen und schimmerndem Eiersack; Geierkönig mit Krone aus magentafarbenen Lichtsplittern und pulsierender Aura. Giftwolken leuchten grün, Netze kleben sichtbar am Vogel. Bei Treffern blitzen die Körper hell auf; beim Tod zerfallen sie in violette Funken.
 - **Waffen & Kugeln:** Waffen schweben als Lichtsplitter in Stufenfarbe und zeigen aufs Ziel, mit Mündungsblitz beim Schuss; die Diskokugel ist eine funkelnde Kugel, der Federwirbel zeigt nur seine kreisenden Federklingen. Eigene Kugeln sind leuchtende Kugeln mit weißem Kern und Schweif (Krit gold); eigene Formen haben Popcorn, Gartenzwerg, Bowlingkugel, Seifenblase, Pusteblumen-Schirmchen und Kiesel. Dazu Geisterkrähen, Regenwolken mit Regenstrichen, ein Peitschenbogen für die Dornenranke, Blitze und Henriettes Eier. Gegnerkugeln haben einen dunklen Kern mit farbigem Leuchten.
 - **Status an Gegnern:** Brand (orange), Kleben (weiß), Verlangsamung (blau) und Fluch (violett über dem Kopf) leuchten am Gegner; eingefangene Gegner stecken in einer Blase, betäubte haben kreisende Sterne.
 - **Drops:** Material als leuchtender Mint-Kristall, Herz als leuchtendes Herz, Geschenk der Elster als blaues Päckchen; alle pulsieren.
@@ -172,15 +172,27 @@ Endwerte: Schaden × (1 + Schaden %) × Klassenbonus des Vogels (× 1,25) × sch
  
 ## Gegner
  
-Fünf Gegnertypen mit klar unterscheidbarem Verhalten; Schaden entsteht durch Berührung oder Projektile. Werte gelten für Welle 1.
+Fäulnis-Kreaturen mit klar unterscheidbarem Verhalten, gern mit Augenzwinkern. Jede Welt bringt zwei eigene Gegner mit, die früheren bleiben dabei. Schaden entsteht durch Berührung, Projektile oder Flächen. Angriffe der neuen Gegner werden angekündigt: Sie halten kurz inne und leuchten hell auf (Schuss, Sturz, Explosion). Werte gelten für Welle 1.
  
-| Gegner | Ab Welle | HP | Tempo | Schaden | Radius | Material | Verhalten |
+| Gegner | Welt / ab Welle | HP | Tempo | Schaden | Radius | Material | Verhalten |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Krähe | 1 | 6 | 95 | 2 | 13 | 1 | Fliegt direkt auf den Spieler zu, leichtes Auf und Ab |
-| Käfer | 2 | 12 | 75 | 3 | 15 | 1 | Läuft am Boden, springt hoch, wenn der Spieler über ihm ist (alle 1,5–2,5 s) |
-| Spucker | 3 | 9 | 70 | 2 | 14 | 1 | Hält 200–300 Abstand, schießt alle \~2,4 s eine Kugel (Tempo 240) |
-| Brocken | 5 | 45 | 42 | 5 | 27 | 3 | Langsamer, schwerer Verfolger mit HP-Leiste |
-| Geierkönig (Boss) | 15 | 4500 | 55 | 6 | 52 | – | Schwebt, Fächer aus 7 Kugeln alle 1,5 s, ruft alle 6 s drei Krähen |
+| Fäulniskrähe | überall / 1 | 6 | 95 | 2 | 13 | 1 | Fliegt direkt auf den Spieler zu, leichtes Auf und Ab |
+| Glutkäfer | überall / 2 | 12 | 75 | 3 | 15 | 1 | Läuft am Boden, springt hoch, wenn der Spieler über ihm ist (alle 1,5–2,5 s) |
+| Spucker | überall / 3 | 9 | 70 | 2 | 14 | 1 | Hält 200–300 Abstand, schießt alle \~2,4 s eine Kugel (Tempo 240) |
+| Brocken | überall / 5 | 45 | 42 | 5 | 27 | 3 | Langsamer, schwerer Verfolger mit HP-Leiste |
+| Pusteling | Felder / 2 | 10 | 35 | 2 | 15 | 1 | Treibt langsam heran; platzt bei Berührung oder Tod in eine Giftwolke (Radius 60, 3 s, Schaden bei Kontakt; bei Berührung ohne Material) |
+| Vogelscheuche | Felder / 3 | 26 | – | 3 | 18 | 2 | Steht fest im Feld, wirft alle \~2,4 s brennendes Stroh im Bogen auf die Stelle des Spielers (bis 560 entfernt) |
+| Fledermaus | Dorf / 5 | 7 | 150 | 2 | 11 | 1 | Zickzackflug: Richtung Spieler mit kräftigem Pendeln quer dazu |
+| Wetterhahn | Dorf / 6 | 22 | – | 3 | 16 | 2 | Steht fest auf seiner Stange, dreht sich gleichmäßig (0,9 rad/s) und schießt alle 0,8 s in Zeigerichtung (Tempo 210) |
+| Spinne | Wald / 9 | 16 | 60 | 3 | 15 | 1 | Hängt am Faden von oben, folgt dem Spieler und seilt sich bis knapp über ihn ab; schießt alle \~2,8 s ein Netz (verlangsamt 2 s: Tempo × 0,55, Schub × 0,75) |
+| Irrlicht | Wald / 10 | 9 | – | 5 | 12 | 1 | Springt alle 2,2 s neben den Spieler; nach drei Sprüngen oder in seiner Nähe 0,8 s Warnung, dann Explosion (Radius 75, ohne Material) |
+| Felsadler | Gebirge / 13 | 30 | 120 | 5 | 20 | 2 | Kreist oben über dem Spieler, hält alle 2,5–3,5 s inne (0,7 s Warnung) und stürzt sich auf dessen Position (560) |
+| Lawinenkäfer | Gebirge / 13 | 40 | 70 | 6 | 18 | 2 | Läuft heran, rollt sich in Reichweite (380) ein (0,6 s Warnung) und rast 1,6 s über den Boden (430) |
+| Geierkönig (Boss) | Gipfel / 15 | 4500 | 55 | 6 | 52 | – | siehe „Geierkönig“ |
+
+Stationäre Gegner (Vogelscheuche, Wetterhahn) lassen sich nicht verschieben und nicht einfangen; der Wind treibt sie nicht ab.
+
+**Gewichtung je Welle** (Pool wächst mit, siehe „Wellen & Spawns“): Krähe 10, Käfer 7 (ab 2), Spucker 4 + 0,3 · w (ab 3), Brocken 2 + 0,3 · w (ab 5), Pusteling 4 in den Feldern / sonst 2 (ab 2), Vogelscheuche 2 / 1 (ab 3), Fledermaus 6 im Dorf / sonst 3 (ab 5), Wetterhahn 2,5 / 1 (ab 6), Spinne 4 im Wald / sonst 2 (ab 9), Irrlicht 3 / 1,5 (ab 10), Felsadler 4 und Lawinenkäfer 3 (ab 13). Spinne und Felsadler erscheinen oben an der Decke, Bodengegner am Boden.
  
 Skalierung pro Welle w (gilt nicht für den Boss):
  
@@ -188,7 +200,39 @@ Skalierung pro Welle w (gilt nicht für den Boss):
 - Schaden × (1 + 0,15 · (w − 1)), gerundet
 - Tempo × (1 + 0,02 · w)
  
-Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln. Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
+Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln (Boss, Torwächter und stationäre Gegner bleiben stehen). Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
+
+### Elitegegner
+
+Ab Welle 5 kann ein regulär erscheinender Gegner (nicht Boss oder Torwächter) als Elite kommen: Chance min(15 %, 4 % + 1 % · (w − 5)). Elitegegner haben × 2,5 HP, sind 18 % größer, tragen einen pulsierenden Goldring, einen goldenen Schein, eine schmale HP-Leiste und das Zeichen ihres Modifikators über dem Kopf (als Form gezeichnet). Sie lassen × 3 Material fallen und mit 25 % Chance ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item).
+
+| Modifikator | Zeichen | Wirkung |
+| --- | --- | --- |
+| Flink | » (cyan) | Tempo × 1,25, alles läuft 35 % schneller (Bewegung, Abklingzeiten) |
+| Gepanzert | Raute (silber) | nimmt nur halben Schaden, kein Rückstoß |
+| Explosiv | Stern (orange) | hinterlässt beim Tod einen Sprengsatz: 0,7 s wachsender Warnkreis, dann Explosion (Radius 80, Schaden × 1,5) |
+| Teilend | zwei Kreise (grün) | zerfällt beim Tod in zwei kleine Kopien (35 % HP, 70 % Größe); stationäre Gegner werden stattdessen gepanzert |
+| Heiler | Plus (mint) | heilt Gegner im Umkreis 140 um 2 % ihrer Max-HP alle 0,5 s (grünes Aufleuchten), sichtbarer Heilkreis |
+
+### Torwächter
+
+Am Ende jeder Welt außer dem Gipfel (Welle 4, 8, 12) bewacht ein Torwächter das Ziel. Er erscheint, sobald der Spieler 1000 vor dem Ziel ist, 260 davor (mit Beben, Funken und großem Namen „TORWÄCHTER …“ nach dem Wellenbanner). Solange er lebt, ist das Ziel versperrt (violette Gitterstäbe, „VERSPERRT“): Der Spieler wird zurückgeschoben und bekommt den Hinweis „Besiege zuerst …“. Läuft die Zeit ab, endet die Welle wie gewohnt. Das HUD zeigt seinen Namen und eine HP-Kapsel unter der Zielstrecke. Besiegt lässt er 15 Material und ein Geschenk fallen („DAS TOR IST OFFEN“). Torwächter sind wie der Boss immun gegen Einfangen und Rückstoß, Betäubung wirkt nur 30 %; sie skalieren mit der Welle wie normale Gegner und bleiben im Umkreis von 220 um ihren Platz.
+
+| Torwächter | Welle | HP | Tempo | Schaden | Radius | Angriffe |
+| --- | --- | --- | --- | --- | --- | --- |
+| Der Strohkönig | 4 | 220 | 25 | 5 | 40 | Riesige Vogelscheuche mit Kürbiskopf: Fächer aus drei brennenden Strohbündeln alle 2,6 s (0,6 s Warnung), ruft alle 8 s zwei Krähen |
+| Die Glocke | 8 | 260 | 40 | 5 | 36 | Hängt an einer Kette: Ring aus 10 Kugeln alle 2,2 s (jedes Mal gedreht); alle 6 s Glockenschlag – 1 s wachsender Warnkreis (Radius 230), dann Schaden × 1,5 im ganzen Kreis |
+| Die Spinnenmutter | 12 | 300 | 70 | 6 | 40 | Hängt oben: Fächer aus drei Netzen alle 2,6 s, ruft alle 7 s zwei Spinnen; alle 9 s 0,8 s Warnung, dann lässt sie sich bis zum Boden fallen und klettert zurück |
+
+### Geierkönig
+
+Der Boss der Welle 15 hat drei Phasen (Wechsel bei 66 % und 33 % HP, jeweils mit Beben, Funken und Text „DER GEIERKÖNIG TOBT!“ bzw. „LETZTE KRAFT!“). Die Boss-Leiste zeigt die Phasengrenzen und „PHASE n“.
+
+| Phase | Angriffe |
+| --- | --- |
+| 1 | Schwebt, Fächer aus 7 Kugeln alle 1,5 s, ruft alle 6 s drei Krähen |
+| 2 | dazu Federregen alle 5 s: 6 rosa Warnlinien über das Bild verteilt, nach 0,8 s fallen dort Federn von der Decke (Tempo 330) |
+| 3 | Fächer aus 9 Kugeln alle 1,1 s, Krähen alle 4 s, Federregen alle 4 s mit 8 Linien; dazu alle 7 s Sturzflug: 0,9 s Warnung (helles Leuchten), dann quer durchs Bild auf Höhe des Spielers (680) |
  
 ## Wellen & Spawns
  
@@ -201,8 +245,8 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
 - **Gruppengröße:** 1 + ⌊w / 2,5⌋, mit 40 % Chance einer mehr; in den Wellen 1–3 je Gruppe 1 Gegner zusätzlich (sonst reicht das Material nach Welle 1 für keinen Kauf). Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
 - **Warnung:** Ein pulsierender Fäulnis-Riss (dunkler Kern, violett-rotes Leuchten, der sich bis zum Erscheinen schließt) markiert jeden Spawn 0,9 s vorher (Boss: 2 s, größer).
 - **Obergrenze:** keine neuen Spawns bei mehr als 110 lebenden Gegnern.
-- **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle).
-- **Gewichtung:** Krähe 10, Käfer 7, Spucker 4 + 0,3 · w, Brocken 2 + 0,3 · w.
+- **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle, nie Boss oder Torwächter).
+- **Gewichtung:** siehe „Gegner“; dazu ab Welle 5 Elitegegner und in Welle 4, 8, 12 ein Torwächter am Ziel.
  
 Am Wellenende verpuffen alle Gegner und Projektile. Material, das schon zum Spieler fliegt, wird noch gutgeschrieben; alles, was noch am Boden liegt, verfällt. Die Szene steht dann 1,2 s still mit der Einblendung „WELLE X GESCHAFFT“ und darunter „Ziel erreicht! +N Zeitbonus“ bzw. „Zeit abgelaufen“; erst danach erscheinen Level-up oder Shop. Wer zum Ziel eilt, tauscht also zurückgelassene Beute gegen den Zeitbonus.
  
@@ -476,7 +520,7 @@ Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays ü
 - **Run vorbereiten (Spielen):** Links die Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe) und eine Kurzerklärung. Rechts „Vogel wählen“: zehn Kacheln mit Vogel-Vorschau (gesperrte als dunkle Silhouette mit Schloss; antippen zeigt die Aufgabe mit Fortschritt), darunter der gewählte Vogel mit Flügelschlag-Vorschau, Name, Art und Rolle, Stärke, Nachteil, Flugverhalten, Startwaffe, Startaktion und ggf. Waffenslots sowie der Knopf „Starten“.
 - **Einstellungen:** Vollbild/Fenster (PC), Bildschirmwackeln an/aus, FPS-Anzeige an/aus (beides gespeichert), die Steuerung als umschaltbare Übersicht Tastatur/Controller mit Neubelegung (siehe „Steuerung & Bewegung“) und auf Touch-Geräten die Touch-Knöpfe.
 - **Rekorde:** Bestleistung je Schwierigkeitsstufe (geschafft, erreichte Welle, gesperrt), Statistik-Kacheln (Runs, Siege, besiegte Gegner, höchstes Level, verbrannte Gegner, gesammeltes Material) und die Liste der Vögel mit „freigeschaltet“ bzw. Aufgabe und Fortschritt.
-- **Kompendium:** Sammlung aller Inhalte mit Reitern Vögel, Waffen, Items, Aktionen (inkl. Evolutionen), Kombinationen und Gegner; jeder Reiter und die Kopfzeile zeigen „entdeckt / gesamt“. Sichtbar ist nur, was schon einmal gesehen wurde: Waffen und Items, sobald sie im Shop lagen oder besessen wurden; Aktionen ebenso bzw. als Startaktion oder Evolution; Gegner, sobald einer erschienen ist; Kombinationen, sobald eine ihrer Zutaten besessen wurde (dann zeigt der Shop das Rezept ohnehin) – selbst verschmolzene tragen „✓ verschmolzen“ und einen goldenen Rand. Der Reiter Kombinationen zeigt ein **Sternbild** auf eigenem Nachthimmel (dunkelblauer Verlauf, zwei Nebelschleier, rund 110 funkelnde Hintergrundsterne): die 11 Aktionen als Sterne mit atmendem Lichthof auf einer feinen Umlaufbahn (Ellipse über die volle Breite; jede Vogel-Aktion sitzt zwischen ihren beiden Rezeptpartnern), jedes Rezept als leicht gebogene Lichtbahn zwischen den Zutaten und die Evolution als etwas kleinere Kugel wie die Aktionen, nur mit goldenem Rand und dezentem Schein, dazwischen (etwas zur Mitte gerückt; anschließend stoßen sich die Evolutionen untereinander und von den Aktions-Sternen ab, damit nichts überlappt). Unentdeckt: gestrichelt, „?“ ohne Beschriftung; gesehen: schwach leuchtende Bahn; selbst verschmolzen: gedämpft goldene Bahn mit Lichtpartikeln, die zur Evolution wandern. Oben links „x / 24 verschmolzen“. Ein angewählter Stern hebt alle seine Verbindungen hervor (hell, mit Partikeln) und zeigt das Info-Panel. Unbekanntes erscheint als „?“ / „???“ mit kurzem Hinweis, wo es zu finden ist. Vögel sind immer gelistet, gesperrte als dunkle Silhouette mit Aufgabe und Fortschritt. Jede Kachel ist ansteuerbar und zeigt das Info-Panel wie im Shop (Waffen in Stufe I mit Grundwerten, Gegner mit Werten aus Welle 1 auf Küken). Gespeichert über alle Runs; „Alles freischalten“ (Debug) zeigt alles.
+- **Kompendium:** Sammlung aller Inhalte mit Reitern Vögel, Waffen, Items, Aktionen (inkl. Evolutionen), Kombinationen und Gegner; jeder Reiter und die Kopfzeile zeigen „entdeckt / gesamt“. Sichtbar ist nur, was schon einmal gesehen wurde: Waffen und Items, sobald sie im Shop lagen oder besessen wurden; Aktionen ebenso bzw. als Startaktion oder Evolution; Gegner, sobald einer erschienen ist (der Reiter zeigt auch Torwächter und die fünf Elite-Modifikatoren, letztere sobald ein solcher Elitegegner aufgetaucht ist); Kombinationen, sobald eine ihrer Zutaten besessen wurde (dann zeigt der Shop das Rezept ohnehin) – selbst verschmolzene tragen „✓ verschmolzen“ und einen goldenen Rand. Der Reiter Kombinationen zeigt ein **Sternbild** auf eigenem Nachthimmel (dunkelblauer Verlauf, zwei Nebelschleier, rund 110 funkelnde Hintergrundsterne): die 11 Aktionen als Sterne mit atmendem Lichthof auf einer feinen Umlaufbahn (Ellipse über die volle Breite; jede Vogel-Aktion sitzt zwischen ihren beiden Rezeptpartnern), jedes Rezept als leicht gebogene Lichtbahn zwischen den Zutaten und die Evolution als etwas kleinere Kugel wie die Aktionen, nur mit goldenem Rand und dezentem Schein, dazwischen (etwas zur Mitte gerückt; anschließend stoßen sich die Evolutionen untereinander und von den Aktions-Sternen ab, damit nichts überlappt). Unentdeckt: gestrichelt, „?“ ohne Beschriftung; gesehen: schwach leuchtende Bahn; selbst verschmolzen: gedämpft goldene Bahn mit Lichtpartikeln, die zur Evolution wandern. Oben links „x / 24 verschmolzen“. Ein angewählter Stern hebt alle seine Verbindungen hervor (hell, mit Partikeln) und zeigt das Info-Panel. Unbekanntes erscheint als „?“ / „???“ mit kurzem Hinweis, wo es zu finden ist. Vögel sind immer gelistet, gesperrte als dunkle Silhouette mit Aufgabe und Fortschritt. Jede Kachel ist ansteuerbar und zeigt das Info-Panel wie im Shop (Waffen in Stufe I mit Grundwerten, Gegner mit Werten aus Welle 1 auf Küken). Gespeichert über alle Runs; „Alles freischalten“ (Debug) zeigt alles.
 - **Credits:** Engine, Schriften mit Lizenzhinweis (SIL OFL 1.1), Bibliotheken, Version.
 - **Debug (nur Debug-Builds):** Alles freischalten (Stufen und Vögel), Performance-Test, Render-Analyse.
 - **Level-up:** 4 Karten mit großem Wert (z. B. „+4 %“); die ganze Karte ist wählbar. Seltene Karten haben ein lila Kopfband und das Badge „SELTEN“.
@@ -506,7 +550,7 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Sturzflug/Bauchrutscher, Zeichnung aller Vogelarten (`Player.drawBird`, auch für Menü-Vorschauen) |
 | `components/weapon_mount.dart` | Waffe im Ring um den Spieler, Zielsuche, Verhalten je Waffenart (Schuss, Wurf, Kreis, Hieb, Begleiter, Wolke, Rollen, rundum) |
 | `components/weapon_fx.dart` | Geisterkrähen, Regenwolke, Peitschenbogen, Henriettes Ei (auch Gewitterei), Blitz (Mixin `CombatEffect`) |
-| `components/enemy.dart` | KI und Zeichnung aller Gegnertypen inkl. Boss, Statuseffekte |
+| `components/enemy.dart` | KI und Zeichnung der Grundgegner, Statuseffekte, Elitegegner; Teil-Dateien `enemy_world.dart` (Welt-Gegner, Giftwolke, Sprengsatz), `enemy_gate.dart` (Torwächter), `enemy_boss.dart` (Phasen des Geierkönigs, Federregen) |
 | `components/projectiles.dart` | Spielerkugeln (Durchschlag, Explosion, Bogenwurf, Zünder, Rollen, Treffereffekte) und Gegnerkugeln |
 | `components/pickups.dart` | Material-, Herz- und Geschenk-Drops und Spawn-Warnungen |
 | `components/effects.dart` | Partikel, Explosionsring, schwebende Zahlen |
@@ -559,7 +603,8 @@ Phase 2 – Inhalte:
  
 - [x] Charaktere: zehn Vögel mit Stärke, Nachteil, Flugverhalten und Freischaltaufgaben
 - [x] Waffen: sechs Klassen mit Set-Boni, 18 Waffen inkl. Nahkampf, Brand, Verlangsamen, Betäuben
-- [ ] Elitegegner und ein Zwischenboss
+- [x] Gegner pro Welt, Elitegegner, Torwächter am Ende der Welten, Geierkönig mit drei Phasen
+- [ ] Balancing der neuen Gegner nach Spieltests
 - [x] Items: Seltenheitsstufen, Flug-Items (Schub, Gleiten), Spezial-Items
 - [x] Zwei Aktionstasten mit aktiven Fähigkeiten aus Items und Charakteren, Stufe II und Evolutionen
 - [x] Tastenbelegung frei einstellbar (Tastatur und Controller)

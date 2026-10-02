@@ -300,3 +300,12 @@ Widget weaponMergePreview(RunState r, OwnedWeapon w) {
     _text('• Die zweite ${d.name} (Stufe ${ta.label}) verschwindet, ihr Slot wird frei.', color: _good),
   ]);
 }
+
+Widget eliteInfo(EliteMod m) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      _head('★', 'Elite: ${m.label}', 'ab Welle $kEliteStartWave', const Color(0xFFFFC94A)),
+      _text('Ein normaler Gegner mit goldenem Schein, der ${m.desc}.'),
+      _section('Alle Elitegegner'),
+      _line('Lebenspunkte', '×${fmtNum(kEliteHp)}'),
+      _line('Material', '×$kEliteDrops', color: Palette.mint),
+      _line('Chance auf ein Geschenk', '${(kEliteGiftChance * 100).round()} %', color: Palette.mint),
+    ]);

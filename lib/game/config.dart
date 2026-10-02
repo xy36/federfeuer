@@ -16,6 +16,9 @@ const double kPlayerSpeed = 230;
 /// Sinkflug (nach unten halten): zusätzliche Beschleunigung nach unten und Höchsttempo.
 const double kDiveAccel = 900, kDiveSpeed = 380;
 
+/// Spinnennetz: Tempo und Schub des Spielers, solange er drin hängt.
+const double kWebSlow = 0.55, kWebThrust = 0.75;
+
 /// Freier Flug (Kolibri): senkrechtes Höchsttempo (× Schub %) und Beschleunigung.
 const double kFreeFlightSpeed = 260, kFreeFlightAccel = 1500;
 
@@ -783,7 +786,26 @@ const levelOptions = [
 
 // ---------------- Gegner ----------------
 
-enum EnemyType { crow, beetle, spitter, rock, boss }
+enum EnemyType {
+  crow,
+  beetle,
+  spitter,
+  rock,
+  // Welt-Gegner
+  puffball,
+  scarecrow,
+  bat,
+  weathercock,
+  spider,
+  wisp,
+  eagle,
+  avalanche,
+  // Torwächter am Ende der Welten
+  strawKing,
+  bell,
+  spiderMother,
+  boss,
+}
 
 class EnemyDef {
   const EnemyDef({
@@ -793,10 +815,18 @@ class EnemyDef {
     required this.radius,
     required this.flying,
     required this.drop,
+    this.wind = WeatherConfig.windFactorLight,
+    this.stationary = false,
   });
   final double hp, speed, dmg, radius;
   final bool flying;
   final int drop;
+
+  /// Windanfälligkeit (1 = voller Drift).
+  final double wind;
+
+  /// Bewegt sich nicht vom Fleck (Vogelscheuche, Wetterhahn).
+  final bool stationary;
 }
 
 extension EnemyInfo on EnemyType {
@@ -805,6 +835,17 @@ extension EnemyInfo on EnemyType {
         EnemyType.beetle => 'Glutkäfer',
         EnemyType.spitter => 'Spucker',
         EnemyType.rock => 'Brocken',
+        EnemyType.puffball => 'Pusteling',
+        EnemyType.scarecrow => 'Vogelscheuche',
+        EnemyType.bat => 'Fledermaus',
+        EnemyType.weathercock => 'Wetterhahn',
+        EnemyType.spider => 'Spinne',
+        EnemyType.wisp => 'Irrlicht',
+        EnemyType.eagle => 'Felsadler',
+        EnemyType.avalanche => 'Lawinenkäfer',
+        EnemyType.strawKing => 'Der Strohkönig',
+        EnemyType.bell => 'Die Glocke',
+        EnemyType.spiderMother => 'Die Spinnenmutter',
         EnemyType.boss => 'Der Geierkönig',
       };
 
@@ -813,6 +854,17 @@ extension EnemyInfo on EnemyType {
         EnemyType.beetle => '🪲',
         EnemyType.spitter => '🦠',
         EnemyType.rock => '🪨',
+        EnemyType.puffball => '🎈',
+        EnemyType.scarecrow => '🌾',
+        EnemyType.bat => '🦇',
+        EnemyType.weathercock => '🐓',
+        EnemyType.spider => '🕷️',
+        EnemyType.wisp => '👻',
+        EnemyType.eagle => '🦅',
+        EnemyType.avalanche => '🐚',
+        EnemyType.strawKing => '🎃',
+        EnemyType.bell => '🔔',
+        EnemyType.spiderMother => '🕸️',
         EnemyType.boss => '👑',
       };
 
@@ -821,17 +873,112 @@ extension EnemyInfo on EnemyType {
         EnemyType.beetle => 'Krabbelt am Boden entlang – wer tief fliegt, trifft auf ihn.',
         EnemyType.spitter => 'Hält Abstand und spuckt Giftkugeln.',
         EnemyType.rock => 'Langsam und zäh; lässt drei Material fallen.',
+        EnemyType.puffball => 'Aufgeblähte Pollenkugel. Platzt in eine Giftwolke – nicht hindurchfliegen.',
+        EnemyType.scarecrow => 'Steht im Feld und wirft brennendes Stroh im Bogen.',
+        EnemyType.bat => 'Flattert im Zickzack – schwer zu treffen.',
+        EnemyType.weathercock => 'Dreht sich auf seiner Stange und schießt dorthin, wohin er gerade zeigt.',
+        EnemyType.spider => 'Seilt sich von oben ab; ihre Netze verlangsamen dich.',
+        EnemyType.wisp => 'Springt von Ort zu Ort und explodiert in deiner Nähe.',
+        EnemyType.eagle => 'Kreist oben und stürzt sich nach kurzer Warnung auf dich.',
+        EnemyType.avalanche => 'Rollt sich ein und rast über den Boden.',
+        EnemyType.strawKing =>
+          'Torwächter der Felder (Welle 4). Riesige Vogelscheuche: wirft Strohbündel im Fächer und ruft Krähen.',
+        EnemyType.bell => 'Torwächter des Dorfs (Welle 8). Schießt Kugelringe; vor dem Glockenschlag rechtzeitig raus aus dem Kreis!',
+        EnemyType.spiderMother =>
+          'Torwächterin des Waldes (Welle 12). Schießt Netzfächer, ruft Spinnen und lässt sich blitzschnell fallen.',
         EnemyType.boss => 'Herrscher der Fäulnis auf dem Gipfel. Erscheint in Welle 15.',
       };
 }
 
 const Map<EnemyType, EnemyDef> enemyDefs = {
   EnemyType.crow: EnemyDef(hp: 6, speed: 95, dmg: 2, radius: 13, flying: true, drop: 1),
-  EnemyType.beetle: EnemyDef(hp: 12, speed: 75, dmg: 3, radius: 15, flying: false, drop: 1),
-  EnemyType.spitter: EnemyDef(hp: 9, speed: 70, dmg: 2, radius: 14, flying: true, drop: 1),
-  EnemyType.rock: EnemyDef(hp: 45, speed: 42, dmg: 5, radius: 27, flying: true, drop: 3),
-  EnemyType.boss: EnemyDef(hp: 4500, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0),
+  EnemyType.beetle: EnemyDef(
+      hp: 12, speed: 75, dmg: 3, radius: 15, flying: false, drop: 1, wind: WeatherConfig.windFactorGround),
+  EnemyType.spitter: EnemyDef(
+      hp: 9, speed: 70, dmg: 2, radius: 14, flying: true, drop: 1, wind: WeatherConfig.windFactorMedium),
+  EnemyType.rock: EnemyDef(
+      hp: 45, speed: 42, dmg: 5, radius: 27, flying: true, drop: 3, wind: WeatherConfig.windFactorHeavy),
+  // Felder
+  EnemyType.puffball: EnemyDef(hp: 10, speed: 35, dmg: 2, radius: 15, flying: true, drop: 1),
+  EnemyType.scarecrow: EnemyDef(
+      hp: 26, speed: 0, dmg: 3, radius: 18, flying: false, drop: 2, wind: 0, stationary: true),
+  // Dorf
+  EnemyType.bat: EnemyDef(hp: 7, speed: 150, dmg: 2, radius: 11, flying: true, drop: 1),
+  EnemyType.weathercock: EnemyDef(
+      hp: 22, speed: 0, dmg: 3, radius: 16, flying: false, drop: 2, wind: 0, stationary: true),
+  // Wald
+  EnemyType.spider: EnemyDef(
+      hp: 16, speed: 60, dmg: 3, radius: 15, flying: true, drop: 1, wind: WeatherConfig.windFactorMedium),
+  EnemyType.wisp: EnemyDef(hp: 9, speed: 0, dmg: 5, radius: 12, flying: true, drop: 1, wind: 0),
+  // Gebirge
+  EnemyType.eagle: EnemyDef(
+      hp: 30, speed: 120, dmg: 5, radius: 20, flying: true, drop: 2, wind: WeatherConfig.windFactorMedium),
+  EnemyType.avalanche: EnemyDef(
+      hp: 40, speed: 70, dmg: 6, radius: 18, flying: false, drop: 2, wind: WeatherConfig.windFactorGround),
+  // Torwächter
+  EnemyType.strawKing: EnemyDef(
+      hp: 220, speed: 25, dmg: 5, radius: 40, flying: false, drop: 0, wind: 0),
+  EnemyType.bell: EnemyDef(hp: 260, speed: 40, dmg: 5, radius: 36, flying: true, drop: 0, wind: 0),
+  EnemyType.spiderMother: EnemyDef(hp: 300, speed: 70, dmg: 6, radius: 40, flying: true, drop: 0, wind: 0),
+  EnemyType.boss: EnemyDef(
+      hp: 4500, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
 };
+
+/// Elitegegner: Modifikator mit Farbe und Zeichen über dem Kopf.
+enum EliteMod {
+  swift('Flink', '»', Color(0xFF7FE8FF), 'bewegt und greift 35 % schneller an'),
+  armored('Gepanzert', '◆', Color(0xFFBFC8D8), 'nimmt nur halben Schaden, kein Rückstoß'),
+  volatile('Explosiv', '✸', Color(0xFFFF8A3D), 'explodiert kurz nach dem Tod'),
+  splitting('Teilend', '✂', Color(0xFFC6FF6A), 'zerfällt beim Tod in zwei kleine Kopien'),
+  healer('Heiler', '✚', Color(0xFF8CF5B0), 'heilt Gegner in der Nähe');
+
+  const EliteMod(this.label, this.mark, this.color, this.desc);
+  final String label, mark, desc;
+  final Color color;
+}
+
+/// Elite ab Welle [kEliteStartWave]: Chance je Gegner, HP-Faktor, Größe, Material-Faktor, Geschenk-Chance.
+const int kEliteStartWave = 5;
+const double kEliteHp = 2.5, kEliteScale = 1.18, kEliteGiftChance = 0.25;
+const int kEliteDrops = 3;
+double eliteChance(int wave) => wave < kEliteStartWave ? 0 : min(0.15, 0.04 + 0.01 * (wave - kEliteStartWave));
+
+/// Kopien eines teilenden Elitegegners: HP-Anteil und Größe.
+const double kSplitHp = 0.35, kSplitScale = 0.7;
+
+/// Gegner-Pool einer Welle (Typ, Gewicht). Jede Welt bringt zwei eigene Gegner mit,
+/// die früheren bleiben dabei.
+List<(EnemyType, double)> spawnPool(int wave) {
+  final w = wave.toDouble();
+  final biome = biomeForWave(wave);
+  final pool = <(EnemyType, double)>[(EnemyType.crow, 10)];
+  if (w >= 2) pool.add((EnemyType.beetle, 7));
+  if (w >= 3) pool.add((EnemyType.spitter, 4 + w * 0.3));
+  if (w >= 5) pool.add((EnemyType.rock, 2 + w * 0.3));
+  if (w >= 2) pool.add((EnemyType.puffball, biome == Biome.fields ? 4 : 2));
+  if (w >= 3) pool.add((EnemyType.scarecrow, biome == Biome.fields ? 2 : 1));
+  if (w >= 5) pool.add((EnemyType.bat, biome == Biome.village ? 6 : 3));
+  if (w >= 6) pool.add((EnemyType.weathercock, biome == Biome.village ? 2.5 : 1));
+  if (w >= 9) pool.add((EnemyType.spider, biome == Biome.forest ? 4 : 2));
+  if (w >= 10) pool.add((EnemyType.wisp, biome == Biome.forest ? 3 : 1.5));
+  if (w >= 13) pool.add((EnemyType.eagle, 4));
+  if (w >= 13) pool.add((EnemyType.avalanche, 3));
+  return pool;
+}
+
+/// Torwächter einer Welle (Ende der Felder, des Dorfs, des Waldes), sonst null.
+EnemyType? gatekeeperForWave(int wave) => switch (wave) {
+      4 => EnemyType.strawKing,
+      8 => EnemyType.bell,
+      12 => EnemyType.spiderMother,
+      _ => null,
+    };
+
+/// Torwächter erscheint, sobald der Spieler so nah am Ziel ist; er steht so weit davor.
+const double kGateTriggerDist = 1000, kGateOffset = 260;
+
+/// Belohnung für einen Torwächter: Material plus ein Geschenk.
+const int kGateDrops = 15;
 
 // ---------------- Schwierigkeitsstufen ----------------
 

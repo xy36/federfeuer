@@ -10,8 +10,12 @@ import 'transient.dart';
 
 /// Ziel am rechten Weltende: eine Lichtsäule, in der Lichtkugeln aufsteigen.
 class Goal extends PositionComponent with Transient {
-  Goal(double x) : super(position: Vector2(x, 0), priority: -30);
+  Goal(double x, {bool Function()? locked})
+      : _locked = locked,
+        super(position: Vector2(x, 0), priority: -30);
 
+  /// Versperrt (Torwächter lebt): Licht gedämpft, violette Gitterstäbe.
+  final bool Function()? _locked;
   double _t = 0;
   final _beam = Paint()
     ..blendMode = BlendMode.plus
@@ -49,6 +53,14 @@ class Goal extends PositionComponent with Transient {
     // Lichtquelle am Boden
     Glow.draw(c, 0, kGround - 4, 80 + 20 * pulse, const Color(0x8CFFD98A));
     drawOval(c, 0, kGround - 2, 26, 5, const Color(0xFFFFF4D6));
-    OutlineText.draw(c, 'ZIEL', const Offset(0, kGround - 34), size: 15, color: const Color(0xFFFFF1C2));
+    final locked = _locked?.call() ?? false;
+    if (locked) {
+      for (var i = -2; i <= 2; i++) {
+        drawRect(c, i * 14.0 - 1.5, kCeil, 3, kGround - kCeil, Color.fromRGBO(180, 76, 255, 0.55 + 0.2 * pulse));
+      }
+      Glow.draw(c, 0, (kGround + kCeil) / 2, 90, Color.fromRGBO(180, 76, 255, 0.25 + 0.1 * pulse));
+    }
+    OutlineText.draw(c, locked ? 'VERSPERRT' : 'ZIEL', const Offset(0, kGround - 34),
+        size: 15, color: locked ? const Color(0xFFE6B8FF) : const Color(0xFFFFF1C2));
   }
 }

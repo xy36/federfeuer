@@ -4,6 +4,7 @@ import '../game/config.dart';
 import '../game/federfeuer_game.dart';
 import '../game/progress.dart';
 import '../game/run_state.dart';
+import '../game/components/draw.dart' show drawEliteMark;
 import 'bird_preview.dart';
 import 'constellation.dart';
 import 'inspect.dart';
@@ -47,7 +48,11 @@ class _CompendiumViewState extends State<CompendiumView> {
         CompendiumTab.items => (_items.where((it) => p.hasSeen(_key('i', it.id))).length, _items.length),
         CompendiumTab.actions => (ActionId.values.where((a) => p.hasSeen(_key('a', a.name))).length, ActionId.values.length),
         CompendiumTab.recipes => (actionRecipes.where((r) => p.hasSeen(_key('r', r.result.name))).length, actionRecipes.length),
-        CompendiumTab.enemies => (EnemyType.values.where((e) => p.hasSeen(_key('e', e.name))).length, EnemyType.values.length),
+        CompendiumTab.enemies => (
+            EnemyType.values.where((e) => p.hasSeen(_key('e', e.name))).length +
+                EliteMod.values.where((m) => p.hasSeen(_key('x', m.name))).length,
+            EnemyType.values.length + EliteMod.values.length
+          ),
       };
 
   /// Items ohne Aktions-Items (die stehen unter „Aktionen“).
@@ -80,7 +85,10 @@ class _CompendiumViewState extends State<CompendiumView> {
         CompendiumTab.items => _grid([for (final it in _items) _item(it)]),
         CompendiumTab.actions => _grid([for (final a in ActionId.values) _action(a)]),
         CompendiumTab.recipes => ActionConstellation(progress: p, reference: _ref),
-        CompendiumTab.enemies => _grid([for (final e in EnemyType.values) _enemy(e)]),
+        CompendiumTab.enemies => _grid([
+            for (final e in EnemyType.values) _enemy(e),
+            for (final m in EliteMod.values) _elite(m),
+          ]),
       },
     ]);
   }
@@ -163,6 +171,17 @@ class _CompendiumViewState extends State<CompendiumView> {
     );
   }
 
+  Widget _elite(EliteMod m) {
+    final known = p.hasSeen(_key('x', m.name));
+    return _tile(
+      icon: known ? CustomPaint(size: const Size(32, 32), painter: _MarkPainter(m)) : _unknown,
+      name: 'Elite: ${m.label}',
+      color: const Color(0xFFFFC94A),
+      known: known,
+      info: (_) => known ? eliteInfo(m) : unknownInfo('Elitegegner tauchen ab Welle $kEliteStartWave auf.'),
+    );
+  }
+
   Widget _enemy(EnemyType t) {
     final known = p.hasSeen(_key('e', t.name));
     return _tile(
@@ -173,4 +192,15 @@ class _CompendiumViewState extends State<CompendiumView> {
       info: (_) => known ? enemyInfo(t) : unknownInfo('Noch nie begegnet.'),
     );
   }
+}
+
+class _MarkPainter extends CustomPainter {
+  _MarkPainter(this.mod);
+  final EliteMod mod;
+
+  @override
+  void paint(Canvas c, Size size) => drawEliteMark(c, mod, size.center(Offset.zero), size.shortestSide * 0.8, mod.color);
+
+  @override
+  bool shouldRepaint(_MarkPainter old) => old.mod != mod;
 }

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../config.dart';
@@ -81,5 +83,38 @@ class OutlineText {
       )..layout();
     });
     tp.paint(c, Offset(center ? at.dx - tp.width / 2 : at.dx, at.dy - tp.height / 2));
+  }
+}
+
+/// Zeichen eines Elite-Modifikators als Form (unabhängig von Schriften): Mitte [at], Größe [s].
+void drawEliteMark(Canvas c, EliteMod m, Offset at, double s, Color col) {
+  final x = at.dx, y = at.dy, h = s / 2;
+  switch (m) {
+    case EliteMod.swift: // zwei Pfeile »
+      for (final o in [-h * 0.45, h * 0.35]) {
+        drawTri(c, x + o - h * 0.35, y - h * 0.7, x + o + h * 0.45, y, x + o - h * 0.35, y + h * 0.7, col);
+      }
+    case EliteMod.armored: // Raute
+      final p = Path()
+        ..moveTo(x, y - h)
+        ..lineTo(x + h * 0.75, y)
+        ..lineTo(x, y + h)
+        ..lineTo(x - h * 0.75, y)
+        ..close();
+      c.drawPath(p, fillOf(col));
+    case EliteMod.volatile: // Stern
+      final p = Path();
+      for (var i = 0; i < 12; i++) {
+        final a = -pi / 2 + i * pi / 6, rr = i.isEven ? h : h * 0.45;
+        final px = x + cos(a) * rr, py = y + sin(a) * rr;
+        i == 0 ? p.moveTo(px, py) : p.lineTo(px, py);
+      }
+      c.drawPath(p..close(), fillOf(col));
+    case EliteMod.splitting: // zwei Hälften
+      drawCircle(c, x - h * 0.45, y, h * 0.5, col);
+      drawCircle(c, x + h * 0.45, y, h * 0.5, col);
+    case EliteMod.healer: // Plus
+      drawRect(c, x - h * 0.25, y - h, h * 0.5, s, col);
+      drawRect(c, x - h, y - h * 0.25, s, h * 0.5, col);
   }
 }

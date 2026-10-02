@@ -71,6 +71,17 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   /// X-Position des Ziels, null in der Bosswelle.
   double? goalX;
 
+  /// Torwächter der aktuellen Welle (sobald erschienen) und Einblendung seines Namens.
+  Enemy? gate;
+  double gateBanner = 0, _gateHintT = 0;
+
+  /// Das Ziel ist versperrt, solange der Torwächter dieser Welle lebt (oder noch nicht da war).
+  bool get goalLocked {
+    final r = run;
+    if (r == null || gatekeeperForWave(r.wave) == null) return false;
+    return !(gate?.dead ?? false);
+  }
+
   /// Welt (Kulisse) der aktuellen Welle; im Menü die Felder.
   Biome biome = Biome.fields;
   BiomeDef get biomeDef => biomeDefs[biome]!;
@@ -239,7 +250,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     lightShieldCd = 0;
     _puddles.setArenaWidth(worldW);
     goalX = boss ? null : worldW - kGoalInset;
-    if (goalX != null) world.add(Goal(goalX!));
+    gate = null;
+    gateBanner = 0;
+    if (goalX != null) world.add(Goal(goalX!, locked: () => goalLocked));
     // Timer-Wellen starten links, die Bosswelle in der Arenamitte.
     player.reset(Vector2(boss ? worldW / 2 : kStartX, kGround - 140));
     _syncWeapons();
@@ -474,6 +487,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void _clearArena() {
+    _pendingMinis.clear();
     for (final c in world.children.whereType<Transient>().toList()) {
       c.removeFromParent();
     }
@@ -508,6 +522,12 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (active || run == null) clock += dt;
     weather.update(active ? dt : 0);
     super.update(animate ? dt : 0);
+    if (_pendingMinis.isNotEmpty && run != null) {
+      for (final (type, pos) in _pendingMinis) {
+        addEnemy(type, pos, mini: true);
+      }
+      _pendingMinis.clear();
+    }
 
     if (run == null) {
       _menuT += dt;
@@ -546,9 +566,25 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (!isBossWave(r.wave)) {
       waveTime -= dt;
       final g = goalX;
+      // Torwächter erscheint vor dem Ziel, sobald der Spieler sich nähert
+      final gk = gatekeeperForWave(r.wave);
+      if (gk != null && gate == null && g != null && player.x > g - kGateTriggerDist) _spawnGate(gk, g);
+      // Name des Torwächters erst nach dem Wellenbanner zeigen
+      if (banner <= 0) gateBanner = max(0.0, gateBanner - dt);
+      _gateHintT = max(0.0, _gateHintT - dt);
       if (g != null && player.x + player.r >= g) {
-        reachGoal();
-        return;
+        if (goalLocked) {
+          // Versperrt: zurückschieben und kurz erklären
+          player.position.x = g - player.r - 1;
+          player.vel.x = min(0.0, player.vel.x);
+          if (_gateHintT <= 0) {
+            _gateHintT = 1.5;
+            floatText(player.position - Vector2(0, 34), 'Besiege zuerst ${gk!.label}!', Palette.coral, 15);
+          }
+        } else {
+          reachGoal();
+          return;
+        }
       }
       if (waveTime <= 0) {
         endWave();
@@ -594,10 +630,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final r = run!;
     if (enemies.length > 110) return;
     final w = r.wave;
-    final pool = <(EnemyType, double)>[(EnemyType.crow, 10)];
-    if (w >= 2) pool.add((EnemyType.beetle, 7));
-    if (w >= 3) pool.add((EnemyType.spitter, 4 + w * 0.3));
-    if (w >= 5) pool.add((EnemyType.rock, 2 + w * 0.3));
+    final pool = spawnPool(w);
     final total = pool.fold(0.0, (a, b) => a + b.$2);
 
     var n = 1 + (w / 2.5).floor() + (rng.nextDouble() < 0.4 ? 1 : 0) + (w <= kEarlySpawnWaves ? kEarlySpawnBonus : 0);
@@ -614,7 +647,10 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       }
       final d = enemyDefs[type]!;
       final x = clampD(cx + rnd(-80, 80), 40, worldW - 40);
-      final y = d.flying ? rnd(kCeil + 50, kGround - 90) : kGround - d.radius;
+      // Spinne und Felsadler kommen von oben, Bodengegner auf dem Boden
+      final y = type == EnemyType.spider || type == EnemyType.eagle
+          ? kCeil + d.radius + 8
+          : (d.flying ? rnd(kCeil + 50, kGround - 90) : kGround - d.radius);
       world.add(SpawnMarker(type, Vector2(x, y), 0.9));
     }
   }
@@ -651,7 +687,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   /// damit sie nicht die Obergrenze für lebende Gegner blockieren.
   void _despawnStragglers() {
     for (final e in enemies) {
-      if (!e.dead && e.x < player.x - kDespawnBehind) {
+      if (!e.dead && !e.boss && e.x < player.x - kDespawnBehind) {
         e.dead = true;
         e.removeFromParent();
       }
@@ -659,9 +695,37 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     enemies.removeWhere((e) => e.dead);
   }
 
-  void addEnemy(EnemyType type, Vector2 pos) {
+  void _spawnGate(EnemyType type, double goal) {
+    final d = enemyDefs[type]!;
+    final y = switch (type) {
+      EnemyType.spiderMother => kCeil + d.radius + 30,
+      EnemyType.bell => 190.0,
+      _ => kGround - d.radius,
+    };
+    addEnemy(type, Vector2(goal - kGateOffset, y));
+    gate = enemies.last;
+    gateBanner = 2.5;
+    shake = max(shake, 10);
+    burst(gate!.position, const Color(0xFFFF5AE0), 30, 260);
+  }
+
+  /// Kopien teilender Elitegegner, die nach dem aktuellen Frame erscheinen.
+  final _pendingMinis = <(EnemyType, Vector2)>[];
+
+  /// Regulärer Spawn (aus der Warnmarkierung): würfelt ab Welle 5 einen Elitegegner.
+  void spawnEnemy(EnemyType type, Vector2 pos) {
+    final w = run!.wave;
+    final elite = type != EnemyType.boss && rng.nextDouble() < eliteChance(w)
+        ? EliteMod.values[rng.nextInt(EliteMod.values.length)]
+        : null;
+    // Stationäre Gegner können sich nicht teilen
+    addEnemy(type, pos, elite: elite == EliteMod.splitting && enemyDefs[type]!.stationary ? EliteMod.armored : elite);
+  }
+
+  void addEnemy(EnemyType type, Vector2 pos, {EliteMod? elite, bool mini = false}) {
     progress.seeEnemy(type);
-    final e = Enemy(type, pos, run!.wave, run!.difficultyDef, rng);
+    if (elite != null) progress.see('x:${elite.name}');
+    final e = Enemy(type, pos, run!.wave, run!.difficultyDef, rng, elite: elite, mini: mini);
     enemies.add(e);
     world.add(e);
   }
@@ -677,11 +741,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         final d = max(0.001, sqrt(dx * dx + dy * dy));
         if (d < rr) {
           final push = (rr - d) / 2 / d;
-          if (a.type != EnemyType.boss) {
+          if (!a.immovable) {
             a.position.x -= dx * push;
             a.position.y -= dy * push;
           }
-          if (b.type != EnemyType.boss) {
+          if (!b.immovable) {
             b.position.x += dx * push;
             b.position.y += dy * push;
           }
@@ -774,6 +838,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (e.dead) return;
     final r = run!;
     if (e.cursed) dmg *= 1 + r.curseBonus;
+    // Gepanzerte Elite: halber Schaden, kein Rückstoß
+    if (e.elite == EliteMod.armored) {
+      dmg *= 0.5;
+      knock = 0;
+    }
     e.hp -= dmg;
     if (!dot) {
       e.flash = 0.08;
@@ -817,9 +886,40 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       return;
     }
     burst(e.position, const Color(0xFFC77DFF), 12, 170);
+    // Torwächter: Tor offen, viel Material und ein Geschenk
+    if (e.gatekeeper) {
+      shake = max(shake, 14);
+      burst(e.position, const Color(0xFFFFC94A), 40, 300);
+      floatText(e.position - Vector2(0, e.r + 20), 'DAS TOR IST OFFEN', Palette.sun, 20);
+      final fall = r.difficultyDef.dropFallSpeed;
+      for (var i = 0; i < kGateDrops; i++) {
+        world.add(Drop(e.position.clone()..x += rnd(-30, 30), material: true, rng: rng, fallSpeed: fall));
+      }
+      world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
+      return;
+    }
+    // Pusteling platzt auch beim Abschuss in eine Giftwolke
+    if (e.type == EnemyType.puffball) world.add(PoisonCloud(e.position.clone(), e.dmg));
     final fall = r.difficultyDef.dropFallSpeed;
+    // Elite: Modifikator beim Tod, mehr Material, manchmal ein Geschenk
+    switch (e.elite) {
+      case EliteMod.volatile:
+        world.add(VolatileRemnant(e.position.clone(), e.dmg * 1.5));
+      case EliteMod.splitting:
+        // Erst nach dem Frame hinzufügen: killEnemy läuft oft mitten in einer Schleife über [enemies]
+        for (final side in [-1.0, 1.0]) {
+          _pendingMinis.add((e.type, e.position.clone()..x += side * e.r));
+        }
+      default:
+    }
+    if (e.elite != null) {
+      burst(e.position, const Color(0xFFFFC94A), 18, 220);
+      if (rng.nextDouble() < kEliteGiftChance) {
+        world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
+      }
+    }
     // Goldgier: 15 % doppelte Drops
-    final times = r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1;
+    final times = (r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1) * (e.elite != null ? kEliteDrops : 1);
     for (var i = 0; i < enemyDefs[e.type]!.drop * times; i++) {
       world.add(Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng, fallSpeed: fall));
     }
