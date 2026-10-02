@@ -64,4 +64,38 @@ void main() {
     game.toMenu();
     await t.pump(const Duration(seconds: 1));
   });
+
+  testWidgets('Pause zeigt die Übersicht des Runs mit Info-Panels', (t) async {
+    await t.runAsync(loadGameFonts);
+    SharedPreferences.setMockInitialValues({});
+    t.view.physicalSize = const Size(1280, 720);
+    t.view.devicePixelRatio = 1;
+    addTearDown(t.view.reset);
+    final game = FederfeuerGame();
+    await t.pumpWidget(MaterialApp(
+      home: GameWidget<FederfeuerGame>(game: game, focusNode: game.focusNode, overlayBuilderMap: buildOverlayMap()),
+    ));
+    for (var i = 0; i < 4; i++) {
+      await t.pump(const Duration(milliseconds: 50));
+    }
+    game.debugStartAtWave(8);
+    await t.pump(const Duration(milliseconds: 100));
+    game.togglePause();
+    await t.pump(const Duration(milliseconds: 100));
+    final r = game.run!;
+    expect(find.text('PAUSE'), findsOneWidget);
+    expect(find.text('Level ${r.level}'), findsOneWidget);
+    final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
+    await mouse.addPointer(location: Offset.zero);
+    await mouse.moveTo(t.getCenter(find.text(r.weapons.first.def.name).first));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.byType(InfoCard), findsOneWidget);
+    expect(find.text('Verkaufen'), findsNothing);
+    await mouse.removePointer();
+    await t.tap(find.text('Weiterspielen'));
+    await t.pump(const Duration(milliseconds: 50));
+    expect(game.phase, Phase.play);
+    game.toMenu();
+    await t.pump(const Duration(seconds: 1));
+  });
 }

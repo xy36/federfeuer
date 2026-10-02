@@ -52,7 +52,7 @@ String _s(double v) => '${fmtNum(v)} s';
 String _pct(double v) => '${(v * 100).round()} %';
 
 /// Waffe in Stufe [tier]; [owned] = Slot im Inventar (zeigt Verkaufspreis).
-Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? price}) {
+Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? price, bool showSell = true}) {
   final d = weaponDefs[id]!, t = tiers[tier], s = r.weaponStats(id, tier);
   final kind = switch (d.kind) {
     WeaponKind.shot => 'Schuss',
@@ -103,7 +103,7 @@ Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? pri
       _line('Schaden', fmtNum(r.weaponStats(id, tier + 1).dmg)),
       _text('Zwei gleiche Waffen gleicher Stufe verschmelzen im Shop.', color: Ui.muted),
     ],
-    if (owned != null) ...[
+    if (owned != null && showSell) ...[
       _section('Verkaufen'),
       _line('Erlös', '${r.sellPrice(owned)}', color: Palette.mint),
     ],

@@ -6,6 +6,7 @@ import '../game/federfeuer_game.dart';
 import '../game/run_state.dart';
 import '../platform/desktop_window.dart';
 import 'bird_preview.dart';
+import 'run_overview.dart';
 import 'widgets.dart';
 
 // ---------------- Level-up ----------------
@@ -77,27 +78,18 @@ class PauseOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = game.run!;
     return Panel(
-      maxWidth: 440,
-      hints: const [(GamepadButton.a, 'Auswählen'), (GamepadButton.b, 'Weiterspielen'), (null, 'Navigieren')],
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const OutlinedLabel('PAUSE', size: 44),
-          const SizedBox(height: 12),
-          Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
-            Pill(isBossWave(r.wave) ? 'Bosswelle' : 'Welle ${r.wave}'),
-            Pill(game.biomeDef.name),
-            Pill(r.difficultyDef.name),
-          ]),
-          const SizedBox(height: 18),
-          Wrap(alignment: WrapAlignment.center, spacing: 12, children: [
-            GameButton(label: 'Weiterspielen', icon: '▶', color: Palette.mint, onPressed: game.togglePause),
-            GameButton(label: 'Aufgeben', color: Ui.card, onPressed: game.toMenu),
-            if (isDesktop) const FullScreenButton(),
-          ]),
-        ],
-      ),
+      maxWidth: 960,
+      hints: const [(GamepadButton.b, 'Weiterspielen'), (null, 'Navigieren – Details beim Auswählen')],
+      footer: Wrap(alignment: WrapAlignment.end, spacing: 12, children: [
+        if (isDesktop) const FullScreenButton(),
+        GameButton(label: 'Aufgeben', size: 15, color: Ui.card, onPressed: game.toMenu),
+        GameButton(label: 'Weiterspielen', icon: '▶', size: 17, color: Palette.mint, onPressed: game.togglePause),
+      ]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+        const OutlinedLabel('PAUSE', size: 34),
+        const SizedBox(height: 8),
+        RunOverview(run: r, worldName: game.biomeDef.name),
+      ]),
     );
   }
 }
