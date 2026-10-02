@@ -63,6 +63,41 @@ void main() {
     });
   });
 
+  group('Startwaffen', () {
+    test('Jeder Vogel außer Henriette hat drei verschiedene Startwaffen', () {
+      for (final c in characterDefs) {
+        if (c.id == 'henriette') {
+          expect(c.startWeapons, isEmpty);
+          continue;
+        }
+        expect(c.startWeapons.length, 3, reason: c.id);
+        expect(c.startWeapons.toSet().length, 3, reason: c.id);
+        for (final id in c.startWeapons) {
+          expect(weaponDefs.containsKey(id), isTrue, reason: '${c.id}: $id');
+        }
+      }
+    });
+
+    testWidgets('Gewählte Startwaffe wird je Vogel gemerkt und im Run benutzt', (tester) async {
+      final game = await _startGame(tester);
+      final russ = characterById['russ']!;
+      expect(game.progress.startWeaponFor(russ), 'vine');
+      game.progress.setStartWeapon(russ, 'lantern');
+      game.progress.setStartWeapon(russ, 'pistol'); // nicht in Ruß' Auswahl → ignoriert
+      expect(game.progress.startWeaponFor(russ), 'lantern');
+      game.startRun(null, 1, 'russ');
+      expect(game.run!.weapons.single.id, 'lantern');
+      game.startRun(null, 1, 'spatz');
+      expect(game.run!.weapons.single.id, 'pistol', reason: 'andere Vögel behalten ihre eigene Wahl');
+      await game.progress.save();
+      final p = Progress();
+      await p.load();
+      expect(p.startWeaponFor(russ), 'lantern');
+      game.toMenu();
+      await tester.pump(const Duration(seconds: 1));
+    });
+  });
+
   group('Set-Boni', () {
     test('Schwellen bei 2, 4 und 6 Waffen', () {
       expect([for (var n = 0; n <= 6; n++) setLevel(n)], [0, 0, 1, 1, 2, 2, 3]);

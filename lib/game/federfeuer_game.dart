@@ -240,10 +240,12 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   /// Startet einen Run. [weaponOverride] ersetzt die Startwaffe des Charakters (Tests, Benchmark).
   void startRun([String? weaponOverride, int? difficulty, String? character]) {
+    final charId = character ?? progress.selectedCharacter;
     run = RunState(
-      weaponOverride,
+      // Ohne Vorgabe: die für diesen Vogel gewählte Startwaffe
+      weaponOverride ?? progress.startWeaponFor(characterById[charId] ?? characterDefs.first),
       difficulty: difficulty ?? progress.selected,
-      characterId: character ?? progress.selectedCharacter,
+      characterId: charId,
       rng: rng,
     );
     player.character = run!.character;

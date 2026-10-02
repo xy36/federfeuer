@@ -92,6 +92,19 @@ class Progress {
       debugUnlockAll || characters.contains(id) || characterById[id]?.unlock.kind == UnlockKind.start;
 
   String get selectedCharacter => hasCharacter(_character) ? _character : 'spatz';
+
+  /// Gewählte Startwaffe je Vogel (sonst die erste seiner Auswahl).
+  final Map<String, String> _startWeapons = {};
+  static const _startWeaponsKey = 'startWeapons';
+
+  String? startWeaponFor(CharacterDef c) {
+    final w = _startWeapons[c.id];
+    return w != null && c.startWeapons.contains(w) ? w : c.startWeapon;
+  }
+
+  void setStartWeapon(CharacterDef c, String id) {
+    if (c.startWeapons.contains(id)) _startWeapons[c.id] = id;
+  }
   set selectedCharacter(String id) {
     if (hasCharacter(id) && characterById.containsKey(id)) _character = id;
   }
@@ -181,6 +194,10 @@ class Progress {
       material = prefs.getInt(_materialKey) ?? 0;
       characters.addAll(prefs.getStringList(_charactersKey) ?? const []);
       _character = prefs.getString(_characterKey) ?? 'spatz';
+      for (final e in prefs.getStringList(_startWeaponsKey) ?? const <String>[]) {
+        final i = e.indexOf('=');
+        if (i > 0) _startWeapons[e.substring(0, i)] = e.substring(i + 1);
+      }
       seen.addAll(prefs.getStringList(_seenKey) ?? const []);
       evolved.addAll(prefs.getStringList(_evolvedKey) ?? const []);
       // Bestleistung aus der Zeit vor den Schwierigkeitsstufen gilt für Stufe 1.
@@ -207,6 +224,7 @@ class Progress {
       await prefs.setInt(_materialKey, material);
       await prefs.setStringList(_charactersKey, characters.toList());
       await prefs.setString(_characterKey, _character);
+      await prefs.setStringList(_startWeaponsKey, [for (final e in _startWeapons.entries) '${e.key}=${e.value}']);
       await prefs.setStringList(_seenKey, seen.toList());
       await prefs.setStringList(_evolvedKey, evolved.toList());
       _seenDirty = false;

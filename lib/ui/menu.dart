@@ -8,10 +8,13 @@ import '../game/config.dart';
 import '../game/federfeuer_game.dart';
 import '../game/gamepad_input.dart' show controllerActive;
 import '../game/progress.dart';
+import '../game/run_state.dart';
 import '../platform/desktop_window.dart';
 import 'bird_preview.dart';
 import 'compendium.dart';
 import 'controls_editor.dart';
+import 'inspect.dart';
+import 'inspect_info.dart';
 import 'overlays.dart' show FullScreenButton;
 import 'widgets.dart';
 
@@ -435,7 +438,7 @@ class _PlayPageState extends State<_PlayPage> {
   Widget _characterDetail(CharacterDef c) {
     final p = game.progress;
     final lock = _locked;
-    final w = c.startWeapon == null ? null : weaponDefs[c.startWeapon]!;
+    final chosen = p.startWeaponFor(c);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -460,9 +463,16 @@ class _PlayPageState extends State<_PlayPage> {
           ),
         ]),
         const SizedBox(height: 8),
+        Text('STARTWAFFE', style: displayStyle(11, Ui.muted).copyWith(letterSpacing: 1.5)),
+        const SizedBox(height: 4),
+        if (c.startWeapons.isEmpty)
+          const Pill('keine Startwaffe – Waffen nur aus dem Shop', icon: '✋')
+        else
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final id in c.startWeapons) _weaponChoice(c, id, selected: id == chosen),
+          ]),
+        const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
-          if (w != null) Pill(w.name, icon: w.icon, color: w.cls.color.withAlpha(60)),
-          if (w == null) const Pill('keine Startwaffe', icon: '✋'),
           if (c.startAction != null) Pill(c.startAction!.label, icon: c.startAction!.icon, color: const Color(0x33FFD23F)),
           if (c.maxWeapons != 6) Pill('${c.maxWeapons} Waffenslots', icon: '🎒'),
         ]),
@@ -476,6 +486,41 @@ class _PlayPageState extends State<_PlayPage> {
           child: GameButton(label: 'Starten', icon: '▶', size: 17, color: Palette.mint, onPressed: () => game.startRun()),
         ),
       ]),
+    );
+  }
+
+  /// Wählbare Startwaffe mit Info-Panel (Werte inklusive Klassenbonus des Vogels).
+  Widget _weaponChoice(CharacterDef c, String id, {required bool selected}) {
+    final d = weaponDefs[id]!;
+    return Inspectable(
+      radius: 12,
+      // Ohne Waffen im Inventar, damit kein „Kauf erreicht den nächsten Bonus“ erscheint
+      info: (_) => weaponInfo(RunState(id, characterId: c.id)..weapons.clear(), id, 0),
+      child: Pressable(
+        onPressed: () => setState(() {
+          game.progress.setStartWeapon(c, id);
+          game.progress.save();
+        }),
+        builder: (context, st) => Sticker(
+          state: st,
+          color: selected ? Palette.sun : d.cls.color,
+          radius: 12,
+          depth: 2,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(d.icon, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(d.name, style: bodyText(12.5, color: selected ? Palette.sun : Ui.text, weight: 900)),
+              Text(d.cls.label, style: bodyText(10.5, color: Ui.muted)),
+            ]),
+            if (selected) ...[
+              const SizedBox(width: 6),
+              Text('✓', style: bodyText(13, color: Palette.sun, weight: 900)),
+            ],
+          ]),
+        ),
+      ),
     );
   }
 

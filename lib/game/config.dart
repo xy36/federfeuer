@@ -639,7 +639,7 @@ class CharacterDef {
     required this.body,
     required this.belly,
     required this.unlock,
-    this.startWeapon,
+    this.startWeapons = const [],
     this.startAction,
     this.mods = const {},
     this.classBonus,
@@ -669,7 +669,9 @@ class CharacterDef {
   final BirdLook look;
   final Color glow, body, belly;
   final UnlockDef unlock;
-  final String? startWeapon;
+  /// Wählbare Startwaffen (die erste ist voreingestellt); leer = ohne Waffe (Henriette).
+  final List<String> startWeapons;
+  String? get startWeapon => startWeapons.isEmpty ? null : startWeapons.first;
   final ActionId? startAction;
 
   /// Werte-Änderungen zu Beginn eines Runs.
@@ -706,35 +708,35 @@ const characterDefs = [
     id: 'spatz', name: 'Kampfspatz', species: 'Spatz', icon: '🐦', role: 'Allround',
     strength: '+10 % Material', weakness: 'keine Spezialität', flight: 'normal – das Maß aller Dinge',
     look: BirdLook.sparrow, glow: Color(0xFFFFC86E), body: Color(0xFFFFD23F), belly: Color(0xFFFFF3C4),
-    startWeapon: 'pistol', startAction: ActionId.dash, materialChance: 0.1,
+    startWeapons: ['pistol', 'smg', 'shotgun'], startAction: ActionId.dash, materialChance: 0.1,
     unlock: UnlockDef(UnlockKind.start, 'Von Anfang an verfügbar'),
   ),
   CharacterDef(
     id: 'glutkehlchen', name: 'Glutkehlchen', species: 'Rotkehlchen', icon: '🐦', role: 'Glut',
     strength: 'Brand hält länger, +25 % Brandschaden', weakness: '−30 Reichweite', flight: 'normal, mit Funkenspur',
     look: BirdLook.robin, glow: Color(0xFFFF7A3D), body: Color(0xFFB0643A), belly: Color(0xFFFF6A3D),
-    startWeapon: 'shotgun', burnBonus: true, mods: {Stat.range: -30},
+    startWeapons: ['shotgun', 'rocket', 'popcorn'], burnBonus: true, mods: {Stat.range: -30},
     unlock: UnlockDef(UnlockKind.burnKills, '500 Gegner durch Brand besiegen', amount: 500),
   ),
   CharacterDef(
     id: 'boee', name: 'Böe', species: 'Schwalbe', icon: '🐦', role: 'Wind',
     strength: '+20 % Angriffstempo, schnellster Flieger', weakness: '−5 Max-HP', flight: 'sehr schnell, enge Kurven',
     look: BirdLook.swallow, glow: Color(0xFFBFF8E6), body: Color(0xFF3D5A9E), belly: Color(0xFFF2F2E8),
-    startWeapon: 'smg', mods: {Stat.atk: 20, Stat.maxHp: -5}, speedMul: 1.3, accelMul: 1.5,
+    startWeapons: ['smg', 'feather', 'dandelion'], mods: {Stat.atk: 20, Stat.maxHp: -5}, speedMul: 1.3, accelMul: 1.5,
     unlock: UnlockDef(UnlockKind.reachWave, 'Welle 8 erreichen', wave: 8),
   ),
   CharacterDef(
     id: 'schillerchen', name: 'Schillerchen', species: 'Kolibri', icon: '🐦', role: 'Licht',
     strength: '+15 % Krit, winzige Trefferfläche', weakness: '−40 % Max-HP', flight: 'fliegt frei in alle Richtungen, steht in der Luft',
     look: BirdLook.hummingbird, glow: Color(0xFF8CFFC8), body: Color(0xFF3FD6A0), belly: Color(0xFFE6FFF4),
-    startWeapon: 'disco', mods: {Stat.crit: 15}, maxHpMul: 0.6, freeFlight: true, radius: 11, scale: 0.75,
+    startWeapons: ['disco', 'pistol', 'rail'], mods: {Stat.crit: 15}, maxHpMul: 0.6, freeFlight: true, radius: 11, scale: 0.75,
     unlock: UnlockDef(UnlockKind.winAny, 'Einen Run gewinnen'),
   ),
   CharacterDef(
     id: 'russ', name: 'Ruß', species: 'Rabe', icon: '🐦‍⬛', role: 'Böse',
     strength: 'Böse-Waffen +25 %, +5 % Lebensraub', weakness: 'Herzen heilen nur halb', flight: 'schwer, gleitet lange',
     look: BirdLook.raven, glow: Color(0xFFB44CFF), body: Color(0xFF2A2140), belly: Color(0xFF4A3A66),
-    startWeapon: 'vine', classBonus: WeaponClass.dark, mods: {Stat.lifesteal: 5}, heartMul: 0.5,
+    startWeapons: ['vine', 'crowcall', 'lantern'], classBonus: WeaponClass.dark, mods: {Stat.lifesteal: 5}, heartMul: 0.5,
     glideMul: 0.6, accelMul: 0.8,
     unlock: UnlockDef(UnlockKind.totalKills, '2000 Gegner besiegen', amount: 2000),
   ),
@@ -742,7 +744,7 @@ const characterDefs = [
     id: 'frack', name: 'Frack', species: 'Pinguin', icon: '🐧', role: 'Wasser',
     strength: '+50 % Max-HP, +3 Rüstung', weakness: 'kann kaum fliegen', flight: 'mühsam in der Luft, am Boden rasend schnell',
     look: BirdLook.penguin, glow: Color(0xFF9FE4FF), body: Color(0xFF26304A), belly: Color(0xFFF4FAFF),
-    startWeapon: 'water', startAction: ActionId.bellySlide, mods: {Stat.armor: 3}, maxHpMul: 1.5,
+    startWeapons: ['water', 'bubbles', 'raincloud'], startAction: ActionId.bellySlide, mods: {Stat.armor: 3}, maxHpMul: 1.5,
     thrustMul: 0.62, glideMul: 1.4, groundMul: 1.7, scale: 1.1, radius: 17,
     unlock: UnlockDef(UnlockKind.classWave, 'Welle 10 mit mindestens 3 Wasser-Waffen erreichen',
         cls: WeaponClass.water, amount: 3, wave: 10),
@@ -751,7 +753,7 @@ const characterDefs = [
     id: 'hacki', name: 'Hacki', species: 'Specht', icon: '🐦', role: 'Stein',
     strength: 'Stein-Waffen +25 %, +3 Rüstung', weakness: '−15 % Angriffstempo', flight: 'ruckartig, klammert sich an den Weltrand',
     look: BirdLook.woodpecker, glow: Color(0xFFFFB37A), body: Color(0xFF3A3A3A), belly: Color(0xFFF2EEE6),
-    startWeapon: 'pebble', startAction: ActionId.drumroll, classBonus: WeaponClass.stone,
+    startWeapons: ['pebble', 'gnome', 'bowling'], startAction: ActionId.drumroll, classBonus: WeaponClass.stone,
     mods: {Stat.armor: 3, Stat.atk: -15}, accelMul: 1.3, wallCling: true,
     unlock: UnlockDef(UnlockKind.classWave, 'Welle 10 mit mindestens 3 Stein-Waffen erreichen',
         cls: WeaponClass.stone, amount: 3, wave: 10),
@@ -760,7 +762,7 @@ const characterDefs = [
     id: 'uhu', name: 'Professor Uhu', species: 'Eule', icon: '🦉', role: 'Licht/Böse',
     strength: '+25 % Erfahrung, nachts +20 % Schaden', weakness: 'tagsüber −10 % Schaden', flight: 'lautlos, sinkt sehr langsam',
     look: BirdLook.owl, glow: Color(0xFFE6D6FF), body: Color(0xFF8A6A4A), belly: Color(0xFFE8D8C0),
-    startWeapon: 'pistol', startAction: ActionId.flash, xpMul: 1.25, nightBonus: 0.2, dayMalus: 0.1, glideMul: 0.35,
+    startWeapons: ['pistol', 'rail', 'crowcall'], startAction: ActionId.flash, xpMul: 1.25, nightBonus: 0.2, dayMalus: 0.1, glideMul: 0.35,
     scale: 1.1, radius: 17,
     unlock: UnlockDef(UnlockKind.runLevel, 'In einem Run Level 15 erreichen', amount: 15),
   ),
@@ -768,7 +770,7 @@ const characterDefs = [
     id: 'glitzer', name: 'Glitzer', species: 'Elster', icon: '🐦', role: 'Wirtschaft',
     strength: 'Shop −15 %, manchmal Geschenk beim Kill', weakness: 'nur 4 Waffenslots', flight: 'normal',
     look: BirdLook.magpie, glow: Color(0xFF9FD4FF), body: Color(0xFF20242E), belly: Color(0xFFF6F6F6),
-    startWeapon: 'water', startAction: ActionId.steal, shopMul: 0.85, giftChance: 0.01, maxWeapons: 4,
+    startWeapons: ['water', 'disco', 'pebble'], startAction: ActionId.steal, shopMul: 0.85, giftChance: 0.01, maxWeapons: 4,
     unlock: UnlockDef(UnlockKind.totalMaterial, '3000 Material sammeln', amount: 3000),
   ),
   CharacterDef(

@@ -207,7 +207,6 @@ Widget statInfo(RunState r, Stat s) {
 
 Widget characterInfo(Progress p, CharacterDef c) {
   final has = p.hasCharacter(c.id);
-  final w = c.startWeapon == null ? null : weaponDefs[c.startWeapon]!;
   final prog = p.unlockProgress(c.unlock);
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
     _head(c.icon, c.name, '${c.species} · ${c.role}', c.glow),
@@ -219,7 +218,7 @@ Widget characterInfo(Progress p, CharacterDef c) {
     _text(c.flight),
     _section('Start'),
     _text([
-      w?.name ?? 'keine Waffe',
+      c.startWeapons.isEmpty ? 'keine Waffe' : c.startWeapons.map((id) => weaponDefs[id]!.name).join(' / '),
       if (c.startAction != null) c.startAction!.label,
       if (c.maxWeapons != 6) '${c.maxWeapons} Waffenslots',
     ].join(' · ')),
