@@ -5,6 +5,7 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:gamepads/gamepads.dart' show GamepadButton;
 
 import 'components/atmosphere.dart';
 import 'components/decor.dart';
@@ -34,6 +35,9 @@ import 'weather.dart';
 enum Phase { menu, play, cleared, levelUp, shop, paused, over }
 
 class ArenaWorld extends World {}
+
+/// Kurztasten im Shop.
+enum ShopHotkey { reroll, start, lock, nextSection, prevSection }
 
 class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   FederfeuerGame() : super(world: ArenaWorld());
@@ -158,8 +162,53 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     onBack: _padBack,
     onStart: _padStart,
     onAction: useAction,
+    onMenuButton: _padMenuButton,
     bindings: settings.bindings,
   );
+
+  /// Vom Shop gesetzt: Kurztasten (Neu würfeln, Welle starten, Zurückhalten, Bereich wechseln).
+  void Function(ShopHotkey key)? onShopHotkey;
+
+  /// Kurztaste an den Shop geben – nicht direkt nach dem Öffnen (Taste war fürs Spiel gemeint).
+  void _shopHotkey(ShopHotkey key) {
+    if (phase != Phase.shop) return;
+    if (DateTime.now().difference(_menuShownAt).inMilliseconds < kMenuConfirmGraceMs) return;
+    onShopHotkey?.call(key);
+  }
+
+  /// Controller im Shop: true = Knopf verbraucht (geht nicht weiter ans Spiel, z. B. Start ≠ Pause).
+  bool _padMenuButton(GamepadButton b) {
+    if (phase != Phase.shop) return false;
+    final key = switch (b) {
+      GamepadButton.x => ShopHotkey.reroll,
+      GamepadButton.y => ShopHotkey.lock,
+      GamepadButton.start => ShopHotkey.start,
+      GamepadButton.rightBumper => ShopHotkey.nextSection,
+      GamepadButton.leftBumper => ShopHotkey.prevSection,
+      _ => null,
+    };
+    if (key == null) return false;
+    _shopHotkey(key);
+    return true;
+  }
+
+  /// Tastatur im Shop – global abgehört, weil ein fokussierter Shop-Knopf die Tasten sonst
+  /// nicht ans Spiel weitergibt. Fest belegt, nicht W/Leertaste/S (im Spiel zum Fliegen).
+  bool _onShopKey(KeyEvent e) {
+    if (phase != Phase.shop || inputCapture || e is! KeyDownEvent) return false;
+    final key = switch (e.logicalKey) {
+      LogicalKeyboardKey.keyR => ShopHotkey.reroll,
+      LogicalKeyboardKey.keyN => ShopHotkey.start,
+      LogicalKeyboardKey.keyL => ShopHotkey.lock,
+      LogicalKeyboardKey.pageDown => ShopHotkey.nextSection,
+      LogicalKeyboardKey.pageUp => ShopHotkey.prevSection,
+      _ => null,
+    };
+    if (key == null) return false;
+    if (pad.used) pad.used = false;
+    _shopHotkey(key);
+    return true;
+  }
 
   /// Neubelegung in den Einstellungen läuft: Tastatur-Eingaben gehen nicht ans Spiel oder Menü.
   bool inputCapture = false;
@@ -208,6 +257,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     camera.viewport.add(PerfOverlay());
     perf.start();
     if (kDebugTools) HardwareKeyboard.instance.addHandler(_onDebugKey);
+    HardwareKeyboard.instance.addHandler(_onShopKey);
     await progress.load();
     await settings.load();
     showPerf = settings.showFps;
@@ -220,6 +270,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     pad.stop();
     perf.stop();
     HardwareKeyboard.instance.removeHandler(_onDebugKey);
+    HardwareKeyboard.instance.removeHandler(_onShopKey);
     super.onRemove();
   }
 

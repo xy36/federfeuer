@@ -6,6 +6,7 @@ import 'package:gamepads/gamepads.dart';
 
 import '../game/config.dart';
 import '../game/federfeuer_game.dart';
+import '../game/gamepad_input.dart' show controllerActive;
 import '../game/input_bindings.dart';
 import '../platform/desktop_window.dart';
 import 'widgets.dart';
@@ -227,3 +228,23 @@ class KeyCap extends StatelessWidget {
       );
 }
 
+
+/// Kurztasten-Hinweis neben einem Knopf: Tastenkappe bzw. Controller-Knopf, je nach Eingabegerät.
+/// Auf Touch-Geräten ohne Controller unsichtbar.
+class ShortcutHint extends StatelessWidget {
+  const ShortcutHint({super.key, required this.keyLabel, required this.pad});
+  final String keyLabel;
+  final GamepadButton pad;
+
+  @override
+  Widget build(BuildContext context) => ValueListenableBuilder<bool>(
+        valueListenable: controllerActive,
+        builder: (context, usePad, _) {
+          if (!usePad && isTouchPlatform) return const SizedBox.shrink();
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6),
+            child: usePad ? PadGlyph(pad) : KeyCap(keyLabel),
+          );
+        },
+      );
+}

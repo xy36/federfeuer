@@ -17,11 +17,16 @@ class GamepadInput {
     required this.onBack,
     required this.onStart,
     this.onAction,
+    this.onMenuButton,
     InputBindings? bindings,
   }) : bindings = bindings ?? InputBindings();
 
   /// Belegung der Spielaktionen; Menüs bleiben fest (Steuerkreuz/Stick, A, B).
   InputBindings bindings;
+
+  /// Fest belegte Menü-Knöpfe neben A/B/Steuerkreuz (X, Y, LB, RB, Start) – z. B. Shop-Kurztasten.
+  /// Gibt true zurück, wenn der Knopf verbraucht wurde.
+  final bool Function(GamepadButton)? onMenuButton;
 
   /// Während der Neubelegung: der nächste gedrückte Knopf geht hierhin statt ins Spiel.
   ValueChanged<GamepadButton>? onCapture;
@@ -154,6 +159,7 @@ class GamepadInput {
         onNavigate(TraversalDirection.right);
       default:
     }
+    if (onMenuButton?.call(b) ?? false) return;
     // Spiel: frei belegt
     if (bindings.padMatches(InputAction.pause, b)) onStart();
     if (bindings.padMatches(InputAction.action1, b)) onAction?.call(0);
