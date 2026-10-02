@@ -711,6 +711,9 @@ class _DebugPage extends StatefulWidget {
 }
 
 class _DebugPageState extends State<_DebugPage> {
+  /// Gewählte Welle für den Direktstart.
+  int _wave = 4;
+
   @override
   Widget build(BuildContext context) {
     final game = widget.game, p = game.progress;
@@ -725,6 +728,38 @@ class _DebugPageState extends State<_DebugPage> {
           value: p.debugUnlockAll,
           onChanged: (v) => setState(() => p.debugUnlockAll = v),
         ),
+        _ToggleRow(
+          label: 'Unverwundbar',
+          hint: 'Der Vogel nimmt keinen Schaden (wird nicht gespeichert)',
+          value: game.debugInvincible,
+          onChanged: (v) => setState(() => game.debugInvincible = v),
+        ),
+        sectionTitle('Welle wählen'),
+        Text('Startet einen Run mit dem gewählten Vogel und der gewählten Stufe direkt in dieser Welle. '
+            'Torwächter: 4, 8, 12 · Boss: 15.', style: mutedStyle),
+        const SizedBox(height: 8),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          for (var w = 1; w <= kMaxWave; w++)
+            _waveChip(w, gate: gatekeeperForWave(w) != null, boss: isBossWave(w)),
+        ]),
+        const SizedBox(height: 4),
+        Wrap(spacing: 10, children: [
+          GameButton(
+            label: 'Welle $_wave starten',
+            icon: '▶',
+            size: 14,
+            color: Palette.mint,
+            onPressed: () => game.debugStartAtWave(_wave),
+          ),
+          if (_wave > 1)
+            GameButton(
+              label: 'Erst Shop (+${30 * (_wave - 1)} Material)',
+              icon: '🛒',
+              size: 14,
+              color: Ui.card,
+              onPressed: () => game.debugStartAtWave(_wave, shopFirst: true),
+            ),
+        ]),
         sectionTitle('Messen'),
         Text('FPS-Anzeige jederzeit mit F3. Aussagekräftig nur im Profile- oder Release-Build.', style: mutedStyle),
         const SizedBox(height: 8),
@@ -733,6 +768,21 @@ class _DebugPageState extends State<_DebugPage> {
           GameButton(label: 'Render-Analyse', icon: '🔬', size: 14, color: Ui.card, onPressed: game.startRenderAnalysis),
         ]),
       ]),
+    );
+  }
+
+  Widget _waveChip(int w, {required bool gate, required bool boss}) {
+    final sel = w == _wave;
+    return Pressable(
+      onPressed: () => setState(() => _wave = w),
+      builder: (context, st) => Sticker(
+        state: st,
+        color: sel ? Palette.sun : (boss ? const Color(0xFFFF5AE0) : (gate ? const Color(0xFFC07BFF) : Ui.card)),
+        radius: 10,
+        depth: 2,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Text('$w', style: numberStyle(14, Ui.cardText)),
+      ),
     );
   }
 }

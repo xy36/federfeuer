@@ -115,7 +115,8 @@ void main() {
     game.hurtEnemy(game.enemies.last, 1e6, false, 0);
     await t.pump(const Duration(milliseconds: 50));
     expect(game.world.children.whereType<VolatileRemnant>(), isNotEmpty);
-    expect(game.world.children.whereType<Drop>().where((d) => d.material).length, greaterThanOrEqualTo(kEliteDrops));
+    final value = game.world.children.whereType<Drop>().where((d) => d.material).fold(0, (a, d) => a + d.value);
+    expect(value, greaterThanOrEqualTo(kEliteDrops), reason: 'Elite: dreifaches Material');
     expect(game.progress.hasSeen('x:volatile'), isTrue);
   });
 
@@ -190,6 +191,38 @@ void main() {
       await t.pump(const Duration(milliseconds: 50));
     }
     expect(boss.bossPhase, 3);
+    game.toMenu();
+    await t.pump(const Duration(seconds: 1));
+  });
+
+  test('Material wird in wenige wertvolle Kristalle zerlegt', () {
+    expect(splitMaterial(1), [1]);
+    expect(splitMaterial(3), [3]);
+    expect(splitMaterial(9), [5, 3, 1]);
+    expect(splitMaterial(15), [10, 5]);
+    for (var n = 0; n < 40; n++) {
+      expect(splitMaterial(n).fold(0, (a, b) => a + b), n);
+    }
+    expect(materialColor(10), isNot(materialColor(1)));
+  });
+
+  testWidgets('Debug: Start direkt in einer Welle oder mit Shop davor; Unverwundbar', (t) async {
+    final game = await _game(t);
+    game.debugStartAtWave(8);
+    expect(game.run!.wave, 8);
+    expect(game.phase, Phase.play);
+    game.debugInvincible = true;
+    final hp = game.run!.hp;
+    game.player.iframe = 0;
+    game.hurtPlayer(5);
+    expect(game.run!.hp, hp);
+    game.debugInvincible = false;
+    game.debugStartAtWave(12, shopFirst: true);
+    expect(game.phase, Phase.shop);
+    expect(game.run!.wave, 11);
+    expect(game.run!.money, kStartMoney + 30 * 11);
+    game.nextWave();
+    expect(game.run!.wave, 12);
     game.toMenu();
     await t.pump(const Duration(seconds: 1));
   });

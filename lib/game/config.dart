@@ -62,6 +62,29 @@ const double kItemPriceLin = 0.15, kItemPriceQuad = 0.015;
 /// Neu würfeln: ⌊2 + lin·w + quad·w²⌋, jeder weitere Wurf in derselben Shopphase +2.
 const double kRerollLin = 0.8, kRerollQuad = 0.04;
 
+/// Material-Kristalle: Wert und Farbe. Größere Ausbeute fällt als wenige wertvolle Kristalle.
+const kMaterialValues = [10, 5, 3, 1];
+
+Color materialColor(int value) => switch (value) {
+      >= 10 => const Color(0xFFFFC94A), // Gold
+      >= 5 => const Color(0xFFC07BFF), // Violett
+      >= 3 => const Color(0xFF6CC8FF), // Blau
+      _ => Palette.mint,
+    };
+
+/// Zerlegt [total] Material in möglichst wenige Kristalle (z. B. 9 → 5 + 3 + 1).
+List<int> splitMaterial(int total) {
+  final out = <int>[];
+  var left = total;
+  for (final v in kMaterialValues) {
+    while (left >= v) {
+      out.add(v);
+      left -= v;
+    }
+  }
+  return out;
+}
+
 /// Startgeld jedes Runs, damit schon nach Welle 1 ein Kauf drin ist.
 const int kStartMoney = 15;
 

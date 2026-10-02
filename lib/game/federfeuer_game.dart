@@ -99,6 +99,29 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   final perf = PerfMonitor();
 
+  /// Debug: Held nimmt keinen Schaden (bleibt über Runs an, wird nicht gespeichert).
+  bool debugInvincible = false;
+
+  /// Debug: Run direkt in Welle [wave] starten. [shopFirst]: vorher Shop mit Startkapital
+  /// (30 Material je übersprungener Welle), damit man sich passend ausrüsten kann.
+  void debugStartAtWave(int wave, {bool shopFirst = false}) {
+    startRun();
+    final r = run!;
+    if (wave <= 1) return;
+    if (shopFirst) {
+      r.wave = wave - 1;
+      r.money += 30 * (wave - 1);
+      phase = Phase.shop;
+      _clearArena();
+      r.rerolls = 0;
+      r.rollOffers(rng);
+      _setOverlays(['shop']);
+    } else {
+      r.wave = wave;
+      startWave();
+    }
+  }
+
   /// FPS-Anzeige (F3), unverwundbarer Held, laufender Performance-Test.
   bool showPerf = false, godMode = false, benchmarkRunning = false;
   double benchmarkLeft = 0;
@@ -303,7 +326,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final r = run!;
     // Nur Material, das schon zum Spieler fliegt, zählt noch; der Rest verfällt.
     for (final d in world.children.whereType<Drop>()) {
-      if (d.material && !d.taken && d.pulled) r.gain(1);
+      if (d.material && !d.taken && d.pulled) r.gain(d.value);
     }
     // Sparschwein: Zinsen
     final interest = r.interest();
@@ -709,6 +732,14 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     burst(gate!.position, const Color(0xFFFF5AE0), 30, 260);
   }
 
+  /// Lässt [total] Material als möglichst wenige Kristalle fallen (1 / 3 / 5 / 10).
+  void dropMaterial(Vector2 at, int total, {double spread = 8}) {
+    final fall = run!.difficultyDef.dropFallSpeed;
+    for (final v in splitMaterial(total)) {
+      world.add(Drop(at.clone()..x += rnd(-spread, spread), material: true, rng: rng, fallSpeed: fall, value: v));
+    }
+  }
+
   /// Kopien teilender Elitegegner, die nach dem aktuellen Frame erscheinen.
   final _pendingMinis = <(EnemyType, Vector2)>[];
 
@@ -758,7 +789,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void hurtPlayer(double amount, {Enemy? source}) {
     final r = run;
-    if (r == null || !playing || player.iframe > 0 || winT > 0 || godMode) return;
+    if (r == null || !playing || player.iframe > 0 || winT > 0 || godMode || debugInvincible) return;
     // Seifenblasenschild schluckt alles
     if (shieldT > 0) return;
     // Lichtschild: blockt alle 8 s einen Treffer
@@ -892,9 +923,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       burst(e.position, const Color(0xFFFFC94A), 40, 300);
       floatText(e.position - Vector2(0, e.r + 20), 'DAS TOR IST OFFEN', Palette.sun, 20);
       final fall = r.difficultyDef.dropFallSpeed;
-      for (var i = 0; i < kGateDrops; i++) {
-        world.add(Drop(e.position.clone()..x += rnd(-30, 30), material: true, rng: rng, fallSpeed: fall));
-      }
+      dropMaterial(e.position, kGateDrops, spread: 30);
       world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
       return;
     }
@@ -920,9 +949,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
     // Goldgier: 15 % doppelte Drops
     final times = (r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1) * (e.elite != null ? kEliteDrops : 1);
-    for (var i = 0; i < enemyDefs[e.type]!.drop * times; i++) {
-      world.add(Drop(e.position.clone()..x += rnd(-8, 8), material: true, rng: rng, fallSpeed: fall));
-    }
+    dropMaterial(e.position, enemyDefs[e.type]!.drop * times);
     if (rng.nextDouble() < 0.04) {
       world.add(Drop(e.position.clone(), material: false, rng: rng, fallSpeed: fall));
     }
