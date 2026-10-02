@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -6,6 +8,7 @@ import 'package:federfeuer/game/components/pickups.dart';
 import 'package:federfeuer/game/components/projectiles.dart';
 import 'package:federfeuer/game/config.dart';
 import 'package:federfeuer/game/federfeuer_game.dart';
+import 'package:federfeuer/game/run_state.dart';
 import 'package:federfeuer/main.dart' show buildOverlayMap;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -225,5 +228,25 @@ void main() {
     expect(game.run!.wave, 12);
     game.toMenu();
     await t.pump(const Duration(seconds: 1));
+  });
+
+  test('Debug-Ausrüstung wächst mit der Welle', () {
+    for (final seed in [1, 2, 3]) {
+      final early = RunState('pistol', rng: Random(seed))..debugEquip(4, Random(seed));
+      final late = RunState('pistol', rng: Random(seed))..debugEquip(14, Random(seed));
+      expect(late.level, greaterThan(early.level));
+      expect(late.weapons.length, greaterThan(early.weapons.length));
+      expect(late.weapons.length, lessThanOrEqualTo(late.maxWeapons));
+      int itemCount(RunState r) => r.items.values.fold<int>(0, (a, b) => a + b);
+      expect(itemCount(late), greaterThan(itemCount(early)));
+      expect(late.weapons.map((w) => w.tier).reduce(max), greaterThanOrEqualTo(2));
+      expect(late.weapons.map((w) => w.def.cls).toSet().length, lessThanOrEqualTo(2), reason: 'zwei Klassen für Set-Boni');
+      expect(late.hp, late.maxHp);
+    }
+    // Glitzer hat nur 4 Slots, Henriette startet ohne Waffe
+    final g = RunState(null, characterId: 'glitzer')..debugEquip(15, Random(1));
+    expect(g.weapons.length, 4);
+    final h = RunState(null, characterId: 'henriette')..debugEquip(10, Random(1));
+    expect(h.weapons, isNotEmpty);
   });
 }

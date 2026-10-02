@@ -104,10 +104,14 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   /// Debug: Run direkt in Welle [wave] starten. [shopFirst]: vorher Shop mit Startkapital
   /// (30 Material je übersprungener Welle), damit man sich passend ausrüsten kann.
-  void debugStartAtWave(int wave, {bool shopFirst = false}) {
+  void debugStartAtWave(int wave, {bool shopFirst = false, bool equip = true}) {
     startRun();
     final r = run!;
     if (wave <= 1) return;
+    if (equip) {
+      r.debugEquip(wave, rng);
+      _syncWeapons();
+    }
     if (shopFirst) {
       r.wave = wave - 1;
       r.money += 30 * (wave - 1);

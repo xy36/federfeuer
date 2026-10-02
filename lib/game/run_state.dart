@@ -461,4 +461,69 @@ class RunState {
     applyMods({c.option.stat: c.value});
     pendingLevels--;
   }
+
+  // ---------------- Debug ----------------
+
+  /// Debug: Ausrüstung, wie sie ein typischer Run bis vor Welle [wave] ungefähr hätte –
+  /// Level-ups, Waffen aus zwei Klassen mit passender Stufe, Items und Aktionen.
+  void debugEquip(int wave, Random rng) {
+    if (wave <= 1) return;
+    final done = wave - 1;
+
+    // Level: etwa 1,2 je geschaffter Welle, Verbesserungen zufällig wie im Spiel
+    final levels = (done * 1.2).round();
+    for (var i = 0; i < levels; i++) {
+      level++;
+      stats[Stat.maxHp] = maxHp + 1;
+      pendingLevels++;
+      rollLevelChoices(rng);
+      chooseLevel(rng.nextInt(levelChoices.length));
+    }
+
+    // Waffen: zwei Klassen (die der Startwaffe und eine zweite), Anzahl und Stufe wachsen mit der Welle
+    final count = min(maxWeapons, (1 + done / 2.6).round());
+    final firstCls = weapons.isNotEmpty ? weapons.first.def.cls : WeaponClass.values[rng.nextInt(WeaponClass.values.length)];
+    final others = WeaponClass.values.where((c) => c != firstCls).toList();
+    final classes = [firstCls, others[rng.nextInt(others.length)]];
+    int tier() {
+      final base = done >= 12 ? 2 : (done >= 7 ? 1 + (rng.nextDouble() < 0.5 ? 1 : 0) : (done >= 3 ? rng.nextInt(2) : 0));
+      return min(3, base + (done >= 10 && rng.nextDouble() < 0.25 ? 1 : 0));
+    }
+
+    for (final w in weapons) {
+      w.tier = max(w.tier, tier());
+    }
+    var k = 0;
+    while (weapons.length < count) {
+      final pool = weaponDefs.values.where((d) => d.cls == classes[k % 2]).toList();
+      weapons.add(OwnedWeapon(pool[rng.nextInt(pool.length)].id, tier()));
+      k++;
+    }
+
+    // Items: etwa 0,8 je Welle mit der Seltenheit dieser Welle
+    final saved = this.wave;
+    for (var i = 0; i < (done * 0.8).round(); i++) {
+      this.wave = 1 + rng.nextInt(done);
+      final rarity = rollRarity(rng);
+      final pool = itemDefs.where((it) => it.action == null && it.rarity == rarity && itemAvailable(it)).toList();
+      if (pool.isEmpty) continue;
+      final it = pool[rng.nextInt(pool.length)];
+      applyMods(it.mods);
+      items[it.id] = (items[it.id] ?? 0) + 1;
+    }
+    this.wave = saved;
+
+    // Aktionen: ab Welle 5 eine zweite, später Stufe II oder Verschmelzen
+    final buyable = itemDefs.where((it) => it.action != null).map((it) => it.action!).toList();
+    if (done >= 4) {
+      final options = buyable.where((a) => actionBuy(a) == ActionBuy.add).toList();
+      if (options.isNotEmpty) addAction(options[rng.nextInt(options.length)]);
+    }
+    if (done >= 8 && actions.isNotEmpty && rng.nextBool()) {
+      final a = actions[rng.nextInt(actions.length)];
+      if (!a.id.evolved) a.level = 1;
+    }
+    if (done >= 10 && evolution != null) evolve();
+    hp = maxHp;
+  }
 }

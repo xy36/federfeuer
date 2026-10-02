@@ -711,8 +711,9 @@ class _DebugPage extends StatefulWidget {
 }
 
 class _DebugPageState extends State<_DebugPage> {
-  /// Gewählte Welle für den Direktstart.
+  /// Gewählte Welle für den Direktstart und ob passende Ausrüstung dazukommt.
   int _wave = 4;
+  bool _equip = true;
 
   @override
   Widget build(BuildContext context) {
@@ -742,6 +743,12 @@ class _DebugPageState extends State<_DebugPage> {
           for (var w = 1; w <= kMaxWave; w++)
             _waveChip(w, gate: gatekeeperForWave(w) != null, boss: isBossWave(w)),
         ]),
+        _ToggleRow(
+          label: 'Passende Ausrüstung',
+          hint: 'Level, Waffen, Items und Aktionen wie ungefähr nach ${max(0, _wave - 1)} Wellen',
+          value: _equip,
+          onChanged: (v) => setState(() => _equip = v),
+        ),
         const SizedBox(height: 4),
         Wrap(spacing: 10, children: [
           GameButton(
@@ -749,7 +756,7 @@ class _DebugPageState extends State<_DebugPage> {
             icon: '▶',
             size: 14,
             color: Palette.mint,
-            onPressed: () => game.debugStartAtWave(_wave),
+            onPressed: () => game.debugStartAtWave(_wave, equip: _equip),
           ),
           if (_wave > 1)
             GameButton(
@@ -757,7 +764,7 @@ class _DebugPageState extends State<_DebugPage> {
               icon: '🛒',
               size: 14,
               color: Ui.card,
-              onPressed: () => game.debugStartAtWave(_wave, shopFirst: true),
+              onPressed: () => game.debugStartAtWave(_wave, shopFirst: true, equip: _equip),
             ),
         ]),
         sectionTitle('Messen'),

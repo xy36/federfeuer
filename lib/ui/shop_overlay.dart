@@ -219,9 +219,15 @@ class _ShopOverlayState extends State<ShopOverlay> {
     final hints = <(String, Color)>[];
     if (buyKind == ActionBuy.upgrade) hints.add(('⤴ Stufe II: −30 % Abklingzeit, stärkere Wirkung', _green));
     if (act != null && buyKind != ActionBuy.upgrade) {
-      for (final owned in r.actions) {
-        final rec = recipeFor(owned.id, act);
-        if (rec != null) hints.add(('passt zu ${owned.id.label} → ${rec.result.label}', _green));
+      // Höchstens eine Rezeptzeile, sonst läuft die Karte über; Details zeigt das Info-Panel
+      final recs = [
+        for (final owned in r.actions)
+          if (recipeFor(owned.id, act) case final rec?) (owned.id, rec.result),
+      ];
+      if (recs.isNotEmpty) {
+        final (with_, result) = recs.first;
+        final more = recs.length > 1 ? ' (+${recs.length - 1})' : '';
+        hints.add(('passt zu ${with_.label} → ${result.label}$more', _green));
       }
       if (buyKind == ActionBuy.replace) hints.add(('Plätze voll – ersetzt eine Aktion', Ui.cardMuted));
     }
