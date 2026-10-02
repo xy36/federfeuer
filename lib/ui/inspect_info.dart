@@ -187,7 +187,7 @@ Widget statInfo(RunState r, Stat s) {
     Stat.range => 'Addiert sich auf die Reichweite aller Waffen.',
     Stat.speed => 'Bewegungstempo.',
     Stat.armor => 'Erlittener Schaden × 15 / (15 + Rüstung); negativ erhöht ihn.',
-    Stat.lifesteal => 'Chance pro Treffer auf +1 HP.',
+    Stat.lifesteal => 'Chance pro Treffer auf +1 HP – höchstens 1 HP alle 0,5 s.',
     Stat.crit => 'Chance auf doppelten Schaden pro Treffer.',
     Stat.pickup => 'Material in diesem Radius fliegt zu dir (Grundradius 70).',
     Stat.thrust => 'Stärkerer Schub beim Fliegen (Kolibri: schneller hoch und runter).',

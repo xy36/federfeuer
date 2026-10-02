@@ -903,7 +903,10 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     );
     if (!dot) {
       final ls = r.stat(Stat.lifesteal) + (fx?.lifesteal ?? 0);
-      if (ls > 0 && rng.nextDouble() * 100 < ls) heal(1);
+      if (ls > 0 && lifestealCd <= 0 && rng.nextDouble() * 100 < ls) {
+        lifestealCd = kLifestealInterval;
+        heal(1);
+      }
       if (fx != null) e.applyEffects(fx);
       if (crit && cls == WeaponClass.light && r.has(ItemEffect.burningGlass)) e.ignite(2, dmg * 0.3);
       if (crit && r.has(ItemEffect.stardust)) explode(e.position.clone(), 36, dmg * 0.4, false);
@@ -1001,7 +1004,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   /// Zeitblase, Staubsauger, Goldene Stunde, Elsterschatz.
   double timeSlowT = 0, shieldT = 0, stormT = 0, slideT = 0, flashT = 0, freezeT = 0;
   double timeBubbleT = 0, vacuumT = 0, goldenT = 0, hoardT = 0;
-  double lightShieldCd = 0, _stormTick = 0, _boomT = 0, _rocketT = 0, _drumT = 0, _actionPower = 1;
+  double lifestealCd = 0, lightShieldCd = 0, _stormTick = 0, _boomT = 0, _rocketT = 0, _drumT = 0, _actionPower = 1;
   int _drums = 0;
 
   /// Gewitter-Parameter (Gewitterwolke, Gewitterblase, Ewiges Gewitter).
@@ -1262,6 +1265,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     goldenT = max(0.0, goldenT - dt);
     hoardT = max(0.0, hoardT - dt);
     lightShieldCd = max(0.0, lightShieldCd - dt);
+    lifestealCd = max(0.0, lifestealCd - dt);
     final p = player.position;
     if (stormT > 0) {
       stormT -= dt;

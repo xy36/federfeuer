@@ -193,7 +193,7 @@ enum WeaponClass {
         light => const ['+5 % Krit', '+10 % Krit', '+20 % Krit'],
         ember => const ['Brand/Explosion +15 %', 'Brand/Explosion +30 %', 'Brand/Explosion +50 %'],
         wind => const ['+8 % Angriffstempo', '+16 % Angriffstempo', '+30 % Angriffstempo'],
-        dark => const ['+3 % Lebensraub, Fluch +15 %', '+6 % Lebensraub, Fluch +30 %', '+12 % Lebensraub, Fluch +50 %'],
+        dark => const ['+2 % Lebensraub, Fluch +15 %', '+4 % Lebensraub, Fluch +30 %', '+8 % Lebensraub, Fluch +50 %'],
         water => const ['Verlangsamung +20 %, +1 Regen.', 'Verlangsamung +40 %, +2 Regen.', 'Verlangsamung +70 %, +4 Regen.'],
         stone => const ['+2 Rüstung, schwere Waffen +10 %', '+4 Rüstung, schwere Waffen +20 %', '+8 Rüstung, schwere Waffen +35 %'],
       };
@@ -206,7 +206,10 @@ int setLevel(int count) => count >= 6 ? 3 : (count >= 4 ? 2 : (count >= 2 ? 1 : 
 const kSetCrit = [0.0, 5, 10, 20];
 const kSetEmber = [0.0, 0.15, 0.3, 0.5]; // Brandschaden und Explosionsradius
 const kSetAtk = [0.0, 8, 16, 30];
-const kSetLifesteal = [0.0, 3, 6, 12];
+const kSetLifesteal = [0.0, 2, 4, 8];
+
+/// Lebensraub heilt höchstens 1 HP je so viele Sekunden (sonst heilen schnelle Waffen fast dauerhaft).
+const double kLifestealInterval = 0.5;
 const kSetCurse = [0.0, 0.15, 0.3, 0.5]; // Zusatzschaden auf verfluchte Gegner
 const kSetSlow = [0.0, 0.2, 0.4, 0.7]; // stärkere/längere Verlangsamung
 const kSetRegen = [0.0, 1, 2, 4];
@@ -332,7 +335,7 @@ const Map<String, WeaponDef> weaponDefs = {
   'vine': WeaponDef(
       id: 'vine', name: 'Dornenranke', icon: '🥀', desc: 'Peitschenhieb im Bogen, stiehlt Leben (Nahkampf).',
       cls: WeaponClass.dark, kind: WeaponKind.whip,
-      dmg: 12, cooldown: 0.9, range: 125, speed: 0, spread: 1.7, lifesteal: 30, curse: 2, knock: 18, price: 22,
+      dmg: 12, cooldown: 0.9, range: 125, speed: 0, spread: 1.7, lifesteal: 15, curse: 2, knock: 18, price: 22,
       color: Color(0xFFD08CFF), radius: 4, length: 14),
   'crowcall': WeaponDef(
       id: 'crowcall', name: 'Krähenruf', icon: '🐦‍⬛', desc: 'Ruft Geisterkrähen, die selbst Gegner jagen.',
@@ -549,7 +552,7 @@ const itemDefs = [
   ItemDef('magnet', 'Magnet', '🧲', 10, {Stat.pickup: 70}),
   ItemDef('hantel', 'Hantel', '🏋️', 18, {Stat.dmg: 12, Stat.speed: -3}, rarity: Rarity.rare),
   ItemDef('kaffee', 'Doppelter Espresso', '☕', 18, {Stat.atk: 15}, rarity: Rarity.rare),
-  ItemDef('zahn', 'Vampirzahn', '🦷', 22, {Stat.lifesteal: 4}, rarity: Rarity.rare),
+  ItemDef('zahn', 'Vampirzahn', '🦷', 22, {Stat.lifesteal: 3}, rarity: Rarity.rare),
   ItemDef('klee', 'Kleeblatt', '🍀', 16, {Stat.crit: 8}, rarity: Rarity.rare),
   ItemDef('glas', 'Glaskanone', '🔮', 25, {Stat.dmg: 30, Stat.maxHp: -6}, rarity: Rarity.rare),
   ItemDef('panzer', 'Schildkrötenpanzer', '🐢', 20, {Stat.armor: 5, Stat.speed: -8}, rarity: Rarity.rare),
@@ -737,9 +740,9 @@ const characterDefs = [
   ),
   CharacterDef(
     id: 'russ', name: 'Ruß', species: 'Rabe', icon: '🐦‍⬛', role: 'Böse',
-    strength: 'Böse-Waffen +25 %, +5 % Lebensraub', weakness: 'Herzen heilen nur halb', flight: 'schwer, gleitet lange',
+    strength: 'Böse-Waffen +25 %, +3 % Lebensraub', weakness: 'Herzen heilen nur halb', flight: 'schwer, gleitet lange',
     look: BirdLook.raven, glow: Color(0xFFB44CFF), body: Color(0xFF2A2140), belly: Color(0xFF4A3A66),
-    startWeapons: ['vine', 'crowcall', 'lantern'], classBonus: WeaponClass.dark, mods: {Stat.lifesteal: 5}, heartMul: 0.5,
+    startWeapons: ['vine', 'crowcall', 'lantern'], classBonus: WeaponClass.dark, mods: {Stat.lifesteal: 3}, heartMul: 0.5,
     glideMul: 0.6, accelMul: 0.8,
     unlock: UnlockDef(UnlockKind.totalKills, '2000 Gegner besiegen', amount: 2000),
   ),
@@ -806,7 +809,7 @@ const levelOptions = [
   LevelOption(Stat.armor, 1, '🛡️'),
   LevelOption(Stat.range, 25, '🎯'),
   LevelOption(Stat.speed, 5, '🪶'),
-  LevelOption(Stat.lifesteal, 2, '🦷'),
+  LevelOption(Stat.lifesteal, 1, '🦷'),
   LevelOption(Stat.crit, 4, '🍀'),
   LevelOption(Stat.thrust, 6, '🪽'),
   LevelOption(Stat.glide, 12, '🪁'),

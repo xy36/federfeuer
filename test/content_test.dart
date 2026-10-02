@@ -360,6 +360,26 @@ void main() {
       expect(1000 - e.hp, closeTo(plain * (1 + game.run!.curseBonus), 0.001));
     });
 
+    testWidgets('Lebensraub heilt höchstens 1 HP je 0,5 s, egal wie viele Treffer', (tester) async {
+      final game = await _startGame(tester);
+      game.startRun('pistol');
+      game.godMode = true;
+      await tester.pump(const Duration(milliseconds: 50));
+      final r = game.run!..applyMods({Stat.lifesteal: 100, Stat.maxHp: 100});
+      r.hp = 10;
+      game.addEnemy(EnemyType.rock, Vector2(game.player.x + 500, 200));
+      final e = game.enemies.last..hp = 1e9;
+      for (var i = 0; i < 50; i++) {
+        game.hurtEnemy(e, 1, false, 0);
+      }
+      expect(r.hp, 11, reason: 'viele Treffer im selben Moment: nur 1 HP');
+      game.lifestealCd = 0;
+      game.hurtEnemy(e, 1, false, 0);
+      expect(r.hp, 12);
+      game.toMenu();
+      await tester.pump(const Duration(seconds: 1));
+    });
+
     testWidgets('Phönixasche belebt einmal wieder, Seifenblasenschild schluckt Treffer', (tester) async {
       final game = await _startGame(tester);
       game.startRun('pistol');

@@ -116,7 +116,7 @@ Jede Waffe gehört zu einer von sechs Klassen. Wer mehrere Waffen derselben Klas
 | Licht | präzise, Krits, Durchschlag | +5 / +10 / +20 % Krit-Chance |
 | Glut | Explosionen, Brand | Brandschaden und Explosionsradius +15 / +30 / +50 % |
 | Wind | schnell, viele Projektile, Nahbereich | +8 / +16 / +30 % Angriffstempo |
-| Böse | Lebensraub, Fluch, Risiko | +3 / +6 / +12 % Lebensraub; verfluchte Gegner nehmen zusätzlich +15 / +30 / +50 % Schaden |
+| Böse | Lebensraub, Fluch, Risiko | +2 / +4 / +8 % Lebensraub; verfluchte Gegner nehmen zusätzlich +15 / +30 / +50 % Schaden |
 | Wasser | Verlangsamen, Einfangen, Flächen | Verlangsamung stärker und länger (+20 / +40 / +70 %, höchstens 85 % langsamer), Einfangen etwas länger, +1 / +2 / +4 Regeneration |
 | Stein | schwere Treffer, Rückstoß, Betäuben | +2 / +4 / +8 Rüstung; schwere Waffen (Abklingzeit ab 1 s) +10 / +20 / +35 % Schaden |
 
@@ -133,7 +133,7 @@ Jede Waffe gehört zu einer von sechs Klassen. Wer mehrere Waffen derselben Klas
 | Wind | Böenschwarm | Schuss | 3 | 0,18 | 270 | 760 | Streuung 0,22 rad | 18 |
 | Wind | Federwirbel | Nahkampf | 6 | 0,4 je Gegner | Kreis 58 | 4,2 rad/s | 3 Federklingen kreisen um den Vogel; jede trifft denselben Gegner höchstens alle 0,4 s | 22 |
 | Wind | Pusteblume | Schuss | 2 × 3 | 0,6 | 260 | 150 | Schirmchen schweben leicht aufwärts, kleben 3 s am Gegner und schaden weiter (Trefferschaden pro Sekunde), kein Rückstoß | 20 |
-| Böse | Dornenranke | Nahkampf | 12 | 0,9 | 125 | – | Hieb im 1,7-rad-Bogen trifft alles darin; 30 % Chance je Treffer auf +1 HP, Fluch 2 s, Rückstoß 18 | 22 |
+| Böse | Dornenranke | Nahkampf | 12 | 0,9 | 125 | – | Hieb im 1,7-rad-Bogen trifft alles darin; 15 % Chance je Treffer auf +1 HP, Fluch 2 s, Rückstoß 18 | 22 |
 | Böse | Krähenruf | Begleiter | 6 | 2,5 | Suche 420 | 260 | ruft bis zu 3 Geisterkrähen (je 8 s), die selbst Gegner jagen; Fluch 2 s | 26 |
 | Böse | Paktlaterne | Schuss | 26 | 1,0 | 360 | 900 | kostet 1 HP pro Schuss (nie den letzten), Fluch 3 s | 26 |
 | Wasser | Wasserpistole | Schuss | 2 | 0,12 | 230 | 650 | verlangsamt um 35 % für 1,2 s, Rückstoß 7 | 16 |
@@ -332,7 +332,7 @@ Material ist gleichzeitig Währung und Erfahrung: Jedes aufgesammelte Stück gib
 | Reichweite | 0 | +25 | Addiert auf Waffenreichweite |
 | Rüstung | 0 | +1 | Schaden × 15 / (15 + Rüstung); negativ erhöht Schaden |
 | Tempo % | 0 | +5 | Bewegungsgeschwindigkeit |
-| Lebensraub % | 0 | +2 | Chance pro Treffer auf +1 HP |
+| Lebensraub % | 0 | +1 | Chance pro Treffer auf +1 HP; höchstens 1 HP alle 0,5 s (gilt für alle Lebensraub-Quellen zusammen) |
 | Sammelradius | 0 | – | Nur über Items |
 | Schub % | 0 | +6 | Stärkerer Schub beim Fliegen |
 | Gleiten % | 0 | +12 | Langsameres Sinken beim Gleiten |
@@ -383,7 +383,7 @@ Werte-Items stapeln sich unbegrenzt. Items mit besonderer Wirkung gibt es nur ei
 | Doppelter Espresso | Selten | 18 | +15 % Angriffstempo |
 | Schildkrötenpanzer | Selten | 20 | +5 Rüstung, −8 % Tempo |
 | Fetter Wurm | Selten | 20 | +8 Max-HP, +1 Regeneration |
-| Vampirzahn | Selten | 22 | +4 % Lebensraub |
+| Vampirzahn | Selten | 22 | +3 % Lebensraub |
 | Energiedose | Selten | 22 | +25 % Angriffstempo, −2 Rüstung |
 | Glaskanone | Selten | 25 | +30 % Schaden, −6 Max-HP |
 
@@ -484,7 +484,7 @@ Zehn spielbare Vögel. Jeder hat eine Stärke, einen Nachteil und vor allem ein 
 | Glutkehlchen (Rotkehlchen) | Glut | Brand hält 50 % länger und schadet 25 % mehr | −30 Reichweite | normal, mit Funkenspur | Funkenfächer / Glutkern / Popcornmaschine |
 | Böe (Schwalbe) | Wind | +20 % Angriffstempo, schnellster Flieger | −5 Max-HP | sehr schnell, enge Kurven | Böenschwarm / Federwirbel / Pusteblume |
 | Schillerchen (Kolibri) | Licht | +15 % Krit, winzige Trefferfläche | −40 % Max-HP | fliegt frei in alle Richtungen, steht in der Luft | Diskokugel / Lichtfeder / Sonnenstrahl |
-| Ruß (Rabe, abtrünnige Fäulnis-Krähe) | Böse | Böse-Waffen +25 %, +5 % Lebensraub | Herzen heilen nur 2 statt 3 | schwer, gleitet lange | Dornenranke / Krähenruf / Paktlaterne |
+| Ruß (Rabe, abtrünnige Fäulnis-Krähe) | Böse | Böse-Waffen +25 %, +3 % Lebensraub | Herzen heilen nur 2 statt 3 | schwer, gleitet lange | Dornenranke / Krähenruf / Paktlaterne |
 | Frack (Pinguin) | Wasser | +50 % Max-HP, +3 Rüstung | kann kaum fliegen | mühsam in der Luft, am Boden rasend schnell | Wasserpistole / Seifenblasen / Regenwolke + Bauchrutscher |
 | Hacki (Specht) | Stein | Stein-Waffen +25 %, +3 Rüstung | −15 % Angriffstempo | ruckartig, klammert sich an den Weltrand | Kieselschleuder / Gartenzwergwerfer / Bowlingkugel + Trommelwirbel |
 | Professor Uhu (Eule) | Licht/Böse | +25 % Erfahrung; in Wald, Gebirge, Gipfel +20 % Schaden | in Feldern und Dorf −10 % Schaden | lautlos, sinkt sehr langsam | Lichtfeder / Sonnenstrahl / Krähenruf + Lichtblitz |
