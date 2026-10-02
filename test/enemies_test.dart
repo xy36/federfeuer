@@ -249,4 +249,62 @@ void main() {
     final h = RunState(null, characterId: 'henriette')..debugEquip(10, Random(1));
     expect(h.weapons, isNotEmpty);
   });
+
+  testWidgets('Spawner erzeugen Kinder mit Obergrenze; Kinder geben kein Material', (t) async {
+    final game = await _game(t);
+    game.startRun('pistol');
+    game.run!
+      ..weapons.clear()
+      ..wave = 10;
+    game.godMode = true;
+    game.player.position.setValues(200, 300);
+    Iterable<Enemy> kids(Enemy p) => game.enemies.where((e) => !e.dead && identical(e.spawnedBy, p));
+
+    game.addEnemy(EnemyType.crowNest, Vector2(900, kGround - 20));
+    final nest = game.enemies.last;
+    game.addEnemy(EnemyType.sporeShroom, Vector2(1100, kGround - 20));
+    final shroom = game.enemies.last;
+    game.addEnemy(EnemyType.waspNest, Vector2(700, kCeil + 26));
+    final wasps = game.enemies.last;
+    game.addEnemy(EnemyType.beetleQueen, Vector2(1300, kGround - 26));
+    final queen = game.enemies.last;
+    await _run(t, game, 20);
+    expect(kids(nest).length, inInclusiveRange(1, 3));
+    expect(kids(shroom).length, inInclusiveRange(3, 9));
+    expect(kids(wasps), isEmpty, reason: 'Wespennest wartet auf Treffer');
+    expect(kids(queen).where((e) => e.type == EnemyType.avalanche), isNotEmpty, reason: 'aus Eiern geschlüpft');
+
+    for (var i = 0; i < 12; i++) {
+      game.hurtEnemy(wasps, 0.1, false, 0);
+      await _run(t, game, 0.4);
+    }
+    expect(kids(wasps).length, inInclusiveRange(1, 6));
+
+    // Kind stirbt: kein Material
+    final kid = kids(nest).first;
+    final before = game.world.children.whereType<Drop>().length;
+    game.hurtEnemy(kid, 1e6, false, 0);
+    await t.pump(const Duration(milliseconds: 50));
+    expect(game.world.children.whereType<Drop>().length, before);
+    // Spawner selbst gibt Material
+    game.hurtEnemy(nest, 1e6, false, 0);
+    await t.pump(const Duration(milliseconds: 50));
+    expect(game.world.children.whereType<Drop>().length, greaterThan(before));
+  });
+
+  testWidgets('Fäulnisriss spuckt Gegner aus und schließt sich nach 12 s', (t) async {
+    final game = await _game(t);
+    game.startRun('pistol');
+    game.run!
+      ..weapons.clear()
+      ..wave = 8;
+    game.godMode = true;
+    game.player.position.setValues(200, 300);
+    game.addEnemy(EnemyType.rift, Vector2(900, 250));
+    final rift = game.enemies.last;
+    await _run(t, game, 7);
+    expect(game.enemies.where((e) => identical(e.spawnedBy, rift)), isNotEmpty);
+    await _run(t, game, 7);
+    expect(rift.dead, isTrue);
+  });
 }

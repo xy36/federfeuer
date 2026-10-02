@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../config.dart';
 import '../federfeuer_game.dart';
 import 'draw.dart';
+import 'enemy.dart';
 import 'light.dart';
 import 'transient.dart';
 
@@ -106,9 +107,14 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
 
 /// Rotes X, das kurz vor dem Erscheinen eines Gegners warnt.
 class SpawnMarker extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  SpawnMarker(this.type, Vector2 pos, this.t) : super(position: pos, priority: 2);
+  SpawnMarker(this.type, Vector2 pos, this.t, {this.child = false, this.spawnedBy})
+      : super(position: pos, priority: 2);
 
   final EnemyType type;
+
+  /// Kind eines Spawners (kein Material, zählt zu dessen Obergrenze).
+  final bool child;
+  final Enemy? spawnedBy;
   double t;
   final _paint = Paint()
     ..style = PaintingStyle.stroke
@@ -119,7 +125,11 @@ class SpawnMarker extends PositionComponent with HasGameReference<FederfeuerGame
     if (!game.playing) return;
     t -= dt;
     if (t <= 0) {
-      game.spawnEnemy(type, position.clone());
+      if (child) {
+        game.addEnemy(type, position.clone(), child: true, spawnedBy: spawnedBy);
+      } else {
+        game.spawnEnemy(type, position.clone());
+      }
       removeFromParent();
     }
   }

@@ -825,6 +825,15 @@ enum EnemyType {
   wisp,
   eagle,
   avalanche,
+  // Spawner und ihre Kinder
+  crowNest,
+  waspNest,
+  wasp,
+  sporeShroom,
+  spore,
+  beetleQueen,
+  beetleEgg,
+  rift,
   // Torwächter am Ende der Welten
   strawKing,
   bell,
@@ -842,6 +851,7 @@ class EnemyDef {
     required this.drop,
     this.wind = WeatherConfig.windFactorLight,
     this.stationary = false,
+    this.spawner = false,
   });
   final double hp, speed, dmg, radius;
   final bool flying;
@@ -852,6 +862,9 @@ class EnemyDef {
 
   /// Bewegt sich nicht vom Fleck (Vogelscheuche, Wetterhahn).
   final bool stationary;
+
+  /// Erzeugt weitere Gegner (Nester, Pilz, Königin, Riss); höchstens [kMaxSpawners] gleichzeitig.
+  final bool spawner;
 }
 
 extension EnemyInfo on EnemyType {
@@ -868,6 +881,14 @@ extension EnemyInfo on EnemyType {
         EnemyType.wisp => 'Irrlicht',
         EnemyType.eagle => 'Felsadler',
         EnemyType.avalanche => 'Lawinenkäfer',
+        EnemyType.crowNest => 'Krähennest',
+        EnemyType.waspNest => 'Wespennest',
+        EnemyType.wasp => 'Fäulniswespe',
+        EnemyType.sporeShroom => 'Sporenpilz',
+        EnemyType.spore => 'Spore',
+        EnemyType.beetleQueen => 'Käferkönigin',
+        EnemyType.beetleEgg => 'Käferei',
+        EnemyType.rift => 'Fäulnisriss',
         EnemyType.strawKing => 'Der Strohkönig',
         EnemyType.bell => 'Die Glocke',
         EnemyType.spiderMother => 'Die Spinnenmutter',
@@ -887,6 +908,14 @@ extension EnemyInfo on EnemyType {
         EnemyType.wisp => '👻',
         EnemyType.eagle => '🦅',
         EnemyType.avalanche => '🐚',
+        EnemyType.crowNest => '🪹',
+        EnemyType.waspNest => '🐝',
+        EnemyType.wasp => '🐝',
+        EnemyType.sporeShroom => '🍄',
+        EnemyType.spore => '🟢',
+        EnemyType.beetleQueen => '🪲',
+        EnemyType.beetleEgg => '🥚',
+        EnemyType.rift => '🌀',
         EnemyType.strawKing => '🎃',
         EnemyType.bell => '🔔',
         EnemyType.spiderMother => '🕸️',
@@ -906,6 +935,14 @@ extension EnemyInfo on EnemyType {
         EnemyType.wisp => 'Springt von Ort zu Ort und explodiert in deiner Nähe.',
         EnemyType.eagle => 'Kreist oben und stürzt sich nach kurzer Warnung auf dich.',
         EnemyType.avalanche => 'Rollt sich ein und rast über den Boden.',
+        EnemyType.crowNest => 'Steht auf einem Pfahl; alle 4 s schlüpft eine Krähe (höchstens drei). Zuerst zerstören!',
+        EnemyType.waspNest => 'Hängt an der Decke und tut nichts – bis man es trifft. Dann schwärmt pro Treffer eine Wespe aus.',
+        EnemyType.wasp => 'Flink und klein, kommt aus dem Wespennest. Lässt kein Material fallen.',
+        EnemyType.sporeShroom => 'Pulsiert am Boden und stößt alle 5 s drei Sporen aus.',
+        EnemyType.spore => 'Kleine Spore, treibt langsam auf dich zu. Lässt kein Material fallen.',
+        EnemyType.beetleQueen => 'Langsam und groß; legt alle 4 s ein Ei, aus dem ein Lawinenkäfer schlüpft.',
+        EnemyType.beetleEgg => 'Schlüpft nach 2,5 s – vorher zerstören!',
+        EnemyType.rift => 'Ein Fäulnisriss, der offen bleibt: 12 s lang alle 3 s ein Gegner. Beschießen schließt ihn früher.',
         EnemyType.strawKing =>
           'Torwächter der Felder (Welle 4). Riesige Vogelscheuche: wirft Strohbündel im Fächer und ruft Krähen.',
         EnemyType.bell => 'Torwächter des Dorfs (Welle 8). Schießt Kugelringe; vor dem Glockenschlag rechtzeitig raus aus dem Kreis!',
@@ -940,6 +977,20 @@ const Map<EnemyType, EnemyDef> enemyDefs = {
       hp: 30, speed: 120, dmg: 5, radius: 20, flying: true, drop: 2, wind: WeatherConfig.windFactorMedium),
   EnemyType.avalanche: EnemyDef(
       hp: 40, speed: 70, dmg: 6, radius: 18, flying: false, drop: 2, wind: WeatherConfig.windFactorGround),
+  // Spawner (geben mehr Material) und ihre Kinder (geben keins)
+  EnemyType.crowNest: EnemyDef(
+      hp: 30, speed: 0, dmg: 2, radius: 20, flying: false, drop: 3, wind: 0, stationary: true, spawner: true),
+  EnemyType.waspNest: EnemyDef(
+      hp: 34, speed: 0, dmg: 3, radius: 18, flying: true, drop: 3, wind: 0, stationary: true, spawner: true),
+  EnemyType.wasp: EnemyDef(hp: 4, speed: 190, dmg: 1, radius: 8, flying: true, drop: 0),
+  EnemyType.sporeShroom: EnemyDef(
+      hp: 40, speed: 0, dmg: 3, radius: 20, flying: false, drop: 3, wind: 0, stationary: true, spawner: true),
+  EnemyType.spore: EnemyDef(hp: 4, speed: 45, dmg: 2, radius: 8, flying: true, drop: 0),
+  EnemyType.beetleQueen: EnemyDef(
+      hp: 90, speed: 30, dmg: 6, radius: 26, flying: false, drop: 4, wind: WeatherConfig.windFactorHeavy, spawner: true),
+  EnemyType.beetleEgg: EnemyDef(hp: 8, speed: 0, dmg: 0, radius: 9, flying: false, drop: 0, wind: 0, stationary: true),
+  EnemyType.rift: EnemyDef(
+      hp: 50, speed: 0, dmg: 0, radius: 22, flying: true, drop: 3, wind: 0, stationary: true, spawner: true),
   // Torwächter
   EnemyType.strawKing: EnemyDef(
       hp: 220, speed: 25, dmg: 5, radius: 40, flying: false, drop: 0, wind: 0),
@@ -988,8 +1039,17 @@ List<(EnemyType, double)> spawnPool(int wave) {
   if (w >= 10) pool.add((EnemyType.wisp, biome == Biome.forest ? 3 : 1.5));
   if (w >= 13) pool.add((EnemyType.eagle, 4));
   if (w >= 13) pool.add((EnemyType.avalanche, 3));
+  // Spawner: in ihrer Welt häufiger
+  if (w >= 3) pool.add((EnemyType.crowNest, biome == Biome.fields ? 1.5 : 0.6));
+  if (w >= 6) pool.add((EnemyType.waspNest, biome == Biome.village ? 1.5 : 0.6));
+  if (w >= 9) pool.add((EnemyType.sporeShroom, biome == Biome.forest ? 1.5 : 0.6));
+  if (w >= 13) pool.add((EnemyType.beetleQueen, 1.5));
+  if (w >= 6) pool.add((EnemyType.rift, 1));
   return pool;
 }
+
+/// Höchstzahl gleichzeitig lebender Spawner; darüber kommt stattdessen eine Krähe.
+const int kMaxSpawners = 3;
 
 /// Torwächter einer Welle (Ende der Felder, des Dorfs, des Waldes), sonst null.
 EnemyType? gatekeeperForWave(int wave) => switch (wave) {

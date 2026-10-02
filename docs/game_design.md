@@ -202,6 +202,20 @@ Skalierung pro Welle w (gilt nicht für den Boss):
  
 Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln (Boss, Torwächter und stationäre Gegner bleiben stehen). Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
 
+### Spawner
+
+Gegner, die weitere Gegner erzeugen – gute Ziele für zuerst. Was ein Spawner erzeugt („Kinder“), erscheint immer mit kurzer Warnung (Fäulnis-Riss), lässt **kein Material** fallen und zählt zu seiner Obergrenze; der Spawner selbst gibt mehr Material. Höchstens 3 Spawner leben gleichzeitig, darüber erscheint stattdessen eine Krähe. Vor dem Erzeugen wackelt bzw. leuchtet der Spawner.
+
+| Spawner | Welt / ab Welle | HP | Material | Verhalten | Kinder |
+| --- | --- | --- | --- | --- | --- |
+| Krähennest | Felder / 3 | 30 | 3 | steht fest auf einem Pfahl, alle 4 s eine Krähe | höchstens 3 |
+| Wespennest | Dorf / 6 | 34 | 3 | hängt an der Decke und tut nichts – jeder Treffer (höchstens alle 0,3 s) lässt eine Fäulniswespe ausschwärmen (HP 4, Tempo 190, Schaden 1, Zickzack) | höchstens 6 |
+| Sporenpilz | Wald / 9 | 40 | 3 | steht fest, alle 5 s drei Sporen (HP 4, Tempo 45, Schaden 2, treiben langsam heran) | höchstens 9 |
+| Käferkönigin | Gebirge / 13 | 90 | 4 | großer, langsamer Käfer (Tempo 30, Schaden 6), legt alle 4 s ein Ei hinter sich (HP 8); nach 2,5 s schlüpft daraus ein Lawinenkäfer, wenn es nicht vorher zerstört wird | höchstens 6 (Eier und Schlüpflinge) |
+| Fäulnisriss | alle / 6 | 50 | 3 | ein Spawn-Riss, der offen bleibt: 12 s lang alle 3 s ein zufälliger Gegner der Welle (keine Spawner oder stationären); danach schließt er sich ohne Material, Beschießen schließt ihn früher | – |
+
+Gewichtung: Krähennest 1,5 in den Feldern / sonst 0,6, Wespennest 1,5 im Dorf / 0,6, Sporenpilz 1,5 im Wald / 0,6, Käferkönigin 1,5, Fäulnisriss 1. Spawner und Kinder sind keine Elitegegner-Ausnahme: auch ein Spawner kann Elite sein (stationäre statt „teilend“ gepanzert).
+
 ### Elitegegner
 
 Ab Welle 5 kann ein regulär erscheinender Gegner (nicht Boss oder Torwächter) als Elite kommen: Chance min(15 %, 4 % + 1 % · (w − 5)). Elitegegner haben × 2,5 HP, sind 18 % größer, tragen einen pulsierenden Goldring, einen goldenen Schein, eine schmale HP-Leiste und das Zeichen ihres Modifikators über dem Kopf (als Form gezeichnet). Sie lassen × 3 Material fallen und mit 25 % Chance ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item).

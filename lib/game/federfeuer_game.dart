@@ -516,7 +516,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void _clearArena() {
-    _pendingMinis.clear();
+    _pendingSpawns.clear();
     for (final c in world.children.whereType<Transient>().toList()) {
       c.removeFromParent();
     }
@@ -551,11 +551,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (active || run == null) clock += dt;
     weather.update(active ? dt : 0);
     super.update(animate ? dt : 0);
-    if (_pendingMinis.isNotEmpty && run != null) {
-      for (final (type, pos) in _pendingMinis) {
-        addEnemy(type, pos, mini: true);
+    if (_pendingSpawns.isNotEmpty && run != null) {
+      for (final s in [..._pendingSpawns]) {
+        addEnemy(s.type, s.pos, mini: s.mini, child: s.child, spawnedBy: s.spawnedBy);
       }
-      _pendingMinis.clear();
+      _pendingSpawns.clear();
     }
 
     if (run == null) {
@@ -676,8 +676,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       }
       final d = enemyDefs[type]!;
       final x = clampD(cx + rnd(-80, 80), 40, worldW - 40);
-      // Spinne und Felsadler kommen von oben, Bodengegner auf dem Boden
-      final y = type == EnemyType.spider || type == EnemyType.eagle
+      // Spinne, Felsadler und Wespennest kommen von oben, Bodengegner auf dem Boden
+      final y = type == EnemyType.spider || type == EnemyType.eagle || type == EnemyType.waspNest
           ? kCeil + d.radius + 8
           : (d.flying ? rnd(kCeil + 50, kGround - 90) : kGround - d.radius);
       world.add(SpawnMarker(type, Vector2(x, y), 0.9));
@@ -746,12 +746,20 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
   }
 
-  /// Kopien teilender Elitegegner, die nach dem aktuellen Frame erscheinen.
-  final _pendingMinis = <(EnemyType, Vector2)>[];
+  /// Gegner, die erst nach dem aktuellen Frame erscheinen (Kopien teilender Elitegegner,
+  /// Eier und Schlüpflinge) – killEnemy & Co. laufen oft mitten in einer Schleife über [enemies].
+  final _pendingSpawns = <({EnemyType type, Vector2 pos, bool mini, bool child, Enemy? spawnedBy})>[];
+
+  void queueSpawn(EnemyType type, Vector2 pos, {bool mini = false, bool child = false, Enemy? spawnedBy}) =>
+      _pendingSpawns.add((type: type, pos: pos, mini: mini, child: child, spawnedBy: spawnedBy));
 
   /// Regulärer Spawn (aus der Warnmarkierung): würfelt ab Welle 5 einen Elitegegner.
   void spawnEnemy(EnemyType type, Vector2 pos) {
     final w = run!.wave;
+    // Höchstens [kMaxSpawners] Spawner gleichzeitig, sonst eine Krähe
+    if (enemyDefs[type]!.spawner && enemies.where((e) => !e.dead && enemyDefs[e.type]!.spawner).length >= kMaxSpawners) {
+      type = EnemyType.crow;
+    }
     final elite = type != EnemyType.boss && rng.nextDouble() < eliteChance(w)
         ? EliteMod.values[rng.nextInt(EliteMod.values.length)]
         : null;
@@ -759,10 +767,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     addEnemy(type, pos, elite: elite == EliteMod.splitting && enemyDefs[type]!.stationary ? EliteMod.armored : elite);
   }
 
-  void addEnemy(EnemyType type, Vector2 pos, {EliteMod? elite, bool mini = false}) {
+  void addEnemy(EnemyType type, Vector2 pos, {EliteMod? elite, bool mini = false, bool child = false, Enemy? spawnedBy}) {
     progress.seeEnemy(type);
     if (elite != null) progress.see('x:${elite.name}');
-    final e = Enemy(type, pos, run!.wave, run!.difficultyDef, rng, elite: elite, mini: mini);
+    final e = Enemy(type, pos, run!.wave, run!.difficultyDef, rng,
+        elite: elite, mini: mini, child: child, spawnedBy: spawnedBy);
     enemies.add(e);
     world.add(e);
   }
@@ -875,6 +884,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (e.dead) return;
     final r = run!;
     if (e.cursed) dmg *= 1 + r.curseBonus;
+    if (!dot) e.onHit();
     // Gepanzerte Elite: halber Schaden, kein Rückstoß
     if (e.elite == EliteMod.armored) {
       dmg *= 0.5;
@@ -935,6 +945,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
     // Pusteling platzt auch beim Abschuss in eine Giftwolke
     if (e.type == EnemyType.puffball) world.add(PoisonCloud(e.position.clone(), e.dmg));
+    // Kinder von Spawnern lassen nichts fallen
+    if (e.child) return;
     final fall = r.difficultyDef.dropFallSpeed;
     // Elite: Modifikator beim Tod, mehr Material, manchmal ein Geschenk
     switch (e.elite) {
@@ -943,7 +955,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       case EliteMod.splitting:
         // Erst nach dem Frame hinzufügen: killEnemy läuft oft mitten in einer Schleife über [enemies]
         for (final side in [-1.0, 1.0]) {
-          _pendingMinis.add((e.type, e.position.clone()..x += side * e.r));
+          queueSpawn(e.type, e.position.clone()..x += side * e.r, mini: true);
         }
       default:
     }

@@ -16,10 +16,12 @@ import 'transient.dart';
 
 part 'enemy_boss.dart';
 part 'enemy_gate.dart';
+part 'enemy_spawner.dart';
 part 'enemy_world.dart';
 
 class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  Enemy(this.type, Vector2 pos, int wave, DifficultyDef diff, Random rng, {this.elite, this.mini = false})
+  Enemy(this.type, Vector2 pos, int wave, DifficultyDef diff, Random rng,
+      {this.elite, this.mini = false, this.child = false, this.spawnedBy})
       : super(position: pos, priority: 5) {
     final d = enemyDefs[type]!;
     // Wellenskalierung gilt laut GDD nicht für den Boss.
@@ -45,6 +47,13 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   /// Elite-Modifikator (null = normaler Gegner); [mini] = Kopie eines teilenden Elitegegners.
   final EliteMod? elite;
   final bool mini;
+
+  /// Von einem Spawner erzeugt: lässt kein Material fallen; [spawnedBy] ist der Spawner.
+  final bool child;
+  final Enemy? spawnedBy;
+
+  /// Treffer durch den Spieler (Wespennest schwärmt aus).
+  void onHit() => _spawnerOnHit();
   late final double r, maxHp, dmg, spd, sizeK;
   double _healT = 0;
   late final bool fly;
@@ -239,6 +248,16 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         if (dead) return;
       case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
         _gateAi(dt, p, dx, dy, d);
+      case EnemyType.crowNest ||
+            EnemyType.waspNest ||
+            EnemyType.wasp ||
+            EnemyType.sporeShroom ||
+            EnemyType.spore ||
+            EnemyType.beetleQueen ||
+            EnemyType.beetleEgg ||
+            EnemyType.rift:
+        _spawnerAi(dt, p, dx, dy, d);
+        if (dead) return;
       case EnemyType.boss:
         _bossAi(dt, p, dx, dy);
     }
@@ -261,7 +280,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       vel.y = max(0.0, vel.y);
     }
     // Berührungsschaden (das Irrlicht schadet nur durch seine Explosion)
-    if (!disabled && type != EnemyType.wisp && position.distanceTo(p) < r + game.player.r - 3) {
+    if (!disabled && dmg > 0 && type != EnemyType.wisp && position.distanceTo(p) < r + game.player.r - 3) {
       game.hurtPlayer(dmg, source: this);
     }
   }
@@ -299,6 +318,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
     _worldRenderUnflipped(c);
     _gateRenderUnflipped(c);
+    _spawnerRenderUnflipped(c);
     c.save();
     c.scale(face * sizeK, sizeK);
     switch (type) {
@@ -313,6 +333,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         _worldRender(c, k, pulse);
       case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
         _gateRender(c, k, pulse);
+      case EnemyType.crowNest ||
+            EnemyType.waspNest ||
+            EnemyType.wasp ||
+            EnemyType.sporeShroom ||
+            EnemyType.spore ||
+            EnemyType.beetleQueen ||
+            EnemyType.beetleEgg ||
+            EnemyType.rift:
+        _spawnerRender(c, k, pulse);
       case EnemyType.crow:
         final fl = sin(t * 16);
         // Zerfranste Flügel
@@ -473,6 +502,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         _worldGlows(f, eye, front, pulse);
       case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
         _gateGlows(f, front, pulse);
+      case EnemyType.crowNest ||
+            EnemyType.waspNest ||
+            EnemyType.wasp ||
+            EnemyType.sporeShroom ||
+            EnemyType.spore ||
+            EnemyType.beetleQueen ||
+            EnemyType.beetleEgg ||
+            EnemyType.rift:
+        _spawnerGlows(f, front, pulse);
       case EnemyType.crow:
         eye(6, -3, 2.4, _eye);
       case EnemyType.beetle:
