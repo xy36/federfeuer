@@ -32,8 +32,9 @@ jobs:
 
       - run: flutter pub get
 
-      # Projektseiten liegen unter /<repo>/ – das muss der Build wissen
-      - run: flutter build web --release --base-href /${{ github.event.repository.name }}/
+      # Projektseiten liegen unter /<repo>/ – das muss der Build wissen.
+      # FEDERFEUER_DEBUG: Debug-Seite im Menü und Debug-Tasten (Testversion).
+      - run: flutter build web --release --base-href /${{ github.event.repository.name }}/ --dart-define=FEDERFEUER_DEBUG=true
 
       - uses: actions/upload-pages-artifact@v3
         with:
