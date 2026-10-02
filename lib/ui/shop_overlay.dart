@@ -3,7 +3,9 @@ import 'package:gamepads/gamepads.dart';
 
 import '../game/config.dart';
 import '../game/federfeuer_game.dart';
+import '../game/gamepad_input.dart' show controllerActive;
 import '../game/run_state.dart';
+import 'controls_editor.dart' show ShortcutHint;
 import 'fusion.dart';
 import 'inspect.dart';
 import 'inspect_info.dart';
@@ -21,6 +23,57 @@ class _ShopOverlayState extends State<ShopOverlay> {
   FederfeuerGame get game => widget.game;
 
   static const _cardW = 166.0, _cardH = 236.0;
+
+  /// Bereiche für den Sprung mit Bild ↑/↓ bzw. LB/RB: Angebote, Waffen & Items, Aktionen & Werte.
+  final _sections = List.generate(3, (i) => FocusNode(debugLabel: 'Shop-Bereich $i', skipTraversal: true));
+  int _section = 0;
+
+  /// Zuletzt fokussiertes Angebot (für „Zurückhalten“ per Taste).
+  int? _focusedOffer;
+
+  @override
+  void initState() {
+    super.initState();
+    game.onShopHotkey = _hotkey;
+  }
+
+  @override
+  void dispose() {
+    if (game.onShopHotkey == _hotkey) game.onShopHotkey = null;
+    for (final n in _sections) {
+      n.dispose();
+    }
+    super.dispose();
+  }
+
+  void _hotkey(ShopHotkey key) {
+    final r = game.run!;
+    if (_fusion != null) return; // Animation läuft
+    switch (key) {
+      case ShopHotkey.reroll:
+        if (r.money >= r.rerollCost) setState(() => r.reroll(game.rng));
+      case ShopHotkey.start:
+        game.nextWave();
+      case ShopHotkey.lock:
+        final i = _focusedOffer;
+        if (i != null && i < r.offers.length) setState(() => r.toggleLock(i));
+      case ShopHotkey.nextSection || ShopHotkey.prevSection:
+        _section = (_section + (key == ShopHotkey.nextSection ? 1 : _sections.length - 1)) % _sections.length;
+        final first = _sections[_section].traversalDescendants.where((n) => n.canRequestFocus).firstOrNull;
+        first?.requestFocus();
+        if (first?.context != null) Scrollable.ensureVisible(first!.context!, alignment: 0.3);
+    }
+  }
+
+  /// Bereich, der beim Sprung angesteuert wird.
+  Widget _sectionArea(int i, Widget child) => Focus(
+    focusNode: _sections[i],
+    canRequestFocus: false,
+    onFocusChange: (v) {
+      if (v) _section = i;
+    },
+    child: child,
+  );
   static const _itemAccent = Color(0xFFFFB86B);
 
   @override
@@ -30,11 +83,28 @@ class _ShopOverlayState extends State<ShopOverlay> {
     final next = biomeForWave(r.wave + 1);
     final panel = Panel(
       maxWidth: 960,
-      hints: const [(GamepadButton.a, 'Kaufen / Auswählen'), (null, 'Navigieren – Details erscheinen beim Auswählen')],
+      hints: const [
+        (GamepadButton.a, 'Kaufen'),
+        (GamepadButton.x, 'Neu würfeln'),
+        (GamepadButton.y, 'Zurückhalten'),
+        (GamepadButton.leftBumper, '/ RB Bereich'),
+        (GamepadButton.start, 'Welle starten'),
+      ],
       footer: Row(
         children: [
           MoneyPill(r.money),
-          const Spacer(),
+          const SizedBox(width: 12),
+          // Tastatur: Kurztasten auf einen Blick (Controller zeigt sie in der Hinweiszeile)
+          Expanded(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: controllerActive,
+              builder: (context, pad, _) => pad || isTouchPlatform
+                  ? const SizedBox.shrink()
+                  : Text('R würfeln · L zurückhalten · Bild ↑↓ Bereich',
+                      maxLines: 1, overflow: TextOverflow.ellipsis, style: bodyText(11.5, color: Ui.muted)),
+            ),
+          ),
+          const ShortcutHint(keyLabel: 'N', pad: GamepadButton.start),
           GameButton(
             label: isBossWave(r.wave + 1) ? 'Zum Gipfel: Boss' : 'Welle ${r.wave + 1} starten',
             icon: '▶',
@@ -65,6 +135,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
             children: [
               Expanded(child: sectionTitle('Angebote')),
               const SizedBox(width: 12),
+              const ShortcutHint(keyLabel: 'R', pad: GamepadButton.x),
               GameButton(
                 label: 'Neu würfeln · ${r.rerollCost}',
                 icon: '🎲',
@@ -74,10 +145,13 @@ class _ShopOverlayState extends State<ShopOverlay> {
               ),
             ],
           ),
-          Wrap(spacing: 12, runSpacing: 4, children: [for (var i = 0; i < r.offers.length; i++) _offer(r, i)]),
+          _sectionArea(
+            0,
+            Wrap(spacing: 12, runSpacing: 4, children: [for (var i = 0; i < r.offers.length; i++) _offer(r, i)]),
+          ),
           LayoutBuilder(
             builder: (context, box) {
-              final left = _inventory(r), right = _stats(r);
+              final left = _sectionArea(1, _inventory(r)), right = _sectionArea(2, _stats(r));
               if (box.maxWidth > 680) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,19 +204,26 @@ class _ShopOverlayState extends State<ShopOverlay> {
   /// Angebotskarte mit Schloss-Knopf darunter.
   Widget _offer(RunState r, int i) {
     final o = r.offers[i];
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (o.sold)
-          _offerCard(r, i)
-        else
-          Inspectable(
-            radius: 16,
-            info: (_) => o.isWeapon ? weaponInfo(r, o.id, o.tier, price: o.price) : itemInfo(r, o.id, price: o.price),
-            child: _offerCard(r, i),
-          ),
-        SizedBox(width: _cardW, height: _lockH, child: o.sold ? null : _lockButton(r, i)),
-      ],
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (v) {
+        if (v) _focusedOffer = i;
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (o.sold)
+            _offerCard(r, i)
+          else
+            Inspectable(
+              radius: 16,
+              info: (_) => o.isWeapon ? weaponInfo(r, o.id, o.tier, price: o.price) : itemInfo(r, o.id, price: o.price),
+              child: _offerCard(r, i),
+            ),
+          SizedBox(width: _cardW, height: _lockH, child: o.sold ? null : _lockButton(r, i)),
+        ],
+      ),
     );
   }
 
@@ -219,9 +300,15 @@ class _ShopOverlayState extends State<ShopOverlay> {
     final hints = <(String, Color)>[];
     if (buyKind == ActionBuy.upgrade) hints.add(('⤴ Stufe II: −30 % Abklingzeit, stärkere Wirkung', _green));
     if (act != null && buyKind != ActionBuy.upgrade) {
-      for (final owned in r.actions) {
-        final rec = recipeFor(owned.id, act);
-        if (rec != null) hints.add(('passt zu ${owned.id.label} → ${rec.result.label}', _green));
+      // Höchstens eine Rezeptzeile, sonst läuft die Karte über; Details zeigt das Info-Panel
+      final recs = [
+        for (final owned in r.actions)
+          if (recipeFor(owned.id, act) case final rec?) (owned.id, rec.result),
+      ];
+      if (recs.isNotEmpty) {
+        final (with_, result) = recs.first;
+        final more = recs.length > 1 ? ' (+${recs.length - 1})' : '';
+        hints.add(('passt zu ${with_.label} → ${result.label}$more', _green));
       }
       if (buyKind == ActionBuy.replace) hints.add(('Plätze voll – ersetzt eine Aktion', Ui.cardMuted));
     }
@@ -526,7 +613,11 @@ class _ShopOverlayState extends State<ShopOverlay> {
                 ),
                 FittedBox(
                   fit: BoxFit.scaleDown,
-                  child: Text('Stufe ${t.label} · ${w.def.cls.label}', maxLines: 1, style: bodyText(11, color: Ui.cardMuted)),
+                  child: Text(
+                    'Stufe ${t.label} · ${w.def.cls.label}',
+                    maxLines: 1,
+                    style: bodyText(11, color: Ui.cardMuted),
+                  ),
                 ),
               ],
             ),

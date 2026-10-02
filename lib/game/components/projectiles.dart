@@ -185,12 +185,18 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
 }
 
 class EnemyBullet extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  EnemyBullet(Vector2 position, this.vel, this.radius, this.dmg, this.color)
+  EnemyBullet(Vector2 position, this.vel, this.radius, this.dmg, this.color, {this.gravity = 0, this.web = false})
       : super(position: position, priority: 12);
 
   final Vector2 vel;
   final double radius, dmg;
   final Color color;
+
+  /// Bogenwurf (brennendes Stroh der Vogelscheuche).
+  final double gravity;
+
+  /// Spinnennetz: verlangsamt den Spieler beim Treffer.
+  final bool web;
   double life = 5;
 
   @override
@@ -198,12 +204,18 @@ class EnemyBullet extends PositionComponent with HasGameReference<FederfeuerGame
     if (!game.playing) return;
     // Schnappschuss: Gegnerkugeln stehen still
     if (game.freezeT > 0) return;
+    vel.y += gravity * dt;
     position.addScaled(vel, dt);
     position.x += game.weather.windX * dt;
     life -= dt;
     final p = game.player;
     if (position.distanceTo(p.position) < radius + p.r - 2) {
       game.hurtPlayer(dmg);
+      if (web) p.webT = 2;
+      life = 0;
+    }
+    if (gravity > 0 && y > kGround - radius) {
+      game.burst(position, color, 6, 90);
       life = 0;
     }
     if (life <= 0 || y > kGround) removeFromParent();

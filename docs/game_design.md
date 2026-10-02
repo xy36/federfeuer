@@ -84,10 +84,10 @@ Stil der Spielwelt: leuchtend und geschichtet, angelehnt an die Stimmung von „
 Figuren und Effekte:
 
 - **Held:** Lichtkern mit weichem Verlauf in den Farben des Vogels, durchscheinende Lichtflügel, die beim Flügelschlag aufleuchten, Lichtschweif aus den letzten Positionen (Glutkehlchen mit Funken, beim Sturzflug länger und heller), Aura in der Leuchtfarbe des Vogels; er erhellt den Boden unter sich (je höher, desto schwächer). Jede Vogelart hat eigene Merkmale: Fliegerbrille (Kampfspatz), Gabelschwanz (Schwalbe), langer Schnabel (Kolibri, Specht), violette Augen (Rabe), aufrechter Körper (Pinguin), rote Haube (Specht), Federohren und große Augen (Eule), langer Schwanz (Elster), Kamm und Kehllappen (Huhn). Ein aktiver Seifenblasenschild liegt als leuchtende Blase um ihn.
-- **Gegner:** fast schwarze „Fäulnis“-Kreaturen mit violetter Aura und glühenden Augen; Krähe mit zerfransten Flügeln, Käfer mit glühenden Panzerrissen, Spucker mit grün pulsierendem Giftsack, Brocken mit Glutadern (HP-Leiste als Glutstreifen), Geierkönig mit Krone aus magentafarbenen Lichtsplittern und pulsierender Aura. Bei Treffern blitzen die Körper hell auf; beim Tod zerfallen sie in violette Funken.
+- **Gegner:** fast schwarze „Fäulnis“-Kreaturen mit violetter Aura und glühenden Augen; Krähe mit zerfransten Flügeln, Käfer mit glühenden Panzerrissen, Spucker mit grün pulsierendem Giftsack, Brocken mit Glutadern (HP-Leiste als Glutstreifen), Pusteling als stachlige Pollenkugel mit grünem Kern, Vogelscheuche mit Strohhut und Glutaugen, Fledermaus mit schnellen Flügeln, Wetterhahn auf einer Stange mit goldenem Zeigerpfeil, Spinne an einem feinen Faden mit vier roten Augen, Irrlicht als flackernder blasser Lichtkern, Felsadler mit eingeklappten Flügeln im Sturzflug, Lawinenkäfer als Panzer oder rollende Kugel mit Streifen; Torwächter: Strohkönig mit glühendem Kürbisgesicht und Strohkrone, Glocke an einer Kette mit glühenden Rissen und schwingendem Klöppel, Spinnenmutter mit sechs Augen und schimmerndem Eiersack; Geierkönig mit Krone aus magentafarbenen Lichtsplittern und pulsierender Aura. Giftwolken leuchten grün, Netze kleben sichtbar am Vogel. Bei Treffern blitzen die Körper hell auf; beim Tod zerfallen sie in violette Funken.
 - **Waffen & Kugeln:** Waffen schweben als Lichtsplitter in Stufenfarbe und zeigen aufs Ziel, mit Mündungsblitz beim Schuss; die Diskokugel ist eine funkelnde Kugel, der Federwirbel zeigt nur seine kreisenden Federklingen. Eigene Kugeln sind leuchtende Kugeln mit weißem Kern und Schweif (Krit gold); eigene Formen haben Popcorn, Gartenzwerg, Bowlingkugel, Seifenblase, Pusteblumen-Schirmchen und Kiesel. Dazu Geisterkrähen, Regenwolken mit Regenstrichen, ein Peitschenbogen für die Dornenranke, Blitze und Henriettes Eier. Gegnerkugeln haben einen dunklen Kern mit farbigem Leuchten.
 - **Status an Gegnern:** Brand (orange), Kleben (weiß), Verlangsamung (blau) und Fluch (violett über dem Kopf) leuchten am Gegner; eingefangene Gegner stecken in einer Blase, betäubte haben kreisende Sterne.
-- **Drops:** Material als leuchtender Mint-Kristall, Herz als leuchtendes Herz, Geschenk der Elster als blaues Päckchen; alle pulsieren.
+- **Drops:** Material als leuchtender Kristall (Farbe und Größe nach Wert: mint, blau, violett, gold), Herz als leuchtendes Herz, Geschenk der Elster als blaues Päckchen; alle pulsieren.
 
 ## Welten
 
@@ -116,7 +116,7 @@ Jede Waffe gehört zu einer von sechs Klassen. Wer mehrere Waffen derselben Klas
 | Licht | präzise, Krits, Durchschlag | +5 / +10 / +20 % Krit-Chance |
 | Glut | Explosionen, Brand | Brandschaden und Explosionsradius +15 / +30 / +50 % |
 | Wind | schnell, viele Projektile, Nahbereich | +8 / +16 / +30 % Angriffstempo |
-| Böse | Lebensraub, Fluch, Risiko | +3 / +6 / +12 % Lebensraub; verfluchte Gegner nehmen zusätzlich +15 / +30 / +50 % Schaden |
+| Böse | Lebensraub, Fluch, Risiko | +2 / +4 / +8 % Lebensraub; verfluchte Gegner nehmen zusätzlich +15 / +30 / +50 % Schaden |
 | Wasser | Verlangsamen, Einfangen, Flächen | Verlangsamung stärker und länger (+20 / +40 / +70 %, höchstens 85 % langsamer), Einfangen etwas länger, +1 / +2 / +4 Regeneration |
 | Stein | schwere Treffer, Rückstoß, Betäuben | +2 / +4 / +8 Rüstung; schwere Waffen (Abklingzeit ab 1 s) +10 / +20 / +35 % Schaden |
 
@@ -133,7 +133,7 @@ Jede Waffe gehört zu einer von sechs Klassen. Wer mehrere Waffen derselben Klas
 | Wind | Böenschwarm | Schuss | 3 | 0,18 | 270 | 760 | Streuung 0,22 rad | 18 |
 | Wind | Federwirbel | Nahkampf | 6 | 0,4 je Gegner | Kreis 58 | 4,2 rad/s | 3 Federklingen kreisen um den Vogel; jede trifft denselben Gegner höchstens alle 0,4 s | 22 |
 | Wind | Pusteblume | Schuss | 2 × 3 | 0,6 | 260 | 150 | Schirmchen schweben leicht aufwärts, kleben 3 s am Gegner und schaden weiter (Trefferschaden pro Sekunde), kein Rückstoß | 20 |
-| Böse | Dornenranke | Nahkampf | 12 | 0,9 | 125 | – | Hieb im 1,7-rad-Bogen trifft alles darin; 30 % Chance je Treffer auf +1 HP, Fluch 2 s, Rückstoß 18 | 22 |
+| Böse | Dornenranke | Nahkampf | 12 | 0,9 | 125 | – | Hieb im 1,7-rad-Bogen trifft alles darin; 15 % Chance je Treffer auf +1 HP, Fluch 2 s, Rückstoß 18 | 22 |
 | Böse | Krähenruf | Begleiter | 6 | 2,5 | Suche 420 | 260 | ruft bis zu 3 Geisterkrähen (je 8 s), die selbst Gegner jagen; Fluch 2 s | 26 |
 | Böse | Paktlaterne | Schuss | 26 | 1,0 | 360 | 900 | kostet 1 HP pro Schuss (nie den letzten), Fluch 3 s | 26 |
 | Wasser | Wasserpistole | Schuss | 2 | 0,12 | 230 | 650 | verlangsamt um 35 % für 1,2 s, Rückstoß 7 | 16 |
@@ -172,15 +172,27 @@ Endwerte: Schaden × (1 + Schaden %) × Klassenbonus des Vogels (× 1,25) × sch
  
 ## Gegner
  
-Fünf Gegnertypen mit klar unterscheidbarem Verhalten; Schaden entsteht durch Berührung oder Projektile. Werte gelten für Welle 1.
+Fäulnis-Kreaturen mit klar unterscheidbarem Verhalten, gern mit Augenzwinkern. Jede Welt bringt zwei eigene Gegner mit, die früheren bleiben dabei. Schaden entsteht durch Berührung, Projektile oder Flächen. Angriffe der neuen Gegner werden angekündigt: Sie halten kurz inne und leuchten hell auf (Schuss, Sturz, Explosion). Werte gelten für Welle 1.
  
-| Gegner | Ab Welle | HP | Tempo | Schaden | Radius | Material | Verhalten |
+| Gegner | Welt / ab Welle | HP | Tempo | Schaden | Radius | Material | Verhalten |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Krähe | 1 | 6 | 95 | 2 | 13 | 1 | Fliegt direkt auf den Spieler zu, leichtes Auf und Ab |
-| Käfer | 2 | 12 | 75 | 3 | 15 | 1 | Läuft am Boden, springt hoch, wenn der Spieler über ihm ist (alle 1,5–2,5 s) |
-| Spucker | 3 | 9 | 70 | 2 | 14 | 1 | Hält 200–300 Abstand, schießt alle \~2,4 s eine Kugel (Tempo 240) |
-| Brocken | 5 | 45 | 42 | 5 | 27 | 3 | Langsamer, schwerer Verfolger mit HP-Leiste |
-| Geierkönig (Boss) | 15 | 4500 | 55 | 6 | 52 | – | Schwebt, Fächer aus 7 Kugeln alle 1,5 s, ruft alle 6 s drei Krähen |
+| Fäulniskrähe | überall / 1 | 6 | 95 | 2 | 13 | 1 | Fliegt direkt auf den Spieler zu, leichtes Auf und Ab |
+| Glutkäfer | überall / 2 | 12 | 75 | 3 | 15 | 1 | Läuft am Boden, springt hoch, wenn der Spieler über ihm ist (alle 1,5–2,5 s) |
+| Spucker | überall / 3 | 9 | 70 | 2 | 14 | 1 | Hält 200–300 Abstand, schießt alle \~2,4 s eine Kugel (Tempo 240) |
+| Brocken | überall / 5 | 45 | 42 | 5 | 27 | 3 | Langsamer, schwerer Verfolger mit HP-Leiste |
+| Pusteling | Felder / 2 | 10 | 35 | 2 | 15 | 1 | Treibt langsam heran; platzt bei Berührung oder Tod in eine Giftwolke (Radius 60, 3 s, Schaden bei Kontakt; bei Berührung ohne Material) |
+| Vogelscheuche | Felder / 3 | 26 | – | 3 | 18 | 2 | Steht fest im Feld, wirft alle \~2,4 s brennendes Stroh im Bogen auf die Stelle des Spielers (bis 560 entfernt) |
+| Fledermaus | Dorf / 5 | 7 | 150 | 2 | 11 | 1 | Zickzackflug: Richtung Spieler mit kräftigem Pendeln quer dazu |
+| Wetterhahn | Dorf / 6 | 22 | – | 3 | 16 | 2 | Steht fest auf seiner Stange, dreht sich gleichmäßig (0,9 rad/s) und schießt alle 0,8 s in Zeigerichtung (Tempo 210) |
+| Spinne | Wald / 9 | 16 | 60 | 3 | 15 | 1 | Hängt am Faden von oben, folgt dem Spieler und seilt sich bis knapp über ihn ab; schießt alle \~2,8 s ein Netz (verlangsamt 2 s: Tempo × 0,55, Schub × 0,75) |
+| Irrlicht | Wald / 10 | 9 | – | 5 | 12 | 1 | Springt alle 2,2 s neben den Spieler; nach drei Sprüngen oder in seiner Nähe 0,8 s Warnung, dann Explosion (Radius 75, ohne Material) |
+| Felsadler | Gebirge / 13 | 30 | 120 | 5 | 20 | 2 | Kreist oben über dem Spieler, hält alle 2,5–3,5 s inne (0,7 s Warnung) und stürzt sich auf dessen Position (560) |
+| Lawinenkäfer | Gebirge / 13 | 40 | 70 | 6 | 18 | 2 | Läuft heran, rollt sich in Reichweite (380) ein (0,6 s Warnung) und rast 1,6 s über den Boden (430) |
+| Geierkönig (Boss) | Gipfel / 15 | 4500 | 55 | 6 | 52 | – | siehe „Geierkönig“ |
+
+Stationäre Gegner (Vogelscheuche, Wetterhahn) lassen sich nicht verschieben und nicht einfangen; der Wind treibt sie nicht ab.
+
+**Gewichtung je Welle** (Pool wächst mit, siehe „Wellen & Spawns“): Krähe 10, Käfer 7 (ab 2), Spucker 4 + 0,3 · w (ab 3), Brocken 2 + 0,3 · w (ab 5), Pusteling 4 in den Feldern / sonst 2 (ab 2), Vogelscheuche 2 / 1 (ab 3), Fledermaus 6 im Dorf / sonst 3 (ab 5), Wetterhahn 2,5 / 1 (ab 6), Spinne 4 im Wald / sonst 2 (ab 9), Irrlicht 3 / 1,5 (ab 10), Felsadler 4 und Lawinenkäfer 3 (ab 13). Spinne und Felsadler erscheinen oben an der Decke, Bodengegner am Boden.
  
 Skalierung pro Welle w (gilt nicht für den Boss):
  
@@ -188,7 +200,53 @@ Skalierung pro Welle w (gilt nicht für den Boss):
 - Schaden × (1 + 0,15 · (w − 1)), gerundet
 - Tempo × (1 + 0,02 · w)
  
-Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln. Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
+Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln (Boss, Torwächter und stationäre Gegner bleiben stehen). Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
+
+### Spawner
+
+Gegner, die weitere Gegner erzeugen – gute Ziele für zuerst. Was ein Spawner erzeugt („Kinder“), erscheint immer mit kurzer Warnung (Fäulnis-Riss), lässt **kein Material** fallen und zählt zu seiner Obergrenze; der Spawner selbst gibt mehr Material. Höchstens 3 Spawner leben gleichzeitig, darüber erscheint stattdessen eine Krähe. Vor dem Erzeugen wackelt bzw. leuchtet der Spawner.
+
+| Spawner | Welt / ab Welle | HP | Material | Verhalten | Kinder |
+| --- | --- | --- | --- | --- | --- |
+| Krähennest | Felder / 3 | 30 | 3 | steht fest auf einem Pfahl, alle 4 s eine Krähe | höchstens 3 |
+| Wespennest | Dorf / 6 | 34 | 3 | hängt an der Decke und tut nichts – jeder Treffer (höchstens alle 0,3 s) lässt eine Fäulniswespe ausschwärmen (HP 4, Tempo 190, Schaden 1, Zickzack) | höchstens 6 |
+| Sporenpilz | Wald / 9 | 40 | 3 | steht fest, alle 5 s drei Sporen (HP 4, Tempo 45, Schaden 2, treiben langsam heran) | höchstens 9 |
+| Käferkönigin | Gebirge / 13 | 90 | 4 | großer, langsamer Käfer (Tempo 30, Schaden 6), legt alle 4 s ein Ei hinter sich (HP 8); nach 2,5 s schlüpft daraus ein Lawinenkäfer, wenn es nicht vorher zerstört wird | höchstens 6 (Eier und Schlüpflinge) |
+| Fäulnisriss | alle / 6 | 50 | 3 | ein Spawn-Riss, der offen bleibt: 12 s lang alle 3 s ein zufälliger Gegner der Welle (keine Spawner oder stationären); danach schließt er sich ohne Material, Beschießen schließt ihn früher | – |
+
+Gewichtung: Krähennest 1,5 in den Feldern / sonst 0,6, Wespennest 1,5 im Dorf / 0,6, Sporenpilz 1,5 im Wald / 0,6, Käferkönigin 1,5, Fäulnisriss 1. Spawner und Kinder sind keine Elitegegner-Ausnahme: auch ein Spawner kann Elite sein (stationäre statt „teilend“ gepanzert).
+
+### Elitegegner
+
+Ab Welle 5 kann ein regulär erscheinender Gegner (nicht Boss oder Torwächter) als Elite kommen: Chance min(15 %, 4 % + 1 % · (w − 5)). Elitegegner haben × 2,5 HP, sind 18 % größer, tragen einen pulsierenden Goldring, einen goldenen Schein, eine schmale HP-Leiste und das Zeichen ihres Modifikators über dem Kopf (als Form gezeichnet). Sie lassen × 3 Material fallen und mit 25 % Chance ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item).
+
+| Modifikator | Zeichen | Wirkung |
+| --- | --- | --- |
+| Flink | » (cyan) | Tempo × 1,25, alles läuft 35 % schneller (Bewegung, Abklingzeiten) |
+| Gepanzert | Raute (silber) | nimmt nur halben Schaden, kein Rückstoß |
+| Explosiv | Stern (orange) | hinterlässt beim Tod einen Sprengsatz: 0,7 s wachsender Warnkreis, dann Explosion (Radius 80, Schaden × 1,5) |
+| Teilend | zwei Kreise (grün) | zerfällt beim Tod in zwei kleine Kopien (35 % HP, 70 % Größe); stationäre Gegner werden stattdessen gepanzert |
+| Heiler | Plus (mint) | heilt Gegner im Umkreis 140 um 2 % ihrer Max-HP alle 0,5 s (grünes Aufleuchten), sichtbarer Heilkreis |
+
+### Torwächter
+
+Am Ende jeder Welt außer dem Gipfel (Welle 4, 8, 12) bewacht ein Torwächter das Ziel. Er erscheint, sobald der Spieler 1000 vor dem Ziel ist, 260 davor (mit Beben, Funken und großem Namen „TORWÄCHTER …“ nach dem Wellenbanner). Solange er lebt, ist das Ziel versperrt (violette Gitterstäbe, „VERSPERRT“): Der Spieler wird zurückgeschoben und bekommt den Hinweis „Besiege zuerst …“. Läuft die Zeit ab, endet die Welle wie gewohnt. Das HUD zeigt seinen Namen und eine HP-Kapsel unter der Zielstrecke. Besiegt lässt er 15 Material und ein Geschenk fallen („DAS TOR IST OFFEN“). Torwächter sind wie der Boss immun gegen Einfangen und Rückstoß, Betäubung wirkt nur 30 %; sie skalieren mit der Welle wie normale Gegner und bleiben im Umkreis von 220 um ihren Platz.
+
+| Torwächter | Welle | HP | Tempo | Schaden | Radius | Angriffe |
+| --- | --- | --- | --- | --- | --- | --- |
+| Der Strohkönig | 4 | 220 | 25 | 5 | 40 | Riesige Vogelscheuche mit Kürbiskopf: Fächer aus drei brennenden Strohbündeln alle 2,6 s (0,6 s Warnung), ruft alle 8 s zwei Krähen |
+| Die Glocke | 8 | 260 | 40 | 5 | 36 | Hängt an einer Kette: Ring aus 10 Kugeln alle 2,2 s (jedes Mal gedreht); alle 6 s Glockenschlag – 1 s wachsender Warnkreis (Radius 230), dann Schaden × 1,5 im ganzen Kreis |
+| Die Spinnenmutter | 12 | 300 | 70 | 6 | 40 | Hängt oben: Fächer aus drei Netzen alle 2,6 s, ruft alle 7 s zwei Spinnen; alle 9 s 0,8 s Warnung, dann lässt sie sich bis zum Boden fallen und klettert zurück |
+
+### Geierkönig
+
+Der Boss der Welle 15 hat drei Phasen (Wechsel bei 66 % und 33 % HP, jeweils mit Beben, Funken und Text „DER GEIERKÖNIG TOBT!“ bzw. „LETZTE KRAFT!“). Die Boss-Leiste zeigt die Phasengrenzen und „PHASE n“.
+
+| Phase | Angriffe |
+| --- | --- |
+| 1 | Schwebt, Fächer aus 7 Kugeln alle 1,5 s, ruft alle 6 s drei Krähen |
+| 2 | dazu Federregen alle 5 s: 6 rosa Warnlinien über das Bild verteilt, nach 0,8 s fallen dort Federn von der Decke (Tempo 330) |
+| 3 | Fächer aus 9 Kugeln alle 1,1 s, Krähen alle 4 s, Federregen alle 4 s mit 8 Linien; dazu alle 7 s Sturzflug: 0,9 s Warnung (helles Leuchten), dann quer durchs Bild auf Höhe des Spielers (680) |
  
 ## Wellen & Spawns
  
@@ -201,8 +259,8 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
 - **Gruppengröße:** 1 + ⌊w / 2,5⌋, mit 40 % Chance einer mehr; in den Wellen 1–3 je Gruppe 1 Gegner zusätzlich (sonst reicht das Material nach Welle 1 für keinen Kauf). Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
 - **Warnung:** Ein pulsierender Fäulnis-Riss (dunkler Kern, violett-rotes Leuchten, der sich bis zum Erscheinen schließt) markiert jeden Spawn 0,9 s vorher (Boss: 2 s, größer).
 - **Obergrenze:** keine neuen Spawns bei mehr als 110 lebenden Gegnern.
-- **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle).
-- **Gewichtung:** Krähe 10, Käfer 7, Spucker 4 + 0,3 · w, Brocken 2 + 0,3 · w.
+- **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle, nie Boss oder Torwächter).
+- **Gewichtung:** siehe „Gegner“; dazu ab Welle 5 Elitegegner und in Welle 4, 8, 12 ein Torwächter am Ziel.
  
 Am Wellenende verpuffen alle Gegner und Projektile. Material, das schon zum Spieler fliegt, wird noch gutgeschrieben; alles, was noch am Boden liegt, verfällt. Die Szene steht dann 1,2 s still mit der Einblendung „WELLE X GESCHAFFT“ und darunter „Ziel erreicht! +N Zeitbonus“ bzw. „Zeit abgelaufen“; erst danach erscheinen Level-up oder Shop. Wer zum Ziel eilt, tauscht also zurückgelassene Beute gegen den Zeitbonus.
  
@@ -260,7 +318,8 @@ Darstellung: Regenschleier mit Pfützen am Boden, die sich füllen und danach wi
  
 Material ist gleichzeitig Währung und Erfahrung: Jedes aufgesammelte Stück gibt 1 Geld und 1 XP. Jeder Run startet mit 15 Geld (ohne XP). Für Level L braucht der Spieler (L + 3)² XP; jedes Level gibt sofort +1 Max-HP und eine Verbesserung nach der Welle.
  
-- **Drops:** Gegner lassen Material dort, wo sie sterben. Es springt kurz auf; auf Küken und Spatz bleibt es dann schwebend an dieser Stelle (leichtes Wippen) – man holt es sich im Flug. Ab Falke sinkt es zu Boden, je höher die Stufe desto schneller (höchstens 12 / 35 / 70 Einheiten pro Sekunde, bei Regen × 1,5), und bleibt dort liegen; wer es spät noch will, muss tief zu den Käfern hinunter. Im Sammelradius (70 + Bonus) fliegt es zum Spieler. 4 % Chance auf ein Herz (+3 HP, bei Ruß +2), das sich genauso verhält.
+- **Drops:** Gegner lassen Material dort, wo sie sterben. Es springt kurz auf; auf Küken und Spatz bleibt es dann schwebend an dieser Stelle (leichtes Wippen) – man holt es sich im Flug. Ab Falke sinkt es zu Boden (mit Frack auf jeder Stufe mit 70/s), je höher die Stufe desto schneller (höchstens 12 / 35 / 70 Einheiten pro Sekunde, bei Regen × 1,5), und bleibt dort liegen; wer es spät noch will, muss tief zu den Käfern hinunter. Im Sammelradius (70 + Bonus) fliegt es zum Spieler. 4 % Chance auf ein Herz (+3 HP, bei Ruß +2), das sich genauso verhält.
+- **Kristallwerte:** Die Ausbeute eines Gegners fällt als möglichst wenige Kristalle: Wert 10 (gold, größer), 5 (violett), 3 (blau), 1 (mint) – z. B. 9 Material als 5 + 3 + 1. Jeder Kristall gibt beim Einsammeln seinen Wert als Geld und XP.
 - **Level-up-Auswahl:** 4 zufällige Optionen, jede mit 20 % Chance „selten“ (doppelter Wert).
  
 | Wert | Start | Level-up normal | Wirkung |
@@ -273,7 +332,7 @@ Material ist gleichzeitig Währung und Erfahrung: Jedes aufgesammelte Stück gib
 | Reichweite | 0 | +25 | Addiert auf Waffenreichweite |
 | Rüstung | 0 | +1 | Schaden × 15 / (15 + Rüstung); negativ erhöht Schaden |
 | Tempo % | 0 | +5 | Bewegungsgeschwindigkeit |
-| Lebensraub % | 0 | +2 | Chance pro Treffer auf +1 HP |
+| Lebensraub % | 0 | +1 | Chance pro Treffer auf +1 HP; höchstens 1 HP alle 0,5 s (gilt für alle Lebensraub-Quellen zusammen) |
 | Sammelradius | 0 | – | Nur über Items |
 | Schub % | 0 | +6 | Stärkerer Schub beim Fliegen |
 | Gleiten % | 0 | +12 | Langsameres Sinken beim Gleiten |
@@ -282,16 +341,16 @@ Jeder erlittene Treffer macht mindestens 1 Schaden. Die Werte im Shop enthalten 
  
 ## Shop & Items
  
-Nach jeder Welle bietet der Shop 4 zufällige Angebote und dazu als fünftes Feld immer ein Aktions-Item. Jedes der 4 Angebote ist mit Chance max(40 %, 80 % − 5 % × (w − 1)) eine Waffe, sonst ein Item (Welle 1: 80 %, Welle 5: 60 %, ab Welle 9: 40 %); in den Wellen 1–3 sind mindestens 2 der 4 Angebote Waffen. Ab Welle 3 können Waffen in Stufe II (25 %), ab Welle 7 in Stufe III (8 %) und ab Welle 11 in Stufe IV (3 %) auftauchen. Die Chancen sind kumulativ: Ein Wurf unter 3 % ergibt Stufe IV, unter 8 % Stufe III, unter 25 % Stufe II.
+Nach jeder Welle bietet der Shop 4 zufällige Angebote und dazu als fünftes Feld immer ein Aktions-Item. Jedes der 4 Angebote ist mit Chance max(55 %, 80 % − 4 % × (w − 1)) eine Waffe, sonst ein Item (Welle 1: 80 %, Welle 5: 64 %, ab Welle 8: 55 %); in den Wellen 1–3 sind mindestens 2 der 4 Angebote Waffen. Ab Welle 3 können Waffen in Stufe II (25 %), ab Welle 7 in Stufe III (8 %) und ab Welle 11 in Stufe IV (3 %) auftauchen. Die Chancen sind kumulativ: Ein Wurf unter 3 % ergibt Stufe IV, unter 8 % Stufe III, unter 25 % Stufe II.
  
-- **Preise:** Waffen Basis × Stufe × (1 + 0,12 · (w − 1) + 0,012 · (w − 1)²), Items Basis × (1 + 0,15 · (w − 1) + 0,015 · (w − 1)²); bei Glitzer jeweils × 0,85. Der quadratische Anteil sorgt dafür, dass die Preise mit dem späten Einkommen mithalten.
+- **Preise:** Waffen Basis × 0,85 × Stufe × (1 + 0,1 · (w − 1) + 0,009 · (w − 1)²), Items Basis × (1 + 0,15 · (w − 1) + 0,015 · (w − 1)²); bei Glitzer jeweils × 0,85. Der quadratische Anteil sorgt dafür, dass die Preise mit dem späten Einkommen mithalten.
 
 | Welle | Waffen | Items | Neu würfeln |
 | --- | --- | --- | --- |
 | 1 | × 1,0 | × 1,0 | 2 |
-| 5 | × 1,67 | × 1,84 | 7 |
-| 9 | × 2,73 | × 3,16 | 12 |
-| 14 | × 4,59 | × 5,49 | 21 |
+| 5 | × 1,54 | × 1,84 | 7 |
+| 9 | × 2,38 | × 3,16 | 12 |
+| 14 | × 3,82 | × 5,49 | 21 |
 
 - **Zurückhalten:** Jedes Angebot (auch das Aktions-Angebot) lässt sich per Schloss-Knopf zurückhalten. Es bleibt beim Neu würfeln und in den folgenden Shops am selben Platz liegen, bis es gekauft oder wieder freigegeben wird; der Preis richtet sich immer nach der aktuellen Welle. Ein zurückgehaltenes Aktions-Item verschwindet, sobald es nichts mehr bewirken würde. In den Wellen 1–3 zählen zurückgehaltene Waffen zur Mindestzahl, zurückgehaltene Items werden nicht ersetzt.
 - **Neu würfeln:** ⌊2 + 0,8 · w + 0,04 · w²⌋, pro weiterem Wurf in derselben Shopphase +2; mit Glückskeks ist der erste Wurf je Shop gratis.
@@ -324,7 +383,7 @@ Werte-Items stapeln sich unbegrenzt. Items mit besonderer Wirkung gibt es nur ei
 | Doppelter Espresso | Selten | 18 | +15 % Angriffstempo |
 | Schildkrötenpanzer | Selten | 20 | +5 Rüstung, −8 % Tempo |
 | Fetter Wurm | Selten | 20 | +8 Max-HP, +1 Regeneration |
-| Vampirzahn | Selten | 22 | +4 % Lebensraub |
+| Vampirzahn | Selten | 22 | +3 % Lebensraub |
 | Energiedose | Selten | 22 | +25 % Angriffstempo, −2 Rüstung |
 | Glaskanone | Selten | 25 | +30 % Schaden, −6 Max-HP |
 
@@ -376,7 +435,7 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | --- | --- | --- | --- |
 | Sturzflug | Item „Sturzflug-Feder“ (Selten, 18), Kampfspatz | 0,22 s Sprint (760) in Blickrichtung, dabei unverwundbar | 3 s |
 | Hupe | Item (Selten, 16) | Gegner im Umkreis 240 werden weggestoßen (außer Boss) und fliehen 2 s | 8 s |
-| Seifenblasenschild | Item (Episch, 22) | Blase schluckt 2 s lang jeden Treffer | 10 s |
+| Seifenblasenschild | Item (Episch, 22) | Blase schluckt 1,2 s lang jeden Treffer | 14 s |
 | Lichtblitz | Item (Episch, 22), Professor Uhu | betäubt alle Gegner im Bild 1,5 s, Bildschirm blitzt weiß | 12 s |
 | Gewitterwolke | Item (Episch, 26) | 3 s lang alle 0,25 s ein Blitz in einen Gegner im Umkreis 460: Schadensbasis × 1, betäubt 0,3 s | 15 s |
 | Magnetpfiff | Item (Selten, 18) | zieht alles Material im Bild heran | 20 s |
@@ -394,7 +453,7 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | Sturzflug + Seifenblasenschild | Blasenrakete | Sturzflug (0,35 s, 820) mit Blase; berührte Gegner werden 2,5 s eingefangen | 6 s |
 | Lichtblitz + Gewitterwolke | Sonnensturm | blendet alle Gegner im Bild 1,5 s, jeder bekommt einen Blitz (Schadensbasis × 1,5) | 14 s |
 | Lichtblitz + Taschenuhr | Schnappschuss | betäubt alle Gegner im Bild 2 s, Gegnerkugeln stehen 2 s still | 18 s |
-| Taschenuhr + Seifenblasenschild | Zeitblase | 3 s unverwundbar, Gegner im Umkreis 150 stehen still | 20 s |
+| Taschenuhr + Seifenblasenschild | Zeitblase | 2,5 s unverwundbar, Gegner im Umkreis 150 stehen still | 22 s |
 | Magnetpfiff + Hupe | Staubsauger | zieht Drops im Bild und Gegner im Umkreis 340 (außer Boss) 0,7 s heran, dann Knall: Umkreis 190, Schadensbasis × 1,5, fliehen 1,5 s | 16 s |
 | Magnetpfiff + Taschenuhr | Goldene Stunde | zieht Material im Bild heran; 5 s lang zählt jedes Stück doppelt | 25 s |
 | Gewitterwolke + Hupe | Donnerhorn | Hupe plus Kettenblitz: springt bis zu 7-mal (je bis 170 weit), Schadensbasis × 1, betäubt 0,4 s | 10 s |
@@ -404,9 +463,9 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | Klauen + Magnetpfiff | Elsterschatz | zieht alles im Bild heran; 5 s lang 20 % Chance auf doppeltes Material | 18 s |
 | Sturzflug + Lichtblitz | Kometenschweif | Sturzflug (0,3 s, 820); berührte Gegner nehmen Schadensbasis × 1 und sind 1,2 s geblendet | 5 s |
 | Sturzflug + Taschenuhr | Zeitsprung | Sturzflug (0,3 s, 820), Gegner 2,5 s in Zeitlupe | 8 s |
-| Hupe + Seifenblasenschild | Prallblase | 3 s Blase; Gegner, die sie berühren (Abstand Radius + 30), werden weggeschleudert, fliehen 0,6 s und nehmen Schadensbasis × 0,5 (je Gegner höchstens alle 0,6 s) | 12 s |
+| Hupe + Seifenblasenschild | Prallblase | 2 s Blase; Gegner, die sie berühren (Abstand Radius + 30), werden weggeschleudert, fliehen 0,6 s und nehmen Schadensbasis × 0,5 (je Gegner höchstens alle 0,6 s) | 14 s |
 | Hupe + Lichtblitz | Fanfare | betäubt alle Gegner im Bild 2 s, danach fliehen sie (insgesamt 5 s Furcht) | 12 s |
-| Seifenblasenschild + Gewitterwolke | Gewitterblase | 3 s Blase; alle 0,4 s ein Blitz in einen Gegner im Umkreis 260 (Schadensbasis × 1) | 14 s |
+| Seifenblasenschild + Gewitterwolke | Gewitterblase | 2 s Blase; alle 0,4 s ein Blitz in einen Gegner im Umkreis 260 (Schadensbasis × 1) | 16 s |
 | Seifenblasenschild + Magnetpfiff | Blasenfang | Gegner im Umkreis 260 werden 2,5 s eingefangen; Material im Bild kommt heran | 15 s |
 | Gewitterwolke + Magnetpfiff | Elektromagnet | 1,2 s: Gegner im Umkreis 340 (außer Boss) werden herangezogen (380/s), alle 0,25 s ein Blitz im Umkreis 220 (Schadensbasis × 0,8) | 16 s |
 | Gewitterwolke + Taschenuhr | Ewiges Gewitter | 6 s Gewitter wie Gewitterwolke, Gegner 3 s in Zeitlupe | 22 s |
@@ -421,16 +480,18 @@ Zehn spielbare Vögel. Jeder hat eine Stärke, einen Nachteil und vor allem ein 
 
 | Vogel | Rolle | Stärke | Nachteil | Fliegt … | Start |
 | --- | --- | --- | --- | --- | --- |
-| Kampfspatz (Spatz) | Allround | +10 % Material (jedes Stück hat 10 % Chance auf +1) | keine Spezialität | normal – das Maß aller Dinge | Lichtfeder + Sturzflug |
-| Glutkehlchen (Rotkehlchen) | Glut | Brand hält 50 % länger und schadet 25 % mehr | −30 Reichweite | normal, mit Funkenspur | Funkenfächer |
-| Böe (Schwalbe) | Wind | +20 % Angriffstempo, schnellster Flieger | −5 Max-HP | sehr schnell, enge Kurven | Böenschwarm |
-| Schillerchen (Kolibri) | Licht | +15 % Krit, winzige Trefferfläche | −40 % Max-HP | fliegt frei in alle Richtungen, steht in der Luft | Diskokugel |
-| Ruß (Rabe, abtrünnige Fäulnis-Krähe) | Böse | Böse-Waffen +25 %, +5 % Lebensraub | Herzen heilen nur 2 statt 3 | schwer, gleitet lange | Dornenranke |
-| Frack (Pinguin) | Wasser | +50 % Max-HP, +3 Rüstung | kann kaum fliegen | mühsam in der Luft, am Boden rasend schnell | Wasserpistole + Bauchrutscher |
-| Hacki (Specht) | Stein | Stein-Waffen +25 %, +3 Rüstung | −15 % Angriffstempo | ruckartig, klammert sich an den Weltrand | Kieselschleuder + Trommelwirbel |
-| Professor Uhu (Eule) | Licht/Böse | +25 % Erfahrung; in Wald, Gebirge, Gipfel +20 % Schaden | in Feldern und Dorf −10 % Schaden | lautlos, sinkt sehr langsam | Lichtfeder + Lichtblitz |
-| Glitzer (Elster) | Wirtschaft | Shop −15 %; 1 % je Kill ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item) | nur 4 Waffenslots | normal | Wasserpistole + Klauen |
+| Kampfspatz (Spatz) | Allround | +10 % Material (jedes Stück hat 10 % Chance auf +1) | keine Spezialität | normal – das Maß aller Dinge | Lichtfeder / Böenschwarm / Funkenfächer + Sturzflug |
+| Glutkehlchen (Rotkehlchen) | Glut | Brand hält 50 % länger und schadet 25 % mehr | −30 Reichweite | normal, mit Funkenspur | Funkenfächer / Glutkern / Popcornmaschine |
+| Böe (Schwalbe) | Wind | +20 % Angriffstempo, schnellster Flieger | −5 Max-HP | sehr schnell, enge Kurven | Böenschwarm / Federwirbel / Pusteblume |
+| Schillerchen (Kolibri) | Licht | +15 % Krit, winzige Trefferfläche | −40 % Max-HP | fliegt frei in alle Richtungen, steht in der Luft | Diskokugel / Lichtfeder / Sonnenstrahl |
+| Ruß (Rabe, abtrünnige Fäulnis-Krähe) | Böse | Böse-Waffen +25 %, +3 % Lebensraub | Herzen heilen nur 2 statt 3 | schwer, gleitet lange | Dornenranke / Krähenruf / Paktlaterne |
+| Frack (Pinguin) | Wasser | +50 % Max-HP, +3 Rüstung; Material fällt auf jeder Stufe schnell zu Boden (70/s, wie auf Phönix), weil er schwebendes kaum erreicht | kann kaum fliegen | mühsam in der Luft, am Boden rasend schnell | Wasserpistole / Seifenblasen / Regenwolke + Bauchrutscher |
+| Hacki (Specht) | Stein | Stein-Waffen +25 %, +3 Rüstung | −15 % Angriffstempo | ruckartig, klammert sich an den Weltrand | Kieselschleuder / Gartenzwergwerfer / Bowlingkugel + Trommelwirbel |
+| Professor Uhu (Eule) | Licht/Böse | +25 % Erfahrung; in Wald, Gebirge, Gipfel +20 % Schaden | in Feldern und Dorf −10 % Schaden | lautlos, sinkt sehr langsam | Lichtfeder / Sonnenstrahl / Krähenruf + Lichtblitz |
+| Glitzer (Elster) | Wirtschaft | Shop −15 %; 1 % je Kill ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item) | nur 4 Waffenslots | normal | Wasserpistole / Diskokugel / Kieselschleuder + Klauen |
 | Henriette (Huhn) | Glut/Stein | +40 % Max-HP, +2 Rüstung, Eier als Bomben | keine Startwaffe, fliegt nur kurze Hüpfer | flattert in Hüpfern, viel Bodenzeit | Ei legen; Waffen nur aus dem Shop |
+
+**Startwaffe:** Jeder Vogel außer Henriette hat drei Startwaffen zur Auswahl (Spalte „Start“, die erste ist voreingestellt). Gewählt wird unter „Run vorbereiten“; die Wahl wird je Vogel gespeichert.
 
 Max-HP: Start 20, dann Änderungen des Vogels, dann × Max-HP-Faktor (gerundet).
 
@@ -473,16 +534,17 @@ Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays ü
 - **Wetteranzeige:** Unter Timer bzw. Boss-Leiste steht das aktuelle Wetter (bei Wind mit Richtungszeichen, z. B. „Wind ›“); das Wellenbanner nennt es ebenfalls.
 - **Einblendungen:** Wellenbanner zu Beginn (Weltname in der Kantenfarbe der Welt darüber), schwebende Schadenszahlen (weiß, Krit gelb, Spieler rot, Heilung mint; höchstens 40 gleichzeitig, mit scharfem Schatten statt Schein), „LEVEL UP“ am Spieler. Texte im Spiel haben einen weichen Schein in ihrer Farbe statt einer Kontur.
 - **Titelbildschirm:** großes, sanft atmend leuchtendes „FEDERFEUER“ über der lebendigen Felder-Welt (Kamera gleitet, der Geistvogel zieht ruhige Bögen unter dem Menü), darunter „Flieg durch das Licht bis zum Gipfel“ und die Menüpunkte als leuchtender Text: Spielen, Einstellungen, Rekorde, Kompendium, Credits, Debug (nur Debug-Builds), Beenden (nur PC). Der gewählte Punkt leuchtet weiß mit Lichtkugel davor. Unten links die Version, unten rechts die Bedienhinweise. Esc bzw. Controller-B führt von jeder Unterseite zurück zum Titel.
-- **Run vorbereiten (Spielen):** Links die Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe) und eine Kurzerklärung. Rechts „Vogel wählen“: zehn Kacheln mit Vogel-Vorschau (gesperrte als dunkle Silhouette mit Schloss; antippen zeigt die Aufgabe mit Fortschritt), darunter der gewählte Vogel mit Flügelschlag-Vorschau, Name, Art und Rolle, Stärke, Nachteil, Flugverhalten, Startwaffe, Startaktion und ggf. Waffenslots sowie der Knopf „Starten“.
+- **Run vorbereiten (Spielen):** Links die Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe) und eine Kurzerklärung. Rechts „Vogel wählen“: zehn Kacheln mit Vogel-Vorschau (gesperrte als dunkle Silhouette mit Schloss; antippen zeigt die Aufgabe mit Fortschritt), darunter der gewählte Vogel mit Flügelschlag-Vorschau, Name, Art und Rolle, Stärke, Nachteil und Flugverhalten, darunter „Startwaffe“ mit den drei wählbaren Waffen des Vogels (gewählte golden mit ✓, Info-Panel mit den Werten inklusive Klassenbonus des Vogels; Henriette: „keine Startwaffe“), dann Startaktion und ggf. Waffenslots sowie der Knopf „Starten“.
 - **Einstellungen:** Vollbild/Fenster (PC), Bildschirmwackeln an/aus, FPS-Anzeige an/aus (beides gespeichert), die Steuerung als umschaltbare Übersicht Tastatur/Controller mit Neubelegung (siehe „Steuerung & Bewegung“) und auf Touch-Geräten die Touch-Knöpfe.
 - **Rekorde:** Bestleistung je Schwierigkeitsstufe (geschafft, erreichte Welle, gesperrt), Statistik-Kacheln (Runs, Siege, besiegte Gegner, höchstes Level, verbrannte Gegner, gesammeltes Material) und die Liste der Vögel mit „freigeschaltet“ bzw. Aufgabe und Fortschritt.
-- **Kompendium:** Sammlung aller Inhalte mit Reitern Vögel, Waffen, Items, Aktionen (inkl. Evolutionen), Kombinationen und Gegner; jeder Reiter und die Kopfzeile zeigen „entdeckt / gesamt“. Sichtbar ist nur, was schon einmal gesehen wurde: Waffen und Items, sobald sie im Shop lagen oder besessen wurden; Aktionen ebenso bzw. als Startaktion oder Evolution; Gegner, sobald einer erschienen ist; Kombinationen, sobald eine ihrer Zutaten besessen wurde (dann zeigt der Shop das Rezept ohnehin) – selbst verschmolzene tragen „✓ verschmolzen“ und einen goldenen Rand. Der Reiter Kombinationen zeigt ein **Sternbild** auf eigenem Nachthimmel (dunkelblauer Verlauf, zwei Nebelschleier, rund 110 funkelnde Hintergrundsterne): die 11 Aktionen als Sterne mit atmendem Lichthof auf einer feinen Umlaufbahn (Ellipse über die volle Breite; jede Vogel-Aktion sitzt zwischen ihren beiden Rezeptpartnern), jedes Rezept als leicht gebogene Lichtbahn zwischen den Zutaten und die Evolution als etwas kleinere Kugel wie die Aktionen, nur mit goldenem Rand und dezentem Schein, dazwischen (etwas zur Mitte gerückt; anschließend stoßen sich die Evolutionen untereinander und von den Aktions-Sternen ab, damit nichts überlappt). Unentdeckt: gestrichelt, „?“ ohne Beschriftung; gesehen: schwach leuchtende Bahn; selbst verschmolzen: gedämpft goldene Bahn mit Lichtpartikeln, die zur Evolution wandern. Oben links „x / 24 verschmolzen“. Ein angewählter Stern hebt alle seine Verbindungen hervor (hell, mit Partikeln) und zeigt das Info-Panel. Unbekanntes erscheint als „?“ / „???“ mit kurzem Hinweis, wo es zu finden ist. Vögel sind immer gelistet, gesperrte als dunkle Silhouette mit Aufgabe und Fortschritt. Jede Kachel ist ansteuerbar und zeigt das Info-Panel wie im Shop (Waffen in Stufe I mit Grundwerten, Gegner mit Werten aus Welle 1 auf Küken). Gespeichert über alle Runs; „Alles freischalten“ (Debug) zeigt alles.
+- **Kompendium:** Sammlung aller Inhalte mit Reitern Vögel, Waffen, Items, Aktionen (inkl. Evolutionen), Kombinationen und Gegner; jeder Reiter und die Kopfzeile zeigen „entdeckt / gesamt“. Sichtbar ist nur, was schon einmal gesehen wurde: Waffen und Items, sobald sie im Shop lagen oder besessen wurden; Aktionen ebenso bzw. als Startaktion oder Evolution; Gegner, sobald einer erschienen ist (der Reiter zeigt auch Torwächter und die fünf Elite-Modifikatoren, letztere sobald ein solcher Elitegegner aufgetaucht ist); Kombinationen, sobald eine ihrer Zutaten besessen wurde (dann zeigt der Shop das Rezept ohnehin) – selbst verschmolzene tragen „✓ verschmolzen“ und einen goldenen Rand. Der Reiter Kombinationen zeigt ein **Sternbild** auf eigenem Nachthimmel (dunkelblauer Verlauf, zwei Nebelschleier, rund 110 funkelnde Hintergrundsterne): die 11 Aktionen als Sterne mit atmendem Lichthof auf einer feinen Umlaufbahn (Ellipse über die volle Breite; jede Vogel-Aktion sitzt zwischen ihren beiden Rezeptpartnern), jedes Rezept als leicht gebogene Lichtbahn zwischen den Zutaten und die Evolution als etwas kleinere Kugel wie die Aktionen, nur mit goldenem Rand und dezentem Schein, dazwischen (etwas zur Mitte gerückt; anschließend stoßen sich die Evolutionen untereinander und von den Aktions-Sternen ab, damit nichts überlappt). Unentdeckt: gestrichelt, „?“ ohne Beschriftung; gesehen: schwach leuchtende Bahn; selbst verschmolzen: gedämpft goldene Bahn mit Lichtpartikeln, die zur Evolution wandern. Oben links „x / 24 verschmolzen“. Ein angewählter Stern hebt alle seine Verbindungen hervor (hell, mit Partikeln) und zeigt das Info-Panel. Unbekanntes erscheint als „?“ / „???“ mit kurzem Hinweis, wo es zu finden ist. Vögel sind immer gelistet, gesperrte als dunkle Silhouette mit Aufgabe und Fortschritt. Jede Kachel ist ansteuerbar und zeigt das Info-Panel wie im Shop (Waffen in Stufe I mit Grundwerten, Gegner mit Werten aus Welle 1 auf Küken). Gespeichert über alle Runs; „Alles freischalten“ (Debug) zeigt alles.
 - **Credits:** Engine, Schriften mit Lizenzhinweis (SIL OFL 1.1), Bibliotheken, Version.
-- **Debug (nur Debug-Builds):** Alles freischalten (Stufen und Vögel), Performance-Test, Render-Analyse.
+- **Debug (nur Debug-Builds):** Alles freischalten (Stufen und Vögel), Unverwundbar, Welle wählen (direkt oder mit Shop davor), Performance-Test, Render-Analyse.
 - **Level-up:** 4 Karten mit großem Wert (z. B. „+4 %“); die ganze Karte ist wählbar. Seltene Karten haben ein lila Kopfband und das Badge „SELTEN“.
-- **Shop:** Kopfzeile mit Hinweisen (Zeitbonus, nächste Welt); feste Fußleiste unter dem Scrollbereich mit Geld links und dem Start der nächsten Welle rechts – immer sichtbar, auch wenn die Seite gescrollt werden muss. Fünf Angebotskarten in einer Reihe (rechts das Aktions-Angebot) mit Kopfband in Stufenfarbe bzw. Seltenheitsfarbe (gewöhnliche Items apricot), Badge mit Stufe, Seltenheit oder „AKTION“; grün „STUFE … · PAAR“, wenn der Spieler die Waffe in gleicher Stufe schon hat, bzw. „⤴ STUFE …“, wenn der Kauf bei vollen Slots direkt verschmilzt. Waffenkarten zeigen ihre Klasse und grün „Set N!“, wenn der Kauf die nächste Set-Stufe erreicht; Item-Karten ihre Beschreibung; Aktions-Items zusätzlich grün „⤴ STUFE II“ bzw. „passt zu … → …“ und ggf. „Plätze voll – ersetzt eine Aktion“ (beim Kauf erst den Platz wählen). Preis-Etikett als Fußzeile; zu teure Karten sind ausgegraut, gekaufte werden zu einem leeren Platz. Unter jeder Karte ein Schloss-Knopf „🔓 Zurückhalten“, zurückgehalten golden „🔒 Zurückgehalten“. **Details:** Alles im Shop ist ansteuerbar (Pfeile/Tab, Controller, Maus) – Angebote, Waffenslots, Items, Aktionen, Set-Boni und Werte; Anzeigen ohne eigenen Knopf bekommen beim Fokus einen weißen Lichtrand. Zum gewählten bzw. überfahrenen Element erscheint daneben ein Info-Panel (rechts, sonst links, sonst darunter; immer im Bild, wächst mit der UI-Skalierung): Waffen mit allen Werten der Stufe, Effekten, Klassen-Set (erreichte Stufen grün, die nächste per Kauf gold), Schaden der nächsten Stufe und ggf. Preis bzw. Verkaufserlös; Verschmelzen-Knöpfe zeigen eine Vorschau – bei Waffen die Werte vorher → nachher (Schaden, Abklingzeit, ggf. Brand/Kleben, Verkaufswert) und dass der zweite Slot frei wird, bei Aktionen die Evolution mit Wirkung und Abklingzeit, dass Platz 2 frei wird und ggf. dass Stufe II der Zutaten verloren geht; Items mit Seltenheit, Werten, Wirkung und Besitz; Aktionen mit Abklingzeit, Stufe II, Wirkung des Kaufs und allen Rezepten (passende grün); Set-Boni mit allen Schwellen und den Waffen der Klasse; Werte mit Erklärung und Anteil aus Set-Boni/Items. Es ist immer nur ein Panel offen. Darunter die Waffenslots des Vogels (leere sichtbar; Stufe und Klasse, Verkaufen-Knopf und – wenn ein Partner gleicher Stufe da ist – grüner Verschmelzen-Knopf „⤴ II“) und Items als Etiketten (Beschreibung als Tooltip). Rechts „Aktionen“ (beide Plätze mit Stufe und Abklingzeit, grüner Knopf „Verschmelzen → …“ samt Wirkung, sonst die möglichen Rezepte; beim Ersetzen die Auswahl des Platzes), „Set-Boni“ (je Klasse Anzahl und aktiver Bonus bzw. „n/nächste Schwelle“) und die Werte in zwei Spalten.
-- **Pause & Game Over:** Pause zeigt Welle, Welt und Stufe, dazu Weiterspielen/Aufgeben. Game Over zeigt „SIEG!“ bzw. „ABGESTÜRZT“ (mit dem Namen des Vogels), Kacheln für Welle, Gegner und Level, die Stufe, ggf. die neu freigeschaltete Stufe und neu freigeschaltete Vögel mit Vorschau, „Neue Runde“ (führt direkt zu „Run vorbereiten“) und „Hauptmenü“.
-- **Controller-Hinweise:** Sobald ein Controller benutzt wird, zeigen alle Menüs unten eine feste Hinweiszeile mit Knopf-Symbolen in Xbox-Farben – Titel „Ⓐ Bestätigen · ✚ Wählen“ (statt der Tastaturhinweise), Unterseiten „Ⓐ Auswählen · Ⓑ Zurück · ✚ Navigieren“, Level-up „Ⓐ Verbesserung wählen“, Shop „Ⓐ Kaufen / Auswählen · ✚ Navigieren – Details erscheinen beim Auswählen“, Pause „Ⓐ Auswählen · Ⓑ Weiterspielen“, Game Over „Ⓐ Auswählen“. In Welle 1 steht unter dem Wellenbanner die aktuelle Belegung (z. B. „A halten: fliegen · X / Y: Aktionen · Menü: Pause“). Ein Tastendruck auf der Tastatur blendet die Hinweise wieder aus.
+- **Shop-Kurztasten:** R bzw. Controller-X = Neu würfeln, N bzw. Start = Welle starten, L bzw. Y = gewähltes Angebot zurückhalten, Bild ↓/↑ bzw. RB/LB = zum nächsten/vorigen Bereich springen (Angebote → Waffen & Items → Aktionen & Werte; scrollt mit). Bewusst nicht W/Leertaste/S, die im Spiel zum Fliegen dienen; in den ersten 0,5 s nach dem Öffnen wirken die Kurztasten nicht. Neben „Neu würfeln“ und „Welle starten“ steht die Taste (Tastenkappe bzw. Controller-Knopf); mit Tastatur zeigt die Fußleiste „R würfeln · L zurückhalten · Bild ↑↓ Bereich“, mit Controller die Hinweiszeile „Ⓐ Kaufen · Ⓧ Neu würfeln · Ⓨ Zurückhalten · LB/RB Bereich · Menü Welle starten“.
+- **Shop:** Kopfzeile mit Hinweisen (Zeitbonus, nächste Welt); feste Fußleiste unter dem Scrollbereich mit Geld links und dem Start der nächsten Welle rechts – immer sichtbar, auch wenn die Seite gescrollt werden muss. Fünf Angebotskarten in einer Reihe (rechts das Aktions-Angebot) mit Kopfband in Stufenfarbe bzw. Seltenheitsfarbe (gewöhnliche Items apricot), Badge mit Stufe, Seltenheit oder „AKTION“; grün „STUFE … · PAAR“, wenn der Spieler die Waffe in gleicher Stufe schon hat, bzw. „⤴ STUFE …“, wenn der Kauf bei vollen Slots direkt verschmilzt. Waffenkarten zeigen ihre Klasse und grün „Set N!“, wenn der Kauf die nächste Set-Stufe erreicht; Item-Karten ihre Beschreibung; Aktions-Items zusätzlich grün „⤴ STUFE II“ bzw. „passt zu … → …“ (eine Zeile; bei mehreren passenden Rezepten mit „(+n)“, die übrigen zeigt das Info-Panel) und ggf. „Plätze voll – ersetzt eine Aktion“ (beim Kauf erst den Platz wählen). Preis-Etikett als Fußzeile; zu teure Karten sind ausgegraut, gekaufte werden zu einem leeren Platz. Unter jeder Karte ein Schloss-Knopf „🔓 Zurückhalten“, zurückgehalten golden „🔒 Zurückgehalten“. **Details:** Alles im Shop ist ansteuerbar (Pfeile/Tab, Controller, Maus) – Angebote, Waffenslots, Items, Aktionen, Set-Boni und Werte; Anzeigen ohne eigenen Knopf bekommen beim Fokus einen weißen Lichtrand. Zum gewählten bzw. überfahrenen Element erscheint daneben ein Info-Panel (rechts, sonst links, sonst darunter; immer im Bild, wächst mit der UI-Skalierung): Waffen mit allen Werten der Stufe, Effekten, Klassen-Set (erreichte Stufen grün, die nächste per Kauf gold), Schaden der nächsten Stufe und ggf. Preis bzw. Verkaufserlös; Verschmelzen-Knöpfe zeigen eine Vorschau – bei Waffen die Werte vorher → nachher (Schaden, Abklingzeit, ggf. Brand/Kleben, Verkaufswert) und dass der zweite Slot frei wird, bei Aktionen die Evolution mit Wirkung und Abklingzeit, dass Platz 2 frei wird und ggf. dass Stufe II der Zutaten verloren geht; Items mit Seltenheit, Werten, Wirkung und Besitz; Aktionen mit Abklingzeit, Stufe II, Wirkung des Kaufs und allen Rezepten (passende grün); Set-Boni mit allen Schwellen und den Waffen der Klasse; Werte mit Erklärung und Anteil aus Set-Boni/Items. Es ist immer nur ein Panel offen. Darunter die Waffenslots des Vogels (leere sichtbar; Stufe und Klasse, Verkaufen-Knopf und – wenn ein Partner gleicher Stufe da ist – grüner Verschmelzen-Knopf „⤴ II“) und Items als Etiketten (Beschreibung als Tooltip). Rechts „Aktionen“ (beide Plätze mit Stufe und Abklingzeit, grüner Knopf „Verschmelzen → …“ samt Wirkung, sonst die möglichen Rezepte; beim Ersetzen die Auswahl des Platzes), „Set-Boni“ (je Klasse Anzahl und aktiver Bonus bzw. „n/nächste Schwelle“) und die Werte in zwei Spalten.
+- **Pause & Game Over:** Pause zeigt eine komplette Übersicht des Runs: Vogel mit Vorschau, Level, HP, Material, Welle, Welt und Stufe; links Waffen (Stufe, Klasse), Items mit Anzahl (Seltenheitsfarbe) und Aktionen mit Abklingzeit; rechts Set-Boni und alle Werte. Alles ist ansteuerbar und zeigt das Info-Panel wie im Shop (ohne Verkaufsinfo). Weiterspielen und Aufgeben (am PC auch Vollbild) stehen in einer festen Fußleiste; Controller-B spielt weiter. Game Over zeigt „SIEG!“ bzw. „ABGESTÜRZT“ (mit dem Namen des Vogels), Kacheln für Welle, Gegner und Level, die Stufe, ggf. die neu freigeschaltete Stufe und neu freigeschaltete Vögel mit Vorschau, „Neue Runde“ (führt direkt zu „Run vorbereiten“) und „Hauptmenü“.
+- **Controller-Hinweise:** Sobald ein Controller benutzt wird, zeigen alle Menüs unten eine feste Hinweiszeile mit Knopf-Symbolen in Xbox-Farben – Titel „Ⓐ Bestätigen · ✚ Wählen“ (statt der Tastaturhinweise), Unterseiten „Ⓐ Auswählen · Ⓑ Zurück · ✚ Navigieren“, Level-up „Ⓐ Verbesserung wählen“, Shop siehe „Shop-Kurztasten“, Pause „Ⓐ Auswählen · Ⓑ Weiterspielen“, Game Over „Ⓐ Auswählen“. In Welle 1 steht unter dem Wellenbanner die aktuelle Belegung (z. B. „A halten: fliegen · X / Y: Aktionen · Menü: Pause“). Ein Tastendruck auf der Tastatur blendet die Hinweise wieder aus.
 - **Menü-Navigation:** Alle Buttons sind per Tastatur (Pfeile/Tab, Enter/Leertaste) und Controller (Steuerkreuz oder Stick, A bestätigt) bedienbar; der fokussierte Knopf bzw. die fokussierte Karte hebt sich an, leuchtet heller und bekommt einen weißen Lichtrand (bei Mauszeiger darüber ohne Rand). Mit Controller ist in jedem neuen Menü sofort der erste Button fokussiert. In den ersten 0,5 s nach dem Öffnen eines Menüs wird Controller-A ignoriert, damit ein Tippen zum Fliegen nichts versehentlich auswählt.
  
 Stil: leuchtendes Glas passend zur Spielwelt – ruhig und edel statt Arcade-Sticker.
@@ -506,7 +568,7 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Sturzflug/Bauchrutscher, Zeichnung aller Vogelarten (`Player.drawBird`, auch für Menü-Vorschauen) |
 | `components/weapon_mount.dart` | Waffe im Ring um den Spieler, Zielsuche, Verhalten je Waffenart (Schuss, Wurf, Kreis, Hieb, Begleiter, Wolke, Rollen, rundum) |
 | `components/weapon_fx.dart` | Geisterkrähen, Regenwolke, Peitschenbogen, Henriettes Ei (auch Gewitterei), Blitz (Mixin `CombatEffect`) |
-| `components/enemy.dart` | KI und Zeichnung aller Gegnertypen inkl. Boss, Statuseffekte |
+| `components/enemy.dart` | KI und Zeichnung der Grundgegner, Statuseffekte, Elitegegner; Teil-Dateien `enemy_world.dart` (Welt-Gegner, Giftwolke, Sprengsatz), `enemy_gate.dart` (Torwächter), `enemy_boss.dart` (Phasen des Geierkönigs, Federregen) |
 | `components/projectiles.dart` | Spielerkugeln (Durchschlag, Explosion, Bogenwurf, Zünder, Rollen, Treffereffekte) und Gegnerkugeln |
 | `components/pickups.dart` | Material-, Herz- und Geschenk-Drops und Spawn-Warnungen |
 | `components/effects.dart` | Partikel, Explosionsring, schwebende Zahlen |
@@ -525,7 +587,7 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `game/input_bindings.dart` | Frei belegbare Spielaktionen für Tastatur und Controller, Standardbelegung, Speichern, Tastennamen |
 | `game/gamepad_input.dart` | Controller-Eingaben nach Belegung: Bewegung, Fliegen, Aktionen, Pause; feste Menü-Navigation; Erfassung beim Neubelegen |
 | `components/weather_layer.dart` | Regen, Windlinien und Blätter im Viewport, Pfützen am Boden |
-| `ui/*.dart` | Startmenü mit Unterseiten (`menu.dart`), Level-up, Shop, Pause, Game Over, Touch-Steuerung; `widgets.dart` enthält die Bausteine (Panel, Sticker, Knöpfe, Karten, Etiketten), `bird_preview.dart` die Vogel-Vorschau, `controls_editor.dart` die Steuerungs-Übersicht mit Neubelegung, `inspect.dart`/`inspect_info.dart` die Info-Panels (Shop, Kompendium), `compendium.dart` das Kompendium, `constellation.dart` das Sternbild der Verschmelzungen, `fusion.dart` die Verschmelz-Animation |
+| `ui/*.dart` | Startmenü mit Unterseiten (`menu.dart`), Level-up, Shop, Pause, Game Over, Touch-Steuerung; `widgets.dart` enthält die Bausteine (Panel, Sticker, Knöpfe, Karten, Etiketten), `bird_preview.dart` die Vogel-Vorschau, `controls_editor.dart` die Steuerungs-Übersicht mit Neubelegung, `inspect.dart`/`inspect_info.dart` die Info-Panels (Shop, Kompendium), `compendium.dart` das Kompendium, `run_overview.dart` die Run-Übersicht in der Pause, `constellation.dart` das Sternbild der Verschmelzungen, `fusion.dart` die Verschmelz-Animation |
  
 Phasen: `menu → play → cleared → levelUp → shop → play … → over`; `cleared` ist die kurze Einblendung nach einer Welle. Außerhalb von `play` läuft die Engine mit dt = 0 weiter, damit Entfernen/Hinzufügen von Komponenten verarbeitet wird, ohne dass sich etwas bewegt. Temporäre Komponenten tragen das Mixin `Transient` und werden beim Wellenwechsel gesammelt entfernt; Kampf-Effekte (`CombatEffect`) verschwinden schon am Wellenende bzw. beim Tod des Bosses.
 
@@ -534,6 +596,8 @@ Debug-Werkzeuge (in Debug-Builds oder mit `--dart-define=FEDERFEUER_DEBUG=true`;
 - **Tasten 1 / 2 / 3:** Wetter Klar / Wind / Regen.
 - **F3:** FPS-Anzeige oben rechts (für alle Spieler auch über Einstellungen → FPS-Anzeige) – FPS, schlechteste Frame-Zeit der letzten 120 Frames, Build- und Raster-Zeit der Engine, Anzahl Gegner, Kugeln und Komponenten.
 - **Menüseite „Debug“ – Alles freischalten:** alle Schwierigkeitsstufen und Vögel frei.
+- **Menüseite „Debug“ – Unverwundbar:** der Vogel nimmt keinen Schaden (bleibt für die Sitzung an, wird nicht gespeichert).
+- **Menüseite „Debug“ – Welle wählen:** Welle 1–15 auswählen (Torwächter-Wellen violett, Boss rosa) und mit gewähltem Vogel und Stufe direkt starten; oder „Erst Shop“ – Shop vor dieser Welle mit 30 Material je übersprungener Welle zusätzlich zum Startgeld. Mit „Passende Ausrüstung“ (Standard: an) bekommt der Run, was ein typischer Run bis dahin ungefähr hätte: Level ≈ 1,2 je geschaffter Welle (Verbesserungen zufällig), Waffen aus zwei Klassen (die der Startwaffe und eine zufällige) mit wachsender Anzahl (≈ 1 + geschaffte Wellen ÷ 2,6, höchstens Slots) und Stufe (I–II ab Welle 4, II–III ab Welle 8, III ab Welle 13, ab Welle 11 teils eine Stufe mehr), ≈ 0,8 Items je Welle mit der Seltenheit der jeweiligen Welle, ab Welle 5 eine zweite Aktion, ab Welle 9 manchmal Stufe II und ab Welle 11 eine Verschmelzung, wenn möglich.
 - **Menüseite „Debug“ – Performance-Test:** schwerste Szene – Wald mit Regen, Stufe Phönix, dauerhaft 110 Gegner rund um den Spieler, sechs Waffen der Stufe IV, Held unverwundbar. Nach 3 s Aufwärmen wird 30 s gemessen; Ergebnis (Ø FPS, 1%-Low, schlechtester Frame, Raster/Build Ø und max) oben rechts und in der Konsole. Aussagekräftig nur im Profile- oder Release-Build.
 - **Menüseite „Debug“ – Render-Analyse:** dieselbe Lastszene, abschnittsweise gemessen (3 s Aufwärmen, je Abschnitt 1 s Einschwingen + 4 s Messung): zuerst alles an, dann jeweils ohne einen Bildteil (Hintergrund, Kulisse, Boden, Vordergrund, Atmosphäre, Wetter, Gegner-Körper, Gegner-Leuchten, Kugeln, Effekte, HUD). Ergebnis: Rasterzeit je Abschnitt und Ersparnis je Bildteil, größte zuerst – oben rechts und in der Konsole.
  
@@ -559,7 +623,8 @@ Phase 2 – Inhalte:
  
 - [x] Charaktere: zehn Vögel mit Stärke, Nachteil, Flugverhalten und Freischaltaufgaben
 - [x] Waffen: sechs Klassen mit Set-Boni, 18 Waffen inkl. Nahkampf, Brand, Verlangsamen, Betäuben
-- [ ] Elitegegner und ein Zwischenboss
+- [x] Gegner pro Welt, Elitegegner, Torwächter am Ende der Welten, Geierkönig mit drei Phasen
+- [ ] Balancing der neuen Gegner nach Spieltests
 - [x] Items: Seltenheitsstufen, Flug-Items (Schub, Gleiten), Spezial-Items
 - [x] Zwei Aktionstasten mit aktiven Fähigkeiten aus Items und Charakteren, Stufe II und Evolutionen
 - [x] Tastenbelegung frei einstellbar (Tastatur und Controller)

@@ -16,6 +16,9 @@ const double kPlayerSpeed = 230;
 /// Sinkflug (nach unten halten): zusätzliche Beschleunigung nach unten und Höchsttempo.
 const double kDiveAccel = 900, kDiveSpeed = 380;
 
+/// Spinnennetz: Tempo und Schub des Spielers, solange er drin hängt.
+const double kWebSlow = 0.55, kWebThrust = 0.75;
+
 /// Freier Flug (Kolibri): senkrechtes Höchsttempo (× Schub %) und Beschleunigung.
 const double kFreeFlightSpeed = 260, kFreeFlightAccel = 1500;
 
@@ -53,11 +56,37 @@ bool isBossWave(int wave) => wave == kMaxWave;
 
 /// Preisfaktor je Welle: 1 + lin·(w−1) + quad·(w−1)². Der quadratische Anteil
 /// hält mit dem späten Einkommen mit (mehr und längere Wellen, größere Gruppen).
-const double kWeaponPriceLin = 0.12, kWeaponPriceQuad = 0.012;
+const double kWeaponPriceLin = 0.1, kWeaponPriceQuad = 0.009;
+
+/// Waffen-Grundpreise × diesem Faktor (Waffen sollen erschwinglicher sein als Items).
+const double kWeaponPriceScale = 0.85;
 const double kItemPriceLin = 0.15, kItemPriceQuad = 0.015;
 
 /// Neu würfeln: ⌊2 + lin·w + quad·w²⌋, jeder weitere Wurf in derselben Shopphase +2.
 const double kRerollLin = 0.8, kRerollQuad = 0.04;
+
+/// Material-Kristalle: Wert und Farbe. Größere Ausbeute fällt als wenige wertvolle Kristalle.
+const kMaterialValues = [10, 5, 3, 1];
+
+Color materialColor(int value) => switch (value) {
+      >= 10 => const Color(0xFFFFC94A), // Gold
+      >= 5 => const Color(0xFFC07BFF), // Violett
+      >= 3 => const Color(0xFF6CC8FF), // Blau
+      _ => Palette.mint,
+    };
+
+/// Zerlegt [total] Material in möglichst wenige Kristalle (z. B. 9 → 5 + 3 + 1).
+List<int> splitMaterial(int total) {
+  final out = <int>[];
+  var left = total;
+  for (final v in kMaterialValues) {
+    while (left >= v) {
+      out.add(v);
+      left -= v;
+    }
+  }
+  return out;
+}
 
 /// Startgeld jedes Runs, damit schon nach Welle 1 ein Kauf drin ist.
 const int kStartMoney = 15;
@@ -66,7 +95,7 @@ const int kStartMoney = 15;
 const int kEarlySpawnWaves = 3, kEarlySpawnBonus = 1;
 
 /// Shop: Chance, dass ein Angebot eine Waffe ist – früh hoch, später mehr Items.
-const double kWeaponOfferStart = 0.8, kWeaponOfferStep = 0.05, kWeaponOfferMin = 0.4;
+const double kWeaponOfferStart = 0.8, kWeaponOfferStep = 0.04, kWeaponOfferMin = 0.55;
 double weaponOfferChance(int wave) => max(kWeaponOfferMin, kWeaponOfferStart - kWeaponOfferStep * (wave - 1));
 
 /// Shop: Anzahl normaler Angebote (dazu kommt immer ein Aktions-Angebot), Mindestzahl Waffen bis Welle 3.
@@ -164,7 +193,7 @@ enum WeaponClass {
         light => const ['+5 % Krit', '+10 % Krit', '+20 % Krit'],
         ember => const ['Brand/Explosion +15 %', 'Brand/Explosion +30 %', 'Brand/Explosion +50 %'],
         wind => const ['+8 % Angriffstempo', '+16 % Angriffstempo', '+30 % Angriffstempo'],
-        dark => const ['+3 % Lebensraub, Fluch +15 %', '+6 % Lebensraub, Fluch +30 %', '+12 % Lebensraub, Fluch +50 %'],
+        dark => const ['+2 % Lebensraub, Fluch +15 %', '+4 % Lebensraub, Fluch +30 %', '+8 % Lebensraub, Fluch +50 %'],
         water => const ['Verlangsamung +20 %, +1 Regen.', 'Verlangsamung +40 %, +2 Regen.', 'Verlangsamung +70 %, +4 Regen.'],
         stone => const ['+2 Rüstung, schwere Waffen +10 %', '+4 Rüstung, schwere Waffen +20 %', '+8 Rüstung, schwere Waffen +35 %'],
       };
@@ -177,7 +206,10 @@ int setLevel(int count) => count >= 6 ? 3 : (count >= 4 ? 2 : (count >= 2 ? 1 : 
 const kSetCrit = [0.0, 5, 10, 20];
 const kSetEmber = [0.0, 0.15, 0.3, 0.5]; // Brandschaden und Explosionsradius
 const kSetAtk = [0.0, 8, 16, 30];
-const kSetLifesteal = [0.0, 3, 6, 12];
+const kSetLifesteal = [0.0, 2, 4, 8];
+
+/// Lebensraub heilt höchstens 1 HP je so viele Sekunden (sonst heilen schnelle Waffen fast dauerhaft).
+const double kLifestealInterval = 0.5;
 const kSetCurse = [0.0, 0.15, 0.3, 0.5]; // Zusatzschaden auf verfluchte Gegner
 const kSetSlow = [0.0, 0.2, 0.4, 0.7]; // stärkere/längere Verlangsamung
 const kSetRegen = [0.0, 1, 2, 4];
@@ -303,7 +335,7 @@ const Map<String, WeaponDef> weaponDefs = {
   'vine': WeaponDef(
       id: 'vine', name: 'Dornenranke', icon: '🥀', desc: 'Peitschenhieb im Bogen, stiehlt Leben (Nahkampf).',
       cls: WeaponClass.dark, kind: WeaponKind.whip,
-      dmg: 12, cooldown: 0.9, range: 125, speed: 0, spread: 1.7, lifesteal: 30, curse: 2, knock: 18, price: 22,
+      dmg: 12, cooldown: 0.9, range: 125, speed: 0, spread: 1.7, lifesteal: 15, curse: 2, knock: 18, price: 22,
       color: Color(0xFFD08CFF), radius: 4, length: 14),
   'crowcall': WeaponDef(
       id: 'crowcall', name: 'Krähenruf', icon: '🐦‍⬛', desc: 'Ruft Geisterkrähen, die selbst Gegner jagen.',
@@ -365,7 +397,7 @@ const tiers = [
 enum ActionId {
   dash('Sturzflug', 3, '💨', 'Kurzer Sprint in Flugrichtung, dabei unverwundbar.'),
   horn('Hupe', 8, '📯', 'Stößt nahe Gegner weg, sie fliehen 2 s.'),
-  bubbleShield('Seifenblasenschild', 10, '🫧', 'Blase schluckt 2 s lang jeden Treffer.'),
+  bubbleShield('Seifenblasenschild', 14, '🫧', 'Blase schluckt 1,2 s lang jeden Treffer.'),
   flash('Lichtblitz', 12, '⚡', 'Blendet alle Gegner im Bild 1,5 s.'),
   storm('Gewitterwolke', 15, '⛈️', 'Blitze schlagen 3 s lang in Gegner rundherum ein.'),
   magnet('Magnetpfiff', 20, '📣', 'Zieht alles Material im Bild heran.'),
@@ -379,7 +411,7 @@ enum ActionId {
   bubbleRocket('Blasenrakete', 6, '🚀', 'Sturzflug in der Blase – Gegner auf dem Weg werden eingefangen.', evolved: true),
   sunStorm('Sonnensturm', 14, '🌞', 'Blendet alle Gegner im Bild, dann trifft jeden ein Blitz.', evolved: true),
   snapshot('Schnappschuss', 18, '📸', 'Friert alles im Bild 2 s ein – Gegner und Gegnerkugeln.', evolved: true),
-  timeBubble('Zeitblase', 20, '🔮', 'Große Blase um dich: 3 s unverwundbar, Gegner darin stehen still.', evolved: true),
+  timeBubble('Zeitblase', 22, '🔮', 'Große Blase um dich: 2,5 s unverwundbar, Gegner darin stehen still.', evolved: true),
   vacuum('Staubsauger', 16, '🌀', 'Saugt Material und Gegner heran, dann ein Rückstoß-Knall.', evolved: true),
   goldenHour('Goldene Stunde', 25, '🌅', 'Zieht Material heran; 5 s lang zählt jedes Stück doppelt.', evolved: true),
   thunderHorn('Donnerhorn', 10, '🎺', 'Hupe mit Kettenblitz, der zwischen nahen Gegnern springt.', evolved: true),
@@ -389,9 +421,9 @@ enum ActionId {
   magpieHoard('Elsterschatz', 18, '💎', 'Zieht alles im Bild heran; 5 s lang 20 % Chance auf doppeltes Material.', evolved: true),
   comet('Kometenschweif', 5, '☄️', 'Sturzflug mit Lichtschweif: berührte Gegner nehmen Schaden und sind 1,2 s geblendet.', evolved: true),
   timeJump('Zeitsprung', 8, '⌛', 'Sturzflug, danach laufen alle Gegner 2,5 s in Zeitlupe.', evolved: true),
-  bounceBubble('Prallblase', 12, '🏐', '3 s Blase: schluckt Treffer und schleudert Gegner bei Berührung weg.', evolved: true),
+  bounceBubble('Prallblase', 14, '🏐', '2 s Blase: schluckt Treffer und schleudert Gegner bei Berührung weg.', evolved: true),
   fanfare('Fanfare', 12, '🎉', 'Blendet alle Gegner im Bild 2 s, danach fliehen sie 3 s.', evolved: true),
-  stormBubble('Gewitterblase', 14, '🔵', '3 s Blase; alle 0,4 s schlägt ein Blitz in einen Gegner in der Nähe.', evolved: true),
+  stormBubble('Gewitterblase', 16, '🔵', '2 s Blase; alle 0,4 s schlägt ein Blitz in einen Gegner in der Nähe.', evolved: true),
   bubbleTrap('Blasenfang', 15, '🎈', 'Fängt alle Gegner im Umkreis 260 in Blasen und zieht Material heran.', evolved: true),
   electroMagnet('Elektromagnet', 16, '🧲', 'Zieht Gegner heran und schockt sie dabei mit Blitzen.', evolved: true),
   endlessStorm('Ewiges Gewitter', 22, '🌪️', '6 s Gewitter, Gegner dabei 3 s in Zeitlupe.', evolved: true),
@@ -520,7 +552,7 @@ const itemDefs = [
   ItemDef('magnet', 'Magnet', '🧲', 10, {Stat.pickup: 70}),
   ItemDef('hantel', 'Hantel', '🏋️', 18, {Stat.dmg: 12, Stat.speed: -3}, rarity: Rarity.rare),
   ItemDef('kaffee', 'Doppelter Espresso', '☕', 18, {Stat.atk: 15}, rarity: Rarity.rare),
-  ItemDef('zahn', 'Vampirzahn', '🦷', 22, {Stat.lifesteal: 4}, rarity: Rarity.rare),
+  ItemDef('zahn', 'Vampirzahn', '🦷', 22, {Stat.lifesteal: 3}, rarity: Rarity.rare),
   ItemDef('klee', 'Kleeblatt', '🍀', 16, {Stat.crit: 8}, rarity: Rarity.rare),
   ItemDef('glas', 'Glaskanone', '🔮', 25, {Stat.dmg: 30, Stat.maxHp: -6}, rarity: Rarity.rare),
   ItemDef('panzer', 'Schildkrötenpanzer', '🐢', 20, {Stat.armor: 5, Stat.speed: -8}, rarity: Rarity.rare),
@@ -567,7 +599,7 @@ const itemDefs = [
   ItemDef('a_horn', 'Hupe', '📯', 16, {}, rarity: Rarity.rare, effect: ItemEffect.action,
       action: ActionId.horn, desc: 'Stößt nahe Gegner weg, sie fliehen 2 s', unique: true),
   ItemDef('a_shield', 'Seifenblasenschild', '🫧', 22, {}, rarity: Rarity.epic, effect: ItemEffect.action,
-      action: ActionId.bubbleShield, desc: 'Blase schluckt 2 s lang jeden Treffer', unique: true),
+      action: ActionId.bubbleShield, desc: 'Blase schluckt 1,2 s lang jeden Treffer', unique: true),
   ItemDef('a_flash', 'Lichtblitz', '⚡', 22, {}, rarity: Rarity.epic, effect: ItemEffect.action,
       action: ActionId.flash, desc: 'Blendet alle Gegner im Bild für 1,5 s', unique: true),
   ItemDef('a_storm', 'Gewitterwolke', '⛈️', 26, {}, rarity: Rarity.epic, effect: ItemEffect.action,
@@ -613,7 +645,7 @@ class CharacterDef {
     required this.body,
     required this.belly,
     required this.unlock,
-    this.startWeapon,
+    this.startWeapons = const [],
     this.startAction,
     this.mods = const {},
     this.classBonus,
@@ -635,6 +667,7 @@ class CharacterDef {
     this.stamina = 0,
     this.wallCling = false,
     this.freeFlight = false,
+    this.minDropFall = 0,
     this.radius = 16,
     this.scale = 1,
   });
@@ -643,7 +676,9 @@ class CharacterDef {
   final BirdLook look;
   final Color glow, body, belly;
   final UnlockDef unlock;
-  final String? startWeapon;
+  /// Wählbare Startwaffen (die erste ist voreingestellt); leer = ohne Waffe (Henriette).
+  final List<String> startWeapons;
+  String? get startWeapon => startWeapons.isEmpty ? null : startWeapons.first;
   final ActionId? startAction;
 
   /// Werte-Änderungen zu Beginn eines Runs.
@@ -670,6 +705,9 @@ class CharacterDef {
   /// Hält sich am Weltrand fest, statt abzurutschen (Specht).
   final bool wallCling;
 
+  /// Material fällt mindestens so schnell zu Boden (Frack kommt kaum hoch, schwebendes Material wäre unerreichbar).
+  final double minDropFall;
+
   /// Freier Flug ohne Schwerkraft: hoch und runter per Stick bzw. Tasten, bleibt beim Loslassen stehen (Kolibri).
   final bool freeFlight;
   final double radius, scale;
@@ -680,44 +718,44 @@ const characterDefs = [
     id: 'spatz', name: 'Kampfspatz', species: 'Spatz', icon: '🐦', role: 'Allround',
     strength: '+10 % Material', weakness: 'keine Spezialität', flight: 'normal – das Maß aller Dinge',
     look: BirdLook.sparrow, glow: Color(0xFFFFC86E), body: Color(0xFFFFD23F), belly: Color(0xFFFFF3C4),
-    startWeapon: 'pistol', startAction: ActionId.dash, materialChance: 0.1,
+    startWeapons: ['pistol', 'smg', 'shotgun'], startAction: ActionId.dash, materialChance: 0.1,
     unlock: UnlockDef(UnlockKind.start, 'Von Anfang an verfügbar'),
   ),
   CharacterDef(
     id: 'glutkehlchen', name: 'Glutkehlchen', species: 'Rotkehlchen', icon: '🐦', role: 'Glut',
     strength: 'Brand hält länger, +25 % Brandschaden', weakness: '−30 Reichweite', flight: 'normal, mit Funkenspur',
     look: BirdLook.robin, glow: Color(0xFFFF7A3D), body: Color(0xFFB0643A), belly: Color(0xFFFF6A3D),
-    startWeapon: 'shotgun', burnBonus: true, mods: {Stat.range: -30},
+    startWeapons: ['shotgun', 'rocket', 'popcorn'], burnBonus: true, mods: {Stat.range: -30},
     unlock: UnlockDef(UnlockKind.burnKills, '500 Gegner durch Brand besiegen', amount: 500),
   ),
   CharacterDef(
     id: 'boee', name: 'Böe', species: 'Schwalbe', icon: '🐦', role: 'Wind',
     strength: '+20 % Angriffstempo, schnellster Flieger', weakness: '−5 Max-HP', flight: 'sehr schnell, enge Kurven',
     look: BirdLook.swallow, glow: Color(0xFFBFF8E6), body: Color(0xFF3D5A9E), belly: Color(0xFFF2F2E8),
-    startWeapon: 'smg', mods: {Stat.atk: 20, Stat.maxHp: -5}, speedMul: 1.3, accelMul: 1.5,
+    startWeapons: ['smg', 'feather', 'dandelion'], mods: {Stat.atk: 20, Stat.maxHp: -5}, speedMul: 1.3, accelMul: 1.5,
     unlock: UnlockDef(UnlockKind.reachWave, 'Welle 8 erreichen', wave: 8),
   ),
   CharacterDef(
     id: 'schillerchen', name: 'Schillerchen', species: 'Kolibri', icon: '🐦', role: 'Licht',
     strength: '+15 % Krit, winzige Trefferfläche', weakness: '−40 % Max-HP', flight: 'fliegt frei in alle Richtungen, steht in der Luft',
     look: BirdLook.hummingbird, glow: Color(0xFF8CFFC8), body: Color(0xFF3FD6A0), belly: Color(0xFFE6FFF4),
-    startWeapon: 'disco', mods: {Stat.crit: 15}, maxHpMul: 0.6, freeFlight: true, radius: 11, scale: 0.75,
+    startWeapons: ['disco', 'pistol', 'rail'], mods: {Stat.crit: 15}, maxHpMul: 0.6, freeFlight: true, radius: 11, scale: 0.75,
     unlock: UnlockDef(UnlockKind.winAny, 'Einen Run gewinnen'),
   ),
   CharacterDef(
     id: 'russ', name: 'Ruß', species: 'Rabe', icon: '🐦‍⬛', role: 'Böse',
-    strength: 'Böse-Waffen +25 %, +5 % Lebensraub', weakness: 'Herzen heilen nur halb', flight: 'schwer, gleitet lange',
+    strength: 'Böse-Waffen +25 %, +3 % Lebensraub', weakness: 'Herzen heilen nur halb', flight: 'schwer, gleitet lange',
     look: BirdLook.raven, glow: Color(0xFFB44CFF), body: Color(0xFF2A2140), belly: Color(0xFF4A3A66),
-    startWeapon: 'vine', classBonus: WeaponClass.dark, mods: {Stat.lifesteal: 5}, heartMul: 0.5,
+    startWeapons: ['vine', 'crowcall', 'lantern'], classBonus: WeaponClass.dark, mods: {Stat.lifesteal: 3}, heartMul: 0.5,
     glideMul: 0.6, accelMul: 0.8,
     unlock: UnlockDef(UnlockKind.totalKills, '2000 Gegner besiegen', amount: 2000),
   ),
   CharacterDef(
     id: 'frack', name: 'Frack', species: 'Pinguin', icon: '🐧', role: 'Wasser',
-    strength: '+50 % Max-HP, +3 Rüstung', weakness: 'kann kaum fliegen', flight: 'mühsam in der Luft, am Boden rasend schnell',
+    strength: '+50 % Max-HP, +3 Rüstung; Material fällt immer zu Boden', weakness: 'kann kaum fliegen', flight: 'mühsam in der Luft, am Boden rasend schnell',
     look: BirdLook.penguin, glow: Color(0xFF9FE4FF), body: Color(0xFF26304A), belly: Color(0xFFF4FAFF),
-    startWeapon: 'water', startAction: ActionId.bellySlide, mods: {Stat.armor: 3}, maxHpMul: 1.5,
-    thrustMul: 0.62, glideMul: 1.4, groundMul: 1.7, scale: 1.1, radius: 17,
+    startWeapons: ['water', 'bubbles', 'raincloud'], startAction: ActionId.bellySlide, mods: {Stat.armor: 3}, maxHpMul: 1.5,
+    thrustMul: 0.62, glideMul: 1.4, groundMul: 1.7, minDropFall: 70, scale: 1.1, radius: 17,
     unlock: UnlockDef(UnlockKind.classWave, 'Welle 10 mit mindestens 3 Wasser-Waffen erreichen',
         cls: WeaponClass.water, amount: 3, wave: 10),
   ),
@@ -725,7 +763,7 @@ const characterDefs = [
     id: 'hacki', name: 'Hacki', species: 'Specht', icon: '🐦', role: 'Stein',
     strength: 'Stein-Waffen +25 %, +3 Rüstung', weakness: '−15 % Angriffstempo', flight: 'ruckartig, klammert sich an den Weltrand',
     look: BirdLook.woodpecker, glow: Color(0xFFFFB37A), body: Color(0xFF3A3A3A), belly: Color(0xFFF2EEE6),
-    startWeapon: 'pebble', startAction: ActionId.drumroll, classBonus: WeaponClass.stone,
+    startWeapons: ['pebble', 'gnome', 'bowling'], startAction: ActionId.drumroll, classBonus: WeaponClass.stone,
     mods: {Stat.armor: 3, Stat.atk: -15}, accelMul: 1.3, wallCling: true,
     unlock: UnlockDef(UnlockKind.classWave, 'Welle 10 mit mindestens 3 Stein-Waffen erreichen',
         cls: WeaponClass.stone, amount: 3, wave: 10),
@@ -734,7 +772,7 @@ const characterDefs = [
     id: 'uhu', name: 'Professor Uhu', species: 'Eule', icon: '🦉', role: 'Licht/Böse',
     strength: '+25 % Erfahrung, nachts +20 % Schaden', weakness: 'tagsüber −10 % Schaden', flight: 'lautlos, sinkt sehr langsam',
     look: BirdLook.owl, glow: Color(0xFFE6D6FF), body: Color(0xFF8A6A4A), belly: Color(0xFFE8D8C0),
-    startWeapon: 'pistol', startAction: ActionId.flash, xpMul: 1.25, nightBonus: 0.2, dayMalus: 0.1, glideMul: 0.35,
+    startWeapons: ['pistol', 'rail', 'crowcall'], startAction: ActionId.flash, xpMul: 1.25, nightBonus: 0.2, dayMalus: 0.1, glideMul: 0.35,
     scale: 1.1, radius: 17,
     unlock: UnlockDef(UnlockKind.runLevel, 'In einem Run Level 15 erreichen', amount: 15),
   ),
@@ -742,7 +780,7 @@ const characterDefs = [
     id: 'glitzer', name: 'Glitzer', species: 'Elster', icon: '🐦', role: 'Wirtschaft',
     strength: 'Shop −15 %, manchmal Geschenk beim Kill', weakness: 'nur 4 Waffenslots', flight: 'normal',
     look: BirdLook.magpie, glow: Color(0xFF9FD4FF), body: Color(0xFF20242E), belly: Color(0xFFF6F6F6),
-    startWeapon: 'water', startAction: ActionId.steal, shopMul: 0.85, giftChance: 0.01, maxWeapons: 4,
+    startWeapons: ['water', 'disco', 'pebble'], startAction: ActionId.steal, shopMul: 0.85, giftChance: 0.01, maxWeapons: 4,
     unlock: UnlockDef(UnlockKind.totalMaterial, '3000 Material sammeln', amount: 3000),
   ),
   CharacterDef(
@@ -775,7 +813,7 @@ const levelOptions = [
   LevelOption(Stat.armor, 1, '🛡️'),
   LevelOption(Stat.range, 25, '🎯'),
   LevelOption(Stat.speed, 5, '🪶'),
-  LevelOption(Stat.lifesteal, 2, '🦷'),
+  LevelOption(Stat.lifesteal, 1, '🦷'),
   LevelOption(Stat.crit, 4, '🍀'),
   LevelOption(Stat.thrust, 6, '🪽'),
   LevelOption(Stat.glide, 12, '🪁'),
@@ -783,7 +821,35 @@ const levelOptions = [
 
 // ---------------- Gegner ----------------
 
-enum EnemyType { crow, beetle, spitter, rock, boss }
+enum EnemyType {
+  crow,
+  beetle,
+  spitter,
+  rock,
+  // Welt-Gegner
+  puffball,
+  scarecrow,
+  bat,
+  weathercock,
+  spider,
+  wisp,
+  eagle,
+  avalanche,
+  // Spawner und ihre Kinder
+  crowNest,
+  waspNest,
+  wasp,
+  sporeShroom,
+  spore,
+  beetleQueen,
+  beetleEgg,
+  rift,
+  // Torwächter am Ende der Welten
+  strawKing,
+  bell,
+  spiderMother,
+  boss,
+}
 
 class EnemyDef {
   const EnemyDef({
@@ -793,10 +859,22 @@ class EnemyDef {
     required this.radius,
     required this.flying,
     required this.drop,
+    this.wind = WeatherConfig.windFactorLight,
+    this.stationary = false,
+    this.spawner = false,
   });
   final double hp, speed, dmg, radius;
   final bool flying;
   final int drop;
+
+  /// Windanfälligkeit (1 = voller Drift).
+  final double wind;
+
+  /// Bewegt sich nicht vom Fleck (Vogelscheuche, Wetterhahn).
+  final bool stationary;
+
+  /// Erzeugt weitere Gegner (Nester, Pilz, Königin, Riss); höchstens [kMaxSpawners] gleichzeitig.
+  final bool spawner;
 }
 
 extension EnemyInfo on EnemyType {
@@ -805,6 +883,25 @@ extension EnemyInfo on EnemyType {
         EnemyType.beetle => 'Glutkäfer',
         EnemyType.spitter => 'Spucker',
         EnemyType.rock => 'Brocken',
+        EnemyType.puffball => 'Pusteling',
+        EnemyType.scarecrow => 'Vogelscheuche',
+        EnemyType.bat => 'Fledermaus',
+        EnemyType.weathercock => 'Wetterhahn',
+        EnemyType.spider => 'Spinne',
+        EnemyType.wisp => 'Irrlicht',
+        EnemyType.eagle => 'Felsadler',
+        EnemyType.avalanche => 'Lawinenkäfer',
+        EnemyType.crowNest => 'Krähennest',
+        EnemyType.waspNest => 'Wespennest',
+        EnemyType.wasp => 'Fäulniswespe',
+        EnemyType.sporeShroom => 'Sporenpilz',
+        EnemyType.spore => 'Spore',
+        EnemyType.beetleQueen => 'Käferkönigin',
+        EnemyType.beetleEgg => 'Käferei',
+        EnemyType.rift => 'Fäulnisriss',
+        EnemyType.strawKing => 'Der Strohkönig',
+        EnemyType.bell => 'Die Glocke',
+        EnemyType.spiderMother => 'Die Spinnenmutter',
         EnemyType.boss => 'Der Geierkönig',
       };
 
@@ -813,6 +910,25 @@ extension EnemyInfo on EnemyType {
         EnemyType.beetle => '🪲',
         EnemyType.spitter => '🦠',
         EnemyType.rock => '🪨',
+        EnemyType.puffball => '🎈',
+        EnemyType.scarecrow => '🌾',
+        EnemyType.bat => '🦇',
+        EnemyType.weathercock => '🐓',
+        EnemyType.spider => '🕷️',
+        EnemyType.wisp => '👻',
+        EnemyType.eagle => '🦅',
+        EnemyType.avalanche => '🐚',
+        EnemyType.crowNest => '🪹',
+        EnemyType.waspNest => '🐝',
+        EnemyType.wasp => '🐝',
+        EnemyType.sporeShroom => '🍄',
+        EnemyType.spore => '🟢',
+        EnemyType.beetleQueen => '🪲',
+        EnemyType.beetleEgg => '🥚',
+        EnemyType.rift => '🌀',
+        EnemyType.strawKing => '🎃',
+        EnemyType.bell => '🔔',
+        EnemyType.spiderMother => '🕸️',
         EnemyType.boss => '👑',
       };
 
@@ -821,17 +937,143 @@ extension EnemyInfo on EnemyType {
         EnemyType.beetle => 'Krabbelt am Boden entlang – wer tief fliegt, trifft auf ihn.',
         EnemyType.spitter => 'Hält Abstand und spuckt Giftkugeln.',
         EnemyType.rock => 'Langsam und zäh; lässt drei Material fallen.',
+        EnemyType.puffball => 'Aufgeblähte Pollenkugel. Platzt in eine Giftwolke – nicht hindurchfliegen.',
+        EnemyType.scarecrow => 'Steht im Feld und wirft brennendes Stroh im Bogen.',
+        EnemyType.bat => 'Flattert im Zickzack – schwer zu treffen.',
+        EnemyType.weathercock => 'Dreht sich auf seiner Stange und schießt dorthin, wohin er gerade zeigt.',
+        EnemyType.spider => 'Seilt sich von oben ab; ihre Netze verlangsamen dich.',
+        EnemyType.wisp => 'Springt von Ort zu Ort und explodiert in deiner Nähe.',
+        EnemyType.eagle => 'Kreist oben und stürzt sich nach kurzer Warnung auf dich.',
+        EnemyType.avalanche => 'Rollt sich ein und rast über den Boden.',
+        EnemyType.crowNest => 'Steht auf einem Pfahl; alle 4 s schlüpft eine Krähe (höchstens drei). Zuerst zerstören!',
+        EnemyType.waspNest => 'Hängt an der Decke und tut nichts – bis man es trifft. Dann schwärmt pro Treffer eine Wespe aus.',
+        EnemyType.wasp => 'Flink und klein, kommt aus dem Wespennest. Lässt kein Material fallen.',
+        EnemyType.sporeShroom => 'Pulsiert am Boden und stößt alle 5 s drei Sporen aus.',
+        EnemyType.spore => 'Kleine Spore, treibt langsam auf dich zu. Lässt kein Material fallen.',
+        EnemyType.beetleQueen => 'Langsam und groß; legt alle 4 s ein Ei, aus dem ein Lawinenkäfer schlüpft.',
+        EnemyType.beetleEgg => 'Schlüpft nach 2,5 s – vorher zerstören!',
+        EnemyType.rift => 'Ein Fäulnisriss, der offen bleibt: 12 s lang alle 3 s ein Gegner. Beschießen schließt ihn früher.',
+        EnemyType.strawKing =>
+          'Torwächter der Felder (Welle 4). Riesige Vogelscheuche: wirft Strohbündel im Fächer und ruft Krähen.',
+        EnemyType.bell => 'Torwächter des Dorfs (Welle 8). Schießt Kugelringe; vor dem Glockenschlag rechtzeitig raus aus dem Kreis!',
+        EnemyType.spiderMother =>
+          'Torwächterin des Waldes (Welle 12). Schießt Netzfächer, ruft Spinnen und lässt sich blitzschnell fallen.',
         EnemyType.boss => 'Herrscher der Fäulnis auf dem Gipfel. Erscheint in Welle 15.',
       };
 }
 
 const Map<EnemyType, EnemyDef> enemyDefs = {
   EnemyType.crow: EnemyDef(hp: 6, speed: 95, dmg: 2, radius: 13, flying: true, drop: 1),
-  EnemyType.beetle: EnemyDef(hp: 12, speed: 75, dmg: 3, radius: 15, flying: false, drop: 1),
-  EnemyType.spitter: EnemyDef(hp: 9, speed: 70, dmg: 2, radius: 14, flying: true, drop: 1),
-  EnemyType.rock: EnemyDef(hp: 45, speed: 42, dmg: 5, radius: 27, flying: true, drop: 3),
-  EnemyType.boss: EnemyDef(hp: 4500, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0),
+  EnemyType.beetle: EnemyDef(
+      hp: 12, speed: 75, dmg: 3, radius: 15, flying: false, drop: 1, wind: WeatherConfig.windFactorGround),
+  EnemyType.spitter: EnemyDef(
+      hp: 9, speed: 70, dmg: 2, radius: 14, flying: true, drop: 1, wind: WeatherConfig.windFactorMedium),
+  EnemyType.rock: EnemyDef(
+      hp: 45, speed: 42, dmg: 5, radius: 27, flying: true, drop: 3, wind: WeatherConfig.windFactorHeavy),
+  // Felder
+  EnemyType.puffball: EnemyDef(hp: 10, speed: 35, dmg: 2, radius: 15, flying: true, drop: 1),
+  EnemyType.scarecrow: EnemyDef(
+      hp: 26, speed: 0, dmg: 3, radius: 18, flying: false, drop: 2, wind: 0, stationary: true),
+  // Dorf
+  EnemyType.bat: EnemyDef(hp: 7, speed: 150, dmg: 2, radius: 11, flying: true, drop: 1),
+  EnemyType.weathercock: EnemyDef(
+      hp: 22, speed: 0, dmg: 3, radius: 16, flying: false, drop: 2, wind: 0, stationary: true),
+  // Wald
+  EnemyType.spider: EnemyDef(
+      hp: 16, speed: 60, dmg: 3, radius: 15, flying: true, drop: 1, wind: WeatherConfig.windFactorMedium),
+  EnemyType.wisp: EnemyDef(hp: 9, speed: 0, dmg: 5, radius: 12, flying: true, drop: 1, wind: 0),
+  // Gebirge
+  EnemyType.eagle: EnemyDef(
+      hp: 30, speed: 120, dmg: 5, radius: 20, flying: true, drop: 2, wind: WeatherConfig.windFactorMedium),
+  EnemyType.avalanche: EnemyDef(
+      hp: 40, speed: 70, dmg: 6, radius: 18, flying: false, drop: 2, wind: WeatherConfig.windFactorGround),
+  // Spawner (geben mehr Material) und ihre Kinder (geben keins)
+  EnemyType.crowNest: EnemyDef(
+      hp: 30, speed: 0, dmg: 2, radius: 20, flying: false, drop: 3, wind: 0, stationary: true, spawner: true),
+  EnemyType.waspNest: EnemyDef(
+      hp: 34, speed: 0, dmg: 3, radius: 18, flying: true, drop: 3, wind: 0, stationary: true, spawner: true),
+  EnemyType.wasp: EnemyDef(hp: 4, speed: 190, dmg: 1, radius: 8, flying: true, drop: 0),
+  EnemyType.sporeShroom: EnemyDef(
+      hp: 40, speed: 0, dmg: 3, radius: 20, flying: false, drop: 3, wind: 0, stationary: true, spawner: true),
+  EnemyType.spore: EnemyDef(hp: 4, speed: 45, dmg: 2, radius: 8, flying: true, drop: 0),
+  EnemyType.beetleQueen: EnemyDef(
+      hp: 90, speed: 30, dmg: 6, radius: 26, flying: false, drop: 4, wind: WeatherConfig.windFactorHeavy, spawner: true),
+  EnemyType.beetleEgg: EnemyDef(hp: 8, speed: 0, dmg: 0, radius: 9, flying: false, drop: 0, wind: 0, stationary: true),
+  EnemyType.rift: EnemyDef(
+      hp: 50, speed: 0, dmg: 0, radius: 22, flying: true, drop: 3, wind: 0, stationary: true, spawner: true),
+  // Torwächter
+  EnemyType.strawKing: EnemyDef(
+      hp: 220, speed: 25, dmg: 5, radius: 40, flying: false, drop: 0, wind: 0),
+  EnemyType.bell: EnemyDef(hp: 260, speed: 40, dmg: 5, radius: 36, flying: true, drop: 0, wind: 0),
+  EnemyType.spiderMother: EnemyDef(hp: 300, speed: 70, dmg: 6, radius: 40, flying: true, drop: 0, wind: 0),
+  EnemyType.boss: EnemyDef(
+      hp: 4500, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
 };
+
+/// Elitegegner: Modifikator mit Farbe und Zeichen über dem Kopf.
+enum EliteMod {
+  swift('Flink', '»', Color(0xFF7FE8FF), 'bewegt und greift 35 % schneller an'),
+  armored('Gepanzert', '◆', Color(0xFFBFC8D8), 'nimmt nur halben Schaden, kein Rückstoß'),
+  volatile('Explosiv', '✸', Color(0xFFFF8A3D), 'explodiert kurz nach dem Tod'),
+  splitting('Teilend', '✂', Color(0xFFC6FF6A), 'zerfällt beim Tod in zwei kleine Kopien'),
+  healer('Heiler', '✚', Color(0xFF8CF5B0), 'heilt Gegner in der Nähe');
+
+  const EliteMod(this.label, this.mark, this.color, this.desc);
+  final String label, mark, desc;
+  final Color color;
+}
+
+/// Elite ab Welle [kEliteStartWave]: Chance je Gegner, HP-Faktor, Größe, Material-Faktor, Geschenk-Chance.
+const int kEliteStartWave = 5;
+const double kEliteHp = 2.5, kEliteScale = 1.18, kEliteGiftChance = 0.25;
+const int kEliteDrops = 3;
+double eliteChance(int wave) => wave < kEliteStartWave ? 0 : min(0.15, 0.04 + 0.01 * (wave - kEliteStartWave));
+
+/// Kopien eines teilenden Elitegegners: HP-Anteil und Größe.
+const double kSplitHp = 0.35, kSplitScale = 0.7;
+
+/// Gegner-Pool einer Welle (Typ, Gewicht). Jede Welt bringt zwei eigene Gegner mit,
+/// die früheren bleiben dabei.
+List<(EnemyType, double)> spawnPool(int wave) {
+  final w = wave.toDouble();
+  final biome = biomeForWave(wave);
+  final pool = <(EnemyType, double)>[(EnemyType.crow, 10)];
+  if (w >= 2) pool.add((EnemyType.beetle, 7));
+  if (w >= 3) pool.add((EnemyType.spitter, 4 + w * 0.3));
+  if (w >= 5) pool.add((EnemyType.rock, 2 + w * 0.3));
+  if (w >= 2) pool.add((EnemyType.puffball, biome == Biome.fields ? 4 : 2));
+  if (w >= 3) pool.add((EnemyType.scarecrow, biome == Biome.fields ? 2 : 1));
+  if (w >= 5) pool.add((EnemyType.bat, biome == Biome.village ? 6 : 3));
+  if (w >= 6) pool.add((EnemyType.weathercock, biome == Biome.village ? 2.5 : 1));
+  if (w >= 9) pool.add((EnemyType.spider, biome == Biome.forest ? 4 : 2));
+  if (w >= 10) pool.add((EnemyType.wisp, biome == Biome.forest ? 3 : 1.5));
+  if (w >= 13) pool.add((EnemyType.eagle, 4));
+  if (w >= 13) pool.add((EnemyType.avalanche, 3));
+  // Spawner: in ihrer Welt häufiger
+  if (w >= 3) pool.add((EnemyType.crowNest, biome == Biome.fields ? 1.5 : 0.6));
+  if (w >= 6) pool.add((EnemyType.waspNest, biome == Biome.village ? 1.5 : 0.6));
+  if (w >= 9) pool.add((EnemyType.sporeShroom, biome == Biome.forest ? 1.5 : 0.6));
+  if (w >= 13) pool.add((EnemyType.beetleQueen, 1.5));
+  if (w >= 6) pool.add((EnemyType.rift, 1));
+  return pool;
+}
+
+/// Höchstzahl gleichzeitig lebender Spawner; darüber kommt stattdessen eine Krähe.
+const int kMaxSpawners = 3;
+
+/// Torwächter einer Welle (Ende der Felder, des Dorfs, des Waldes), sonst null.
+EnemyType? gatekeeperForWave(int wave) => switch (wave) {
+      4 => EnemyType.strawKing,
+      8 => EnemyType.bell,
+      12 => EnemyType.spiderMother,
+      _ => null,
+    };
+
+/// Torwächter erscheint, sobald der Spieler so nah am Ziel ist; er steht so weit davor.
+const double kGateTriggerDist = 1000, kGateOffset = 260;
+
+/// Belohnung für einen Torwächter: Material plus ein Geschenk.
+const int kGateDrops = 15;
 
 // ---------------- Schwierigkeitsstufen ----------------
 

@@ -6,17 +6,21 @@ import 'package:flutter/material.dart';
 import '../config.dart';
 import '../federfeuer_game.dart';
 import 'draw.dart';
+import 'enemy.dart';
 import 'light.dart';
 import 'transient.dart';
 
 /// Material (Geld + XP), Herz (Heilung) oder Geschenk der Elster (zufälliges Item).
 class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  Drop(Vector2 pos, {required this.material, required Random rng, this.fallSpeed = 70, this.gift = false})
+  Drop(Vector2 pos, {required this.material, required Random rng, this.fallSpeed = 70, this.gift = false, this.value = 1})
       : vel = Vector2((rng.nextDouble() - 0.5) * 80, material ? -20 - rng.nextDouble() * 60 : -60),
         _phase = rng.nextDouble() * 6.28,
         super(position: pos, priority: 1);
 
   final bool material, gift;
+
+  /// Wert eines Material-Kristalls (1, 3, 5, 10) – bestimmt Farbe und Größe.
+  final int value;
 
   /// Höchste Sinkgeschwindigkeit (je Schwierigkeit); 0 = schwebt am Todesort.
   final double fallSpeed;
@@ -62,7 +66,7 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
       if (gift) {
         game.giveGift();
       } else if (material) {
-        game.gain(1);
+        game.gain(value);
       } else {
         game.healHeart();
       }
@@ -82,12 +86,14 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
       drawCircle(c, -2.5, -7, 2.4, const Color(0xFFFFE066));
       drawCircle(c, 2.5, -7, 2.4, const Color(0xFFFFE066));
     } else if (material) {
-      // Leuchtender Mint-Kristall
-      Glow.draw(c, 0, 0, 18, Palette.mint.withAlpha((150 * pulse).round()));
+      // Leuchtender Kristall; wertvollere sind größer und andersfarbig
+      final col = materialColor(value);
+      final sz = value >= 10 ? 7.0 : (value >= 5 ? 6.0 : (value >= 3 ? 5.0 : 4.0));
+      Glow.draw(c, 0, 0, 14 + sz, col.withAlpha((150 * pulse).round()));
       c.save();
       c.rotate(pi / 4);
-      drawRect(c, -4, -4, 8, 8, Palette.mint);
-      drawRect(c, -2, -2, 4, 4, Colors.white);
+      drawRect(c, -sz, -sz, sz * 2, sz * 2, col);
+      drawRect(c, -sz / 2, -sz / 2, sz, sz, Colors.white);
       c.restore();
     } else {
       Glow.draw(c, 0, 1, 24, Palette.coral.withAlpha((160 * pulse).round()));
@@ -101,9 +107,14 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
 
 /// Rotes X, das kurz vor dem Erscheinen eines Gegners warnt.
 class SpawnMarker extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  SpawnMarker(this.type, Vector2 pos, this.t) : super(position: pos, priority: 2);
+  SpawnMarker(this.type, Vector2 pos, this.t, {this.child = false, this.spawnedBy})
+      : super(position: pos, priority: 2);
 
   final EnemyType type;
+
+  /// Kind eines Spawners (kein Material, zählt zu dessen Obergrenze).
+  final bool child;
+  final Enemy? spawnedBy;
   double t;
   final _paint = Paint()
     ..style = PaintingStyle.stroke
@@ -114,7 +125,11 @@ class SpawnMarker extends PositionComponent with HasGameReference<FederfeuerGame
     if (!game.playing) return;
     t -= dt;
     if (t <= 0) {
-      game.addEnemy(type, position.clone());
+      if (child) {
+        game.addEnemy(type, position.clone(), child: true, spawnedBy: spawnedBy);
+      } else {
+        game.spawnEnemy(type, position.clone());
+      }
       removeFromParent();
     }
   }

@@ -8,10 +8,13 @@ import '../game/config.dart';
 import '../game/federfeuer_game.dart';
 import '../game/gamepad_input.dart' show controllerActive;
 import '../game/progress.dart';
+import '../game/run_state.dart';
 import '../platform/desktop_window.dart';
 import 'bird_preview.dart';
 import 'compendium.dart';
 import 'controls_editor.dart';
+import 'inspect.dart';
+import 'inspect_info.dart';
 import 'overlays.dart' show FullScreenButton;
 import 'widgets.dart';
 
@@ -348,15 +351,19 @@ class _PlayPageState extends State<_PlayPage> {
         Pill('HP ×${fmtFactor(sel.hp)}'),
         Pill('Schaden ×${fmtFactor(sel.dmg)}'),
         Pill('Spawns ×${fmtFactor(sel.spawn)}'),
-        Pill(
-          switch (sel.dropFallSpeed) {
-            0 => 'Material schwebt',
-            < 20 => 'Material sinkt langsam',
-            < 50 => 'Material sinkt',
-            _ => 'Material fällt schnell',
-          },
-          icon: sel.dropsFall ? '⬇' : '✦',
-        ),
+        // Mit dem gewählten Vogel (Frack lässt Material immer fallen)
+        Builder(builder: (context) {
+          final fall = max(sel.dropFallSpeed, characterById[p.selectedCharacter]!.minDropFall);
+          return Pill(
+            switch (fall) {
+              0 => 'Material schwebt',
+              < 20 => 'Material sinkt langsam',
+              < 50 => 'Material sinkt',
+              _ => 'Material fällt schnell',
+            },
+            icon: fall > 0 ? '⬇' : '✦',
+          );
+        }),
         if (best > 0) Pill(best > kMaxWave ? 'Geschafft!' : 'Rekord: Welle $best', icon: '🏆', color: const Color(0x33FFD23F)),
       ]),
       if (p.unlocked < kDifficultyCount && !p.debugUnlockAll)
@@ -435,7 +442,7 @@ class _PlayPageState extends State<_PlayPage> {
   Widget _characterDetail(CharacterDef c) {
     final p = game.progress;
     final lock = _locked;
-    final w = c.startWeapon == null ? null : weaponDefs[c.startWeapon]!;
+    final chosen = p.startWeaponFor(c);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -460,9 +467,16 @@ class _PlayPageState extends State<_PlayPage> {
           ),
         ]),
         const SizedBox(height: 8),
+        Text('STARTWAFFE', style: displayStyle(11, Ui.muted).copyWith(letterSpacing: 1.5)),
+        const SizedBox(height: 4),
+        if (c.startWeapons.isEmpty)
+          const Pill('keine Startwaffe – Waffen nur aus dem Shop', icon: '✋')
+        else
+          Wrap(spacing: 6, runSpacing: 6, children: [
+            for (final id in c.startWeapons) _weaponChoice(c, id, selected: id == chosen),
+          ]),
+        const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
-          if (w != null) Pill(w.name, icon: w.icon, color: w.cls.color.withAlpha(60)),
-          if (w == null) const Pill('keine Startwaffe', icon: '✋'),
           if (c.startAction != null) Pill(c.startAction!.label, icon: c.startAction!.icon, color: const Color(0x33FFD23F)),
           if (c.maxWeapons != 6) Pill('${c.maxWeapons} Waffenslots', icon: '🎒'),
         ]),
@@ -476,6 +490,41 @@ class _PlayPageState extends State<_PlayPage> {
           child: GameButton(label: 'Starten', icon: '▶', size: 17, color: Palette.mint, onPressed: () => game.startRun()),
         ),
       ]),
+    );
+  }
+
+  /// Wählbare Startwaffe mit Info-Panel (Werte inklusive Klassenbonus des Vogels).
+  Widget _weaponChoice(CharacterDef c, String id, {required bool selected}) {
+    final d = weaponDefs[id]!;
+    return Inspectable(
+      radius: 12,
+      // Ohne Waffen im Inventar, damit kein „Kauf erreicht den nächsten Bonus“ erscheint
+      info: (_) => weaponInfo(RunState(id, characterId: c.id)..weapons.clear(), id, 0),
+      child: Pressable(
+        onPressed: () => setState(() {
+          game.progress.setStartWeapon(c, id);
+          game.progress.save();
+        }),
+        builder: (context, st) => Sticker(
+          state: st,
+          color: selected ? Palette.sun : d.cls.color,
+          radius: 12,
+          depth: 2,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(d.icon, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: 6),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+              Text(d.name, style: bodyText(12.5, color: selected ? Palette.sun : Ui.text, weight: 900)),
+              Text(d.cls.label, style: bodyText(10.5, color: Ui.muted)),
+            ]),
+            if (selected) ...[
+              const SizedBox(width: 6),
+              Text('✓', style: bodyText(13, color: Palette.sun, weight: 900)),
+            ],
+          ]),
+        ),
+      ),
     );
   }
 
@@ -711,6 +760,10 @@ class _DebugPage extends StatefulWidget {
 }
 
 class _DebugPageState extends State<_DebugPage> {
+  /// Gewählte Welle für den Direktstart und ob passende Ausrüstung dazukommt.
+  int _wave = 4;
+  bool _equip = true;
+
   @override
   Widget build(BuildContext context) {
     final game = widget.game, p = game.progress;
@@ -725,6 +778,44 @@ class _DebugPageState extends State<_DebugPage> {
           value: p.debugUnlockAll,
           onChanged: (v) => setState(() => p.debugUnlockAll = v),
         ),
+        _ToggleRow(
+          label: 'Unverwundbar',
+          hint: 'Der Vogel nimmt keinen Schaden (wird nicht gespeichert)',
+          value: game.debugInvincible,
+          onChanged: (v) => setState(() => game.debugInvincible = v),
+        ),
+        sectionTitle('Welle wählen'),
+        Text('Startet einen Run mit dem gewählten Vogel und der gewählten Stufe direkt in dieser Welle. '
+            'Torwächter: 4, 8, 12 · Boss: 15.', style: mutedStyle),
+        const SizedBox(height: 8),
+        Wrap(spacing: 6, runSpacing: 6, children: [
+          for (var w = 1; w <= kMaxWave; w++)
+            _waveChip(w, gate: gatekeeperForWave(w) != null, boss: isBossWave(w)),
+        ]),
+        _ToggleRow(
+          label: 'Passende Ausrüstung',
+          hint: 'Level, Waffen, Items und Aktionen wie ungefähr nach ${max(0, _wave - 1)} Wellen',
+          value: _equip,
+          onChanged: (v) => setState(() => _equip = v),
+        ),
+        const SizedBox(height: 4),
+        Wrap(spacing: 10, children: [
+          GameButton(
+            label: 'Welle $_wave starten',
+            icon: '▶',
+            size: 14,
+            color: Palette.mint,
+            onPressed: () => game.debugStartAtWave(_wave, equip: _equip),
+          ),
+          if (_wave > 1)
+            GameButton(
+              label: 'Erst Shop (+${30 * (_wave - 1)} Material)',
+              icon: '🛒',
+              size: 14,
+              color: Ui.card,
+              onPressed: () => game.debugStartAtWave(_wave, shopFirst: true, equip: _equip),
+            ),
+        ]),
         sectionTitle('Messen'),
         Text('FPS-Anzeige jederzeit mit F3. Aussagekräftig nur im Profile- oder Release-Build.', style: mutedStyle),
         const SizedBox(height: 8),
@@ -733,6 +824,21 @@ class _DebugPageState extends State<_DebugPage> {
           GameButton(label: 'Render-Analyse', icon: '🔬', size: 14, color: Ui.card, onPressed: game.startRenderAnalysis),
         ]),
       ]),
+    );
+  }
+
+  Widget _waveChip(int w, {required bool gate, required bool boss}) {
+    final sel = w == _wave;
+    return Pressable(
+      onPressed: () => setState(() => _wave = w),
+      builder: (context, st) => Sticker(
+        state: st,
+        color: sel ? Palette.sun : (boss ? const Color(0xFFFF5AE0) : (gate ? const Color(0xFFC07BFF) : Ui.card)),
+        radius: 10,
+        depth: 2,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        child: Text('$w', style: numberStyle(14, Ui.cardText)),
+      ),
     );
   }
 }

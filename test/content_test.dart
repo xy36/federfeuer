@@ -63,6 +63,41 @@ void main() {
     });
   });
 
+  group('Startwaffen', () {
+    test('Jeder Vogel außer Henriette hat drei verschiedene Startwaffen', () {
+      for (final c in characterDefs) {
+        if (c.id == 'henriette') {
+          expect(c.startWeapons, isEmpty);
+          continue;
+        }
+        expect(c.startWeapons.length, 3, reason: c.id);
+        expect(c.startWeapons.toSet().length, 3, reason: c.id);
+        for (final id in c.startWeapons) {
+          expect(weaponDefs.containsKey(id), isTrue, reason: '${c.id}: $id');
+        }
+      }
+    });
+
+    testWidgets('Gewählte Startwaffe wird je Vogel gemerkt und im Run benutzt', (tester) async {
+      final game = await _startGame(tester);
+      final russ = characterById['russ']!;
+      expect(game.progress.startWeaponFor(russ), 'vine');
+      game.progress.setStartWeapon(russ, 'lantern');
+      game.progress.setStartWeapon(russ, 'pistol'); // nicht in Ruß' Auswahl → ignoriert
+      expect(game.progress.startWeaponFor(russ), 'lantern');
+      game.startRun(null, 1, 'russ');
+      expect(game.run!.weapons.single.id, 'lantern');
+      game.startRun(null, 1, 'spatz');
+      expect(game.run!.weapons.single.id, 'pistol', reason: 'andere Vögel behalten ihre eigene Wahl');
+      await game.progress.save();
+      final p = Progress();
+      await p.load();
+      expect(p.startWeaponFor(russ), 'lantern');
+      game.toMenu();
+      await tester.pump(const Duration(seconds: 1));
+    });
+  });
+
   group('Set-Boni', () {
     test('Schwellen bei 2, 4 und 6 Waffen', () {
       expect([for (var n = 0; n <= 6; n++) setLevel(n)], [0, 0, 1, 1, 2, 2, 3]);
@@ -119,6 +154,12 @@ void main() {
       r.biome = Biome.forest;
       final night = r.weaponStats('pistol', 0).dmg;
       expect(night / day, closeTo(1.2 / 0.9, 0.001));
+    });
+
+    test('Frack: Material fällt auf jeder Stufe zu Boden', () {
+      expect(RunState(null, difficulty: 1).dropFallSpeed, 0);
+      expect(RunState(null, difficulty: 1, characterId: 'frack').dropFallSpeed, 70);
+      expect(RunState(null, difficulty: 5, characterId: 'frack').dropFallSpeed, 70);
     });
 
     test('Glitzer: Shop 15 % günstiger, nur 4 Slots', () {
@@ -323,6 +364,26 @@ void main() {
       e.hp = 1000;
       game.hurtEnemy(e, 10, false, 0);
       expect(1000 - e.hp, closeTo(plain * (1 + game.run!.curseBonus), 0.001));
+    });
+
+    testWidgets('Lebensraub heilt höchstens 1 HP je 0,5 s, egal wie viele Treffer', (tester) async {
+      final game = await _startGame(tester);
+      game.startRun('pistol');
+      game.godMode = true;
+      await tester.pump(const Duration(milliseconds: 50));
+      final r = game.run!..applyMods({Stat.lifesteal: 100, Stat.maxHp: 100});
+      r.hp = 10;
+      game.addEnemy(EnemyType.rock, Vector2(game.player.x + 500, 200));
+      final e = game.enemies.last..hp = 1e9;
+      for (var i = 0; i < 50; i++) {
+        game.hurtEnemy(e, 1, false, 0);
+      }
+      expect(r.hp, 11, reason: 'viele Treffer im selben Moment: nur 1 HP');
+      game.lifestealCd = 0;
+      game.hurtEnemy(e, 1, false, 0);
+      expect(r.hp, 12);
+      game.toMenu();
+      await tester.pump(const Duration(seconds: 1));
     });
 
     testWidgets('Phönixasche belebt einmal wieder, Seifenblasenschild schluckt Treffer', (tester) async {

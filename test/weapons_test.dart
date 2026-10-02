@@ -115,10 +115,10 @@ void main() {
       }
 
       expect(weaponOfferChance(1), 0.8);
-      expect(weaponOfferChance(9), closeTo(0.4, 1e-9));
-      expect(weaponOfferChance(14), 0.4);
+      expect(weaponOfferChance(5), closeTo(0.64, 1e-9));
+      expect(weaponOfferChance(14), 0.55);
       expect(share(1), greaterThan(0.75));
-      expect(share(12), closeTo(0.4, 0.06));
+      expect(share(12), closeTo(0.55, 0.06));
     });
   });
 
@@ -137,7 +137,8 @@ void main() {
         lastI = pi;
         lastR = pr;
       }
-      expect(weaponPriceFactor(14), closeTo(4.588, 1e-3));
+      expect(weaponPriceFactor(14), closeTo(3.821, 1e-3));
+      expect(RunState('pistol').weaponPrice('rail', 0), (28 * kWeaponPriceScale).round());
       expect(itemPriceFactor(14), closeTo(5.485, 1e-3));
       expect(rerollBaseCost(1), 2);
       expect(rerollBaseCost(9), 12);

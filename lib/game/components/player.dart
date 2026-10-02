@@ -27,6 +27,9 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
   /// Sturzflug, Bauchrutscher, verbleibender Schub (Huhn).
   double dashT = 0, slideT = 0, stamina = 1;
+
+  /// Im Spinnennetz: langsamer und weniger Schub.
+  double webT = 0;
   bool clinging = false;
 
   void reset(Vector2 p) {
@@ -34,7 +37,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     vel.setZero();
     iframe = 1;
     face = 1;
-    dashT = slideT = 0;
+    dashT = slideT = webT = 0;
     stamina = 1;
     _trail.clear();
   }
@@ -66,7 +69,9 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
     final c = character;
     final dir = (game.inRight ? 1 : 0) - (game.inLeft ? 1 : 0);
-    var maxSpeed = kPlayerSpeed * max(0.4, 1 + run.stat(Stat.speed) / 100) * c.speedMul;
+    webT = max(0.0, webT - dt);
+    final webbed = webT > 0 ? kWebSlow : 1.0;
+    var maxSpeed = kPlayerSpeed * max(0.4, 1 + run.stat(Stat.speed) / 100) * c.speedMul * webbed;
     if (grounded) maxSpeed *= c.groundMul;
     final accel = 1500 * c.accelMul;
 
@@ -83,7 +88,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
     final w = game.weather;
     final rain = w.isRaining && !run.has(ItemEffect.raincoat);
-    final thrustF = rain ? w.thrustFactor : 1.0;
+    final thrustF = (rain ? w.thrustFactor : 1.0) * (webT > 0 ? kWebThrust : 1.0);
     final glideF = rain ? w.glideFallFactor : 1.0;
     // Windfahne: Wind schiebt nur in die eigene Flugrichtung
     final windX = run.has(ItemEffect.windVane) && w.windX.sign != face ? 0.0 : w.windX;
@@ -227,11 +232,28 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
     c.save();
     c.scale(face * ch.scale, ch.scale);
+    final webbed = webT > 0;
     final upright = ch.look == BirdLook.penguin && slideT <= 0;
     c.rotate(slideT > 0 ? pi / 2.4 : (upright ? 0 : clampD(vel.y / 1000, -0.35, 0.35)));
     final fl = sin(anim) * 0.9;
     drawBird(c, ch, _body, fl, upright);
+    if (webbed) _drawWeb(c);
     c.restore();
+  }
+
+  static final _webPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1
+    ..color = const Color(0xCCE6E6F2);
+
+  /// Spinnennetz über dem Vogel.
+  static void _drawWeb(Canvas c) {
+    for (var i = 0; i < 6; i++) {
+      final a = i / 6 * pi;
+      c.drawLine(Offset(cos(a) * 20, sin(a) * 20), Offset(-cos(a) * 20, -sin(a) * 20), _webPaint);
+    }
+    c.drawCircle(Offset.zero, 9, _webPaint);
+    c.drawCircle(Offset.zero, 16, _webPaint);
   }
 
   /// Vogel ohne Schein und Schweif in lokalen Koordinaten (auch für die Vorschau im Menü).

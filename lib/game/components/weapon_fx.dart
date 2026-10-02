@@ -10,7 +10,6 @@ import '../run_state.dart';
 import 'draw.dart';
 import 'enemy.dart';
 import 'light.dart';
-import 'pickups.dart';
 import 'transient.dart';
 
 Enemy? _nearest(FederfeuerGame game, Vector2 from, double range) {
@@ -196,9 +195,7 @@ class Egg extends PositionComponent with HasGameReference<FederfeuerGame>, Trans
       game.explode(position, 75, dmg, false, color: const Color(0xFFFFE08A));
       if (storm) game.lightningAround(position, 180, 6, dmg / 1.6);
       if (gold) {
-        for (var i = 0; i < 5; i++) {
-          game.world.add(Drop(position.clone()..x += (i - 2) * 9, material: true, rng: game.rng, fallSpeed: game.run!.difficultyDef.dropFallSpeed));
-        }
+        game.dropMaterial(position, 5, spread: 18);
       }
       removeFromParent();
     }

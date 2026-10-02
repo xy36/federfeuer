@@ -8,34 +8,91 @@ import '../federfeuer_game.dart';
 import '../perf.dart';
 import '../run_state.dart';
 import 'draw.dart';
+import 'effects.dart';
 import 'light.dart';
 import 'pickups.dart';
 import 'projectiles.dart';
 import 'transient.dart';
 
+part 'enemy_boss.dart';
+part 'enemy_gate.dart';
+part 'enemy_spawner.dart';
+part 'enemy_world.dart';
+
 class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  Enemy(this.type, Vector2 pos, int wave, DifficultyDef diff, Random rng) : super(position: pos, priority: 5) {
+  Enemy(this.type, Vector2 pos, int wave, DifficultyDef diff, Random rng,
+      {this.elite, this.mini = false, this.child = false, this.spawnedBy})
+      : super(position: pos, priority: 5) {
     final d = enemyDefs[type]!;
     // Wellenskalierung gilt laut GDD nicht für den Boss.
     final boss = type == EnemyType.boss;
-    r = d.radius;
+    sizeK = elite != null ? kEliteScale : (mini ? kSplitScale : 1);
+    r = d.radius * sizeK;
     // Schwierigkeitsstufe wirkt auch auf den Boss.
-    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38)) * diff.hp;
+    final hpMul = elite != null ? kEliteHp : (mini ? kSplitHp : 1);
+    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38)) * diff.hp * hpMul;
     hp = maxHp;
     dmg = ((boss ? d.dmg : d.dmg * (1 + (wave - 1) * 0.15)) * diff.dmg).roundToDouble();
-    spd = boss ? d.speed : d.speed * (1 + wave * 0.02);
+    spd = (boss ? d.speed : d.speed * (1 + wave * 0.02)) * (elite == EliteMod.swift ? 1.25 : 1);
     fly = d.flying;
     t = rng.nextDouble() * 10;
     shootT = 0.5 + rng.nextDouble() * 1.5;
+    home = pos.clone();
+    stateT = 1.5 + rng.nextDouble() * 1.5;
+    aim = rng.nextDouble() * pi * 2;
   }
 
   final EnemyType type;
-  late final double r, maxHp, dmg, spd;
+
+  /// Elite-Modifikator (null = normaler Gegner); [mini] = Kopie eines teilenden Elitegegners.
+  final EliteMod? elite;
+  final bool mini;
+
+  /// Von einem Spawner erzeugt: lässt kein Material fallen; [spawnedBy] ist der Spawner.
+  final bool child;
+  final Enemy? spawnedBy;
+
+  /// Treffer durch den Spieler (Wespennest schwärmt aus).
+  void onHit() => _spawnerOnHit();
+  late final double r, maxHp, dmg, spd, sizeK;
+  double _healT = 0;
   late final bool fly;
   late double hp;
   double t = 0, shootT = 0, jumpT = 1, summonT = 5, flash = 0;
   bool dead = false;
   final vel = Vector2.zero();
+
+  /// Zustandsmaschine der Welt-Gegner (Sturzflug, Einrollen, Springen …), Richtung, Ziel.
+  int state = 0, hops = 0;
+  double stateT = 0, aim = 0;
+
+  /// Angriffs-Ankündigung 0–1 (Aufleuchten vor Schuss, Sturz oder Explosion).
+  double warn = 0;
+  final target = Vector2.zero();
+
+  /// Startpunkt; stationäre Gegner bleiben hier.
+  late final Vector2 home;
+  bool get stationary => enemyDefs[type]!.stationary;
+
+  /// Heiler-Elite: heilt Gegner im Umkreis 140 um 4 % ihrer Max-HP pro Sekunde.
+  void _healNearby(double dt) {
+    _healT -= dt;
+    if (_healT > 0) return;
+    _healT = 0.5;
+    for (final o in game.enemies) {
+      if (o.dead || identical(o, this) || o.hp >= o.maxHp) continue;
+      if (o.position.distanceTo(position) < 140) {
+        o.hp = min(o.maxHp, o.hp + o.maxHp * 0.02);
+        o.healGlow = 0.4;
+      }
+    }
+  }
+
+  /// Kurzes grünes Aufleuchten nach einer Heilung.
+  double healGlow = 0;
+
+  /// Lässt sich nicht verschieben (Boss, stationäre Gegner).
+  bool get immovable => boss || stationary;
 
   // ---------------- Statuseffekte ----------------
 
@@ -44,7 +101,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   double burnDps = 0, stickDps = 0, slowAmt = 0;
   double _dotAcc = 0;
 
-  bool get boss => type == EnemyType.boss;
+  /// Boss oder Torwächter: immun gegen Einfangen und Rückstoß, Betäubung wirkt nur kurz.
+  bool get boss => type == EnemyType.boss || gatekeeper;
+  bool get gatekeeper => type == EnemyType.strawKing || type == EnemyType.bell || type == EnemyType.spiderMother;
+
+  /// Phase des Geierkönigs (1–3, wechselt bei 66 % und 33 % HP).
+  int bossPhase = 1;
+
+  /// Radius des Glockenschlags.
+  static const double bellRadius = 230;
   bool get disabled => stunT > 0 || trapT > 0;
   bool get cursed => curseT > 0;
 
@@ -61,7 +126,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     if (s.slow > 0) slow(s.slow, s.slowTime);
     if (s.stun > 0) stun(s.stun);
     if (s.trap > 0) {
-      if (boss) {
+      if (boss || stationary) {
         slow(0.5, s.trap);
       } else {
         trapT = max(trapT, s.trap);
@@ -105,20 +170,17 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   }
 
   /// Wie stark der Wind diesen Gegner verschiebt.
-  double get windFactor => switch (type) {
-        EnemyType.crow => WeatherConfig.windFactorLight,
-        EnemyType.spitter => WeatherConfig.windFactorMedium,
-        EnemyType.beetle => WeatherConfig.windFactorGround,
-        EnemyType.rock => WeatherConfig.windFactorHeavy,
-        EnemyType.boss => WeatherConfig.windFactorBoss,
-      };
+  double get windFactor => enemyDefs[type]!.wind;
 
   @override
   void update(double dt) {
     if (dead || !game.playing) return;
     _tickStatus(dt);
     if (dead) return;
+    if (elite == EliteMod.swift) dt *= 1.35;
+    if (elite == EliteMod.healer) _healNearby(dt);
     flash -= dt;
+    healGlow = max(0.0, healGlow - dt);
     // Verlangsamung und Zeitlupe (Taschenuhr) wirken auf Bewegung und Angriffe
     final realDt = dt;
     dt *= (slowT > 0 ? 1 - slowAmt : 1) * (game.timeSlowT > 0 ? 0.3 : 1);
@@ -174,39 +236,41 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
                 const Color(0xFFB8F35A)));
           }
         }
+      case EnemyType.puffball ||
+            EnemyType.scarecrow ||
+            EnemyType.bat ||
+            EnemyType.weathercock ||
+            EnemyType.spider ||
+            EnemyType.wisp ||
+            EnemyType.eagle ||
+            EnemyType.avalanche:
+        _worldAi(dt, p, dx, dy, d);
+        if (dead) return;
+      case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
+        _gateAi(dt, p, dx, dy, d);
+      case EnemyType.crowNest ||
+            EnemyType.waspNest ||
+            EnemyType.wasp ||
+            EnemyType.sporeShroom ||
+            EnemyType.spore ||
+            EnemyType.beetleQueen ||
+            EnemyType.beetleEgg ||
+            EnemyType.rift:
+        _spawnerAi(dt, p, dx, dy, d);
+        if (dead) return;
       case EnemyType.boss:
-        {
-          vel.x += (dx.sign * spd * (dx.abs() > 120 ? 1 : 0) - vel.x) * dt;
-          vel.y += ((170 + sin(t * 0.8) * 90) - y - vel.y) * 1.5 * dt;
-          shootT -= dt;
-          if (shootT <= 0) {
-            shootT = 1.5;
-            final base = atan2(dy, dx);
-            for (var k = 0; k < 7; k++) {
-              final a = base + (k / 6 - 0.5);
-              game.world.add(EnemyBullet(
-                  position.clone(), Vector2(cos(a), sin(a))..scale(220), 7, dmg - 2, Palette.coral));
-            }
-          }
-          summonT -= dt;
-          if (summonT <= 0) {
-            summonT = 6;
-            for (var k = 0; k < 3; k++) {
-              game.world.add(SpawnMarker(
-                EnemyType.crow,
-                Vector2(clampD(x + game.rnd(-90, 90), 40, game.worldW - 40),
-                    clampD(y + game.rnd(-40, 60), kCeil + 40, kGround - 60)),
-                0.6,
-              ));
-            }
-          }
-        }
+        _bossAi(dt, p, dx, dy);
     }
 
     }
 
     position.x = clampD(x + (vel.x + game.weather.windX * windFactor) * dt, r, game.worldW - r);
     position.y += vel.y * dt;
+    // Stationäre Gegner lassen sich nicht verschieben
+    if (stationary) {
+      position.setFrom(home);
+      vel.setZero();
+    }
     if (y > kGround - r) {
       position.y = kGround - r;
       vel.y = min(0.0, vel.y);
@@ -215,7 +279,10 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       position.y = kCeil + r;
       vel.y = max(0.0, vel.y);
     }
-    if (!disabled && position.distanceTo(p) < r + game.player.r - 3) game.hurtPlayer(dmg, source: this);
+    // Berührungsschaden (das Irrlicht schadet nur durch seine Explosion)
+    if (!disabled && dmg > 0 && type != EnemyType.wisp && position.distanceTo(p) < r + game.player.r - 3) {
+      game.hurtPlayer(dmg, source: this);
+    }
   }
 
   // ---------------- Darstellung: dunkle Fäulnis-Kreaturen ----------------
@@ -224,6 +291,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   static const _aura = Color(0xFFB44CFF), _eye = Color(0xFFFF4D6D), _ember = Color(0xFFFF8A3D);
   static const _toxic = Color(0xFF9CFF5A), _crown = Color(0xFFFF5AE0);
 
+  static final _eliteRing = Paint()..style = PaintingStyle.stroke;
   static final _bubble = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
@@ -248,9 +316,32 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
     // Leuchten (Aura, Augen, Risse) zeichnet der EnemyGlowPass gesammelt, siehe [collectGlows].
 
+    _worldRenderUnflipped(c);
+    _gateRenderUnflipped(c);
+    _spawnerRenderUnflipped(c);
     c.save();
-    c.scale(face, 1);
+    c.scale(face * sizeK, sizeK);
     switch (type) {
+      case EnemyType.puffball ||
+            EnemyType.scarecrow ||
+            EnemyType.bat ||
+            EnemyType.weathercock ||
+            EnemyType.spider ||
+            EnemyType.wisp ||
+            EnemyType.eagle ||
+            EnemyType.avalanche:
+        _worldRender(c, k, pulse);
+      case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
+        _gateRender(c, k, pulse);
+      case EnemyType.crowNest ||
+            EnemyType.waspNest ||
+            EnemyType.wasp ||
+            EnemyType.sporeShroom ||
+            EnemyType.spore ||
+            EnemyType.beetleQueen ||
+            EnemyType.beetleEgg ||
+            EnemyType.rift:
+        _spawnerRender(c, k, pulse);
       case EnemyType.crow:
         final fl = sin(t * 16);
         // Zerfranste Flügel
@@ -333,6 +424,14 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     }
     c.restore();
 
+    // Elite: goldener, pulsierender Ring um den Körper
+    if (elite != null) {
+      _eliteRing
+        ..strokeWidth = 2
+        ..color = Color.fromRGBO(255, 201, 74, 0.55 + 0.35 * pulse);
+      c.drawCircle(Offset.zero, r + 4, _eliteRing);
+    }
+
     if (trapT > 0) {
       // Schillernde Blase
       _bubble.color = Color.fromRGBO(220, 245, 255, 0.55 + 0.2 * sin(t * 6));
@@ -346,13 +445,20 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       }
     }
 
-    if (type == EnemyType.rock && hp < maxHp) {
+    final el = elite;
+    if (el != null) {
+      // Zeichen des Modifikators über dem Kopf, darunter eine schmale HP-Leiste
+      drawEliteMark(c, el, Offset(0, -r - 19), 11, el.color);
+      drawRect(c, -r, -r - 9, r * 2, 3, const Color(0xCC120A1E));
+      drawRect(c, -r, -r - 9, r * 2 * clampD(hp / maxHp, 0, 1), 3, el.color);
+    }
+    if (type == EnemyType.rock && hp < maxHp && el == null) {
       drawRect(c, -20, -r - 10, 40, 4, const Color(0xCC120A1E));
       drawRect(c, -20, -r - 10, 40 * clampD(hp / maxHp, 0, 1), 4, _ember);
     }
   }
 
-  void _glowEye(Canvas c, double x, double y, double r, Color col) {
+  static void _glowEye(Canvas c, double x, double y, double r, Color col) {
     drawCircle(c, x, y, r, Color.lerp(col, Colors.white, 0.45)!);
   }
 
@@ -372,9 +478,39 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     if (curseT > 0) front.add(x, y - r - 10, 14, const Color(0xCCB44CFF));
 
     // Violette Aura, damit die dunklen Körper vor dunklem Hintergrund lesbar bleiben
-    back.add(x, y, r * (type == EnemyType.boss ? 3.0 : 1.9),
-        _aura.withAlpha((type == EnemyType.boss ? 90 + 40 * pulse : 70).round()));
+    final el = elite;
+    if (el != null) {
+      // Elite: goldener Schein plus Farbe des Modifikators
+      back.add(x, y, r * 2.6, Color.fromRGBO(255, 201, 74, 0.35 + 0.15 * pulse));
+      back.add(x, y, r * 1.8, el.color.withAlpha(90));
+      front.add(x, y - r - 18, 16, el.color.withAlpha(150));
+    } else {
+      back.add(x, y, r * (type == EnemyType.boss ? 3.0 : 1.9),
+          _aura.withAlpha((type == EnemyType.boss ? 90 + 40 * pulse : 70).round()));
+    }
+    if (healGlow > 0) front.add(x, y, r * 1.8, Color.fromRGBO(140, 245, 176, healGlow));
+    if (el == EliteMod.healer) back.add(x, y, 140, Color.fromRGBO(140, 245, 176, 0.08 + 0.05 * pulse));
     switch (type) {
+      case EnemyType.puffball ||
+            EnemyType.scarecrow ||
+            EnemyType.bat ||
+            EnemyType.weathercock ||
+            EnemyType.spider ||
+            EnemyType.wisp ||
+            EnemyType.eagle ||
+            EnemyType.avalanche:
+        _worldGlows(f, eye, front, pulse);
+      case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
+        _gateGlows(f, front, pulse);
+      case EnemyType.crowNest ||
+            EnemyType.waspNest ||
+            EnemyType.wasp ||
+            EnemyType.sporeShroom ||
+            EnemyType.spore ||
+            EnemyType.beetleQueen ||
+            EnemyType.beetleEgg ||
+            EnemyType.rift:
+        _spawnerGlows(f, front, pulse);
       case EnemyType.crow:
         eye(6, -3, 2.4, _eye);
       case EnemyType.beetle:
@@ -394,6 +530,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
           f(13.0 + i * 10, -32 - hgt * 0.6, 16, _crown.withAlpha((90 + 60 * pulse).round()));
         }
         eye(34, -20, 4, _crown);
+        if (warn > 0) front.add(x, y, r * (1.5 + warn), Color.fromRGBO(255, 230, 250, 0.2 + 0.5 * warn));
     }
   }
 }

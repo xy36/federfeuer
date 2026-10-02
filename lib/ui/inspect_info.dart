@@ -52,7 +52,7 @@ String _s(double v) => '${fmtNum(v)} s';
 String _pct(double v) => '${(v * 100).round()} %';
 
 /// Waffe in Stufe [tier]; [owned] = Slot im Inventar (zeigt Verkaufspreis).
-Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? price}) {
+Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? price, bool showSell = true}) {
   final d = weaponDefs[id]!, t = tiers[tier], s = r.weaponStats(id, tier);
   final kind = switch (d.kind) {
     WeaponKind.shot => 'Schuss',
@@ -103,7 +103,7 @@ Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? pri
       _line('Schaden', fmtNum(r.weaponStats(id, tier + 1).dmg)),
       _text('Zwei gleiche Waffen gleicher Stufe verschmelzen im Shop.', color: Ui.muted),
     ],
-    if (owned != null) ...[
+    if (owned != null && showSell) ...[
       _section('Verkaufen'),
       _line('Erlös', '${r.sellPrice(owned)}', color: Palette.mint),
     ],
@@ -187,7 +187,7 @@ Widget statInfo(RunState r, Stat s) {
     Stat.range => 'Addiert sich auf die Reichweite aller Waffen.',
     Stat.speed => 'Bewegungstempo.',
     Stat.armor => 'Erlittener Schaden × 15 / (15 + Rüstung); negativ erhöht ihn.',
-    Stat.lifesteal => 'Chance pro Treffer auf +1 HP.',
+    Stat.lifesteal => 'Chance pro Treffer auf +1 HP – höchstens 1 HP alle 0,5 s.',
     Stat.crit => 'Chance auf doppelten Schaden pro Treffer.',
     Stat.pickup => 'Material in diesem Radius fliegt zu dir (Grundradius 70).',
     Stat.thrust => 'Stärkerer Schub beim Fliegen (Kolibri: schneller hoch und runter).',
@@ -207,7 +207,6 @@ Widget statInfo(RunState r, Stat s) {
 
 Widget characterInfo(Progress p, CharacterDef c) {
   final has = p.hasCharacter(c.id);
-  final w = c.startWeapon == null ? null : weaponDefs[c.startWeapon]!;
   final prog = p.unlockProgress(c.unlock);
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
     _head(c.icon, c.name, '${c.species} · ${c.role}', c.glow),
@@ -219,7 +218,7 @@ Widget characterInfo(Progress p, CharacterDef c) {
     _text(c.flight),
     _section('Start'),
     _text([
-      w?.name ?? 'keine Waffe',
+      c.startWeapons.isEmpty ? 'keine Waffe' : c.startWeapons.map((id) => weaponDefs[id]!.name).join(' / '),
       if (c.startAction != null) c.startAction!.label,
       if (c.maxWeapons != 6) '${c.maxWeapons} Waffenslots',
     ].join(' · ')),
@@ -300,3 +299,12 @@ Widget weaponMergePreview(RunState r, OwnedWeapon w) {
     _text('• Die zweite ${d.name} (Stufe ${ta.label}) verschwindet, ihr Slot wird frei.', color: _good),
   ]);
 }
+
+Widget eliteInfo(EliteMod m) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      _head('★', 'Elite: ${m.label}', 'ab Welle $kEliteStartWave', const Color(0xFFFFC94A)),
+      _text('Ein normaler Gegner mit goldenem Schein, der ${m.desc}.'),
+      _section('Alle Elitegegner'),
+      _line('Lebenspunkte', '×${fmtNum(kEliteHp)}'),
+      _line('Material', '×$kEliteDrops', color: Palette.mint),
+      _line('Chance auf ein Geschenk', '${(kEliteGiftChance * 100).round()} %', color: Palette.mint),
+    ]);
