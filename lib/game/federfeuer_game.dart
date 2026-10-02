@@ -1107,7 +1107,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       case ActionId.horn:
         _pushAway(p, 240 * (pw > 1 ? 1.3 : 1), 2 * pw);
       case ActionId.bubbleShield:
-        shieldT = 2 * pw;
+        shieldT = 1.2 * pw;
       case ActionId.flash:
         flashT = 0.35;
         for (final e in enemies) {
@@ -1154,8 +1154,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
           if (_inView(e.x)) e.stun(2);
         }
       case ActionId.timeBubble:
-        timeBubbleT = 3;
-        shieldT = max(shieldT, 3);
+        timeBubbleT = 2.5;
+        shieldT = max(shieldT, 2.5);
       case ActionId.vacuum:
         vacuumT = 0.7;
         _pullDrops();
@@ -1188,8 +1188,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         player.dash(0.3, 820);
         timeSlowT = max(timeSlowT, 2.5);
       case ActionId.bounceBubble:
-        shieldT = max(shieldT, 3);
-        _bounceT = 3;
+        shieldT = max(shieldT, 2);
+        _bounceT = 2;
         _bounceCd.clear();
       case ActionId.fanfare:
         flashT = 0.35;
@@ -1200,8 +1200,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
           e.fearT = max(e.fearT, 5);
         }
       case ActionId.stormBubble:
-        shieldT = max(shieldT, 3);
-        _startStorm(3, every: 0.4, radius: 260);
+        shieldT = max(shieldT, 2);
+        _startStorm(2, every: 0.4, radius: 260);
       case ActionId.bubbleTrap:
         world.add(Ring(p.clone(), 260, color: const Color(0xFFBFF0FF)));
         for (final e in enemies) {

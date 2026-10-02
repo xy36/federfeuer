@@ -56,7 +56,10 @@ bool isBossWave(int wave) => wave == kMaxWave;
 
 /// Preisfaktor je Welle: 1 + lin·(w−1) + quad·(w−1)². Der quadratische Anteil
 /// hält mit dem späten Einkommen mit (mehr und längere Wellen, größere Gruppen).
-const double kWeaponPriceLin = 0.12, kWeaponPriceQuad = 0.012;
+const double kWeaponPriceLin = 0.1, kWeaponPriceQuad = 0.009;
+
+/// Waffen-Grundpreise × diesem Faktor (Waffen sollen erschwinglicher sein als Items).
+const double kWeaponPriceScale = 0.85;
 const double kItemPriceLin = 0.15, kItemPriceQuad = 0.015;
 
 /// Neu würfeln: ⌊2 + lin·w + quad·w²⌋, jeder weitere Wurf in derselben Shopphase +2.
@@ -92,7 +95,7 @@ const int kStartMoney = 15;
 const int kEarlySpawnWaves = 3, kEarlySpawnBonus = 1;
 
 /// Shop: Chance, dass ein Angebot eine Waffe ist – früh hoch, später mehr Items.
-const double kWeaponOfferStart = 0.8, kWeaponOfferStep = 0.05, kWeaponOfferMin = 0.4;
+const double kWeaponOfferStart = 0.8, kWeaponOfferStep = 0.04, kWeaponOfferMin = 0.55;
 double weaponOfferChance(int wave) => max(kWeaponOfferMin, kWeaponOfferStart - kWeaponOfferStep * (wave - 1));
 
 /// Shop: Anzahl normaler Angebote (dazu kommt immer ein Aktions-Angebot), Mindestzahl Waffen bis Welle 3.
@@ -391,7 +394,7 @@ const tiers = [
 enum ActionId {
   dash('Sturzflug', 3, '💨', 'Kurzer Sprint in Flugrichtung, dabei unverwundbar.'),
   horn('Hupe', 8, '📯', 'Stößt nahe Gegner weg, sie fliehen 2 s.'),
-  bubbleShield('Seifenblasenschild', 10, '🫧', 'Blase schluckt 2 s lang jeden Treffer.'),
+  bubbleShield('Seifenblasenschild', 14, '🫧', 'Blase schluckt 1,2 s lang jeden Treffer.'),
   flash('Lichtblitz', 12, '⚡', 'Blendet alle Gegner im Bild 1,5 s.'),
   storm('Gewitterwolke', 15, '⛈️', 'Blitze schlagen 3 s lang in Gegner rundherum ein.'),
   magnet('Magnetpfiff', 20, '📣', 'Zieht alles Material im Bild heran.'),
@@ -405,7 +408,7 @@ enum ActionId {
   bubbleRocket('Blasenrakete', 6, '🚀', 'Sturzflug in der Blase – Gegner auf dem Weg werden eingefangen.', evolved: true),
   sunStorm('Sonnensturm', 14, '🌞', 'Blendet alle Gegner im Bild, dann trifft jeden ein Blitz.', evolved: true),
   snapshot('Schnappschuss', 18, '📸', 'Friert alles im Bild 2 s ein – Gegner und Gegnerkugeln.', evolved: true),
-  timeBubble('Zeitblase', 20, '🔮', 'Große Blase um dich: 3 s unverwundbar, Gegner darin stehen still.', evolved: true),
+  timeBubble('Zeitblase', 22, '🔮', 'Große Blase um dich: 2,5 s unverwundbar, Gegner darin stehen still.', evolved: true),
   vacuum('Staubsauger', 16, '🌀', 'Saugt Material und Gegner heran, dann ein Rückstoß-Knall.', evolved: true),
   goldenHour('Goldene Stunde', 25, '🌅', 'Zieht Material heran; 5 s lang zählt jedes Stück doppelt.', evolved: true),
   thunderHorn('Donnerhorn', 10, '🎺', 'Hupe mit Kettenblitz, der zwischen nahen Gegnern springt.', evolved: true),
@@ -415,9 +418,9 @@ enum ActionId {
   magpieHoard('Elsterschatz', 18, '💎', 'Zieht alles im Bild heran; 5 s lang 20 % Chance auf doppeltes Material.', evolved: true),
   comet('Kometenschweif', 5, '☄️', 'Sturzflug mit Lichtschweif: berührte Gegner nehmen Schaden und sind 1,2 s geblendet.', evolved: true),
   timeJump('Zeitsprung', 8, '⌛', 'Sturzflug, danach laufen alle Gegner 2,5 s in Zeitlupe.', evolved: true),
-  bounceBubble('Prallblase', 12, '🏐', '3 s Blase: schluckt Treffer und schleudert Gegner bei Berührung weg.', evolved: true),
+  bounceBubble('Prallblase', 14, '🏐', '2 s Blase: schluckt Treffer und schleudert Gegner bei Berührung weg.', evolved: true),
   fanfare('Fanfare', 12, '🎉', 'Blendet alle Gegner im Bild 2 s, danach fliehen sie 3 s.', evolved: true),
-  stormBubble('Gewitterblase', 14, '🔵', '3 s Blase; alle 0,4 s schlägt ein Blitz in einen Gegner in der Nähe.', evolved: true),
+  stormBubble('Gewitterblase', 16, '🔵', '2 s Blase; alle 0,4 s schlägt ein Blitz in einen Gegner in der Nähe.', evolved: true),
   bubbleTrap('Blasenfang', 15, '🎈', 'Fängt alle Gegner im Umkreis 260 in Blasen und zieht Material heran.', evolved: true),
   electroMagnet('Elektromagnet', 16, '🧲', 'Zieht Gegner heran und schockt sie dabei mit Blitzen.', evolved: true),
   endlessStorm('Ewiges Gewitter', 22, '🌪️', '6 s Gewitter, Gegner dabei 3 s in Zeitlupe.', evolved: true),
@@ -593,7 +596,7 @@ const itemDefs = [
   ItemDef('a_horn', 'Hupe', '📯', 16, {}, rarity: Rarity.rare, effect: ItemEffect.action,
       action: ActionId.horn, desc: 'Stößt nahe Gegner weg, sie fliehen 2 s', unique: true),
   ItemDef('a_shield', 'Seifenblasenschild', '🫧', 22, {}, rarity: Rarity.epic, effect: ItemEffect.action,
-      action: ActionId.bubbleShield, desc: 'Blase schluckt 2 s lang jeden Treffer', unique: true),
+      action: ActionId.bubbleShield, desc: 'Blase schluckt 1,2 s lang jeden Treffer', unique: true),
   ItemDef('a_flash', 'Lichtblitz', '⚡', 22, {}, rarity: Rarity.epic, effect: ItemEffect.action,
       action: ActionId.flash, desc: 'Blendet alle Gegner im Bild für 1,5 s', unique: true),
   ItemDef('a_storm', 'Gewitterwolke', '⛈️', 26, {}, rarity: Rarity.epic, effect: ItemEffect.action,

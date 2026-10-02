@@ -341,16 +341,16 @@ Jeder erlittene Treffer macht mindestens 1 Schaden. Die Werte im Shop enthalten 
  
 ## Shop & Items
  
-Nach jeder Welle bietet der Shop 4 zufällige Angebote und dazu als fünftes Feld immer ein Aktions-Item. Jedes der 4 Angebote ist mit Chance max(40 %, 80 % − 5 % × (w − 1)) eine Waffe, sonst ein Item (Welle 1: 80 %, Welle 5: 60 %, ab Welle 9: 40 %); in den Wellen 1–3 sind mindestens 2 der 4 Angebote Waffen. Ab Welle 3 können Waffen in Stufe II (25 %), ab Welle 7 in Stufe III (8 %) und ab Welle 11 in Stufe IV (3 %) auftauchen. Die Chancen sind kumulativ: Ein Wurf unter 3 % ergibt Stufe IV, unter 8 % Stufe III, unter 25 % Stufe II.
+Nach jeder Welle bietet der Shop 4 zufällige Angebote und dazu als fünftes Feld immer ein Aktions-Item. Jedes der 4 Angebote ist mit Chance max(55 %, 80 % − 4 % × (w − 1)) eine Waffe, sonst ein Item (Welle 1: 80 %, Welle 5: 64 %, ab Welle 8: 55 %); in den Wellen 1–3 sind mindestens 2 der 4 Angebote Waffen. Ab Welle 3 können Waffen in Stufe II (25 %), ab Welle 7 in Stufe III (8 %) und ab Welle 11 in Stufe IV (3 %) auftauchen. Die Chancen sind kumulativ: Ein Wurf unter 3 % ergibt Stufe IV, unter 8 % Stufe III, unter 25 % Stufe II.
  
-- **Preise:** Waffen Basis × Stufe × (1 + 0,12 · (w − 1) + 0,012 · (w − 1)²), Items Basis × (1 + 0,15 · (w − 1) + 0,015 · (w − 1)²); bei Glitzer jeweils × 0,85. Der quadratische Anteil sorgt dafür, dass die Preise mit dem späten Einkommen mithalten.
+- **Preise:** Waffen Basis × 0,85 × Stufe × (1 + 0,1 · (w − 1) + 0,009 · (w − 1)²), Items Basis × (1 + 0,15 · (w − 1) + 0,015 · (w − 1)²); bei Glitzer jeweils × 0,85. Der quadratische Anteil sorgt dafür, dass die Preise mit dem späten Einkommen mithalten.
 
 | Welle | Waffen | Items | Neu würfeln |
 | --- | --- | --- | --- |
 | 1 | × 1,0 | × 1,0 | 2 |
-| 5 | × 1,67 | × 1,84 | 7 |
-| 9 | × 2,73 | × 3,16 | 12 |
-| 14 | × 4,59 | × 5,49 | 21 |
+| 5 | × 1,54 | × 1,84 | 7 |
+| 9 | × 2,38 | × 3,16 | 12 |
+| 14 | × 3,82 | × 5,49 | 21 |
 
 - **Zurückhalten:** Jedes Angebot (auch das Aktions-Angebot) lässt sich per Schloss-Knopf zurückhalten. Es bleibt beim Neu würfeln und in den folgenden Shops am selben Platz liegen, bis es gekauft oder wieder freigegeben wird; der Preis richtet sich immer nach der aktuellen Welle. Ein zurückgehaltenes Aktions-Item verschwindet, sobald es nichts mehr bewirken würde. In den Wellen 1–3 zählen zurückgehaltene Waffen zur Mindestzahl, zurückgehaltene Items werden nicht ersetzt.
 - **Neu würfeln:** ⌊2 + 0,8 · w + 0,04 · w²⌋, pro weiterem Wurf in derselben Shopphase +2; mit Glückskeks ist der erste Wurf je Shop gratis.
@@ -435,7 +435,7 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | --- | --- | --- | --- |
 | Sturzflug | Item „Sturzflug-Feder“ (Selten, 18), Kampfspatz | 0,22 s Sprint (760) in Blickrichtung, dabei unverwundbar | 3 s |
 | Hupe | Item (Selten, 16) | Gegner im Umkreis 240 werden weggestoßen (außer Boss) und fliehen 2 s | 8 s |
-| Seifenblasenschild | Item (Episch, 22) | Blase schluckt 2 s lang jeden Treffer | 10 s |
+| Seifenblasenschild | Item (Episch, 22) | Blase schluckt 1,2 s lang jeden Treffer | 14 s |
 | Lichtblitz | Item (Episch, 22), Professor Uhu | betäubt alle Gegner im Bild 1,5 s, Bildschirm blitzt weiß | 12 s |
 | Gewitterwolke | Item (Episch, 26) | 3 s lang alle 0,25 s ein Blitz in einen Gegner im Umkreis 460: Schadensbasis × 1, betäubt 0,3 s | 15 s |
 | Magnetpfiff | Item (Selten, 18) | zieht alles Material im Bild heran | 20 s |
@@ -453,7 +453,7 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | Sturzflug + Seifenblasenschild | Blasenrakete | Sturzflug (0,35 s, 820) mit Blase; berührte Gegner werden 2,5 s eingefangen | 6 s |
 | Lichtblitz + Gewitterwolke | Sonnensturm | blendet alle Gegner im Bild 1,5 s, jeder bekommt einen Blitz (Schadensbasis × 1,5) | 14 s |
 | Lichtblitz + Taschenuhr | Schnappschuss | betäubt alle Gegner im Bild 2 s, Gegnerkugeln stehen 2 s still | 18 s |
-| Taschenuhr + Seifenblasenschild | Zeitblase | 3 s unverwundbar, Gegner im Umkreis 150 stehen still | 20 s |
+| Taschenuhr + Seifenblasenschild | Zeitblase | 2,5 s unverwundbar, Gegner im Umkreis 150 stehen still | 22 s |
 | Magnetpfiff + Hupe | Staubsauger | zieht Drops im Bild und Gegner im Umkreis 340 (außer Boss) 0,7 s heran, dann Knall: Umkreis 190, Schadensbasis × 1,5, fliehen 1,5 s | 16 s |
 | Magnetpfiff + Taschenuhr | Goldene Stunde | zieht Material im Bild heran; 5 s lang zählt jedes Stück doppelt | 25 s |
 | Gewitterwolke + Hupe | Donnerhorn | Hupe plus Kettenblitz: springt bis zu 7-mal (je bis 170 weit), Schadensbasis × 1, betäubt 0,4 s | 10 s |
@@ -463,9 +463,9 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | Klauen + Magnetpfiff | Elsterschatz | zieht alles im Bild heran; 5 s lang 20 % Chance auf doppeltes Material | 18 s |
 | Sturzflug + Lichtblitz | Kometenschweif | Sturzflug (0,3 s, 820); berührte Gegner nehmen Schadensbasis × 1 und sind 1,2 s geblendet | 5 s |
 | Sturzflug + Taschenuhr | Zeitsprung | Sturzflug (0,3 s, 820), Gegner 2,5 s in Zeitlupe | 8 s |
-| Hupe + Seifenblasenschild | Prallblase | 3 s Blase; Gegner, die sie berühren (Abstand Radius + 30), werden weggeschleudert, fliehen 0,6 s und nehmen Schadensbasis × 0,5 (je Gegner höchstens alle 0,6 s) | 12 s |
+| Hupe + Seifenblasenschild | Prallblase | 2 s Blase; Gegner, die sie berühren (Abstand Radius + 30), werden weggeschleudert, fliehen 0,6 s und nehmen Schadensbasis × 0,5 (je Gegner höchstens alle 0,6 s) | 14 s |
 | Hupe + Lichtblitz | Fanfare | betäubt alle Gegner im Bild 2 s, danach fliehen sie (insgesamt 5 s Furcht) | 12 s |
-| Seifenblasenschild + Gewitterwolke | Gewitterblase | 3 s Blase; alle 0,4 s ein Blitz in einen Gegner im Umkreis 260 (Schadensbasis × 1) | 14 s |
+| Seifenblasenschild + Gewitterwolke | Gewitterblase | 2 s Blase; alle 0,4 s ein Blitz in einen Gegner im Umkreis 260 (Schadensbasis × 1) | 16 s |
 | Seifenblasenschild + Magnetpfiff | Blasenfang | Gegner im Umkreis 260 werden 2,5 s eingefangen; Material im Bild kommt heran | 15 s |
 | Gewitterwolke + Magnetpfiff | Elektromagnet | 1,2 s: Gegner im Umkreis 340 (außer Boss) werden herangezogen (380/s), alle 0,25 s ein Blitz im Umkreis 220 (Schadensbasis × 0,8) | 16 s |
 | Gewitterwolke + Taschenuhr | Ewiges Gewitter | 6 s Gewitter wie Gewitterwolke, Gegner 3 s in Zeitlupe | 22 s |

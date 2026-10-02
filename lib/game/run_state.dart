@@ -266,7 +266,7 @@ class RunState {
   // ---------------- Shop ----------------
 
   int weaponPrice(String id, int tier) =>
-      (weaponDefs[id]!.price * tiers[tier].price * weaponPriceFactor(wave) * character.shopMul).round();
+      (weaponDefs[id]!.price * kWeaponPriceScale * tiers[tier].price * weaponPriceFactor(wave) * character.shopMul).round();
   int itemPrice(ItemDef it) => (it.price * itemPriceFactor(wave) * character.shopMul).round();
   int get rerollCost => (has(ItemEffect.freeReroll) && rerolls == 0) ? 0 : rerollBaseCost(wave) + rerolls * 2;
   int sellPrice(OwnedWeapon w) => (weaponPrice(w.id, w.tier) * 0.4).round();
