@@ -791,7 +791,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   /// Lässt [total] Material als möglichst wenige Kristalle fallen (1 / 3 / 5 / 10).
   void dropMaterial(Vector2 at, int total, {double spread = 8}) {
-    final fall = run!.difficultyDef.dropFallSpeed;
+    final fall = run!.dropFallSpeed;
     for (final v in splitMaterial(total)) {
       world.add(Drop(at.clone()..x += rnd(-spread, spread), material: true, rng: rng, fallSpeed: fall, value: v));
     }
@@ -992,7 +992,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       shake = max(shake, 14);
       burst(e.position, const Color(0xFFFFC94A), 40, 300);
       floatText(e.position - Vector2(0, e.r + 20), 'DAS TOR IST OFFEN', Palette.sun, 20);
-      final fall = r.difficultyDef.dropFallSpeed;
+      final fall = r.dropFallSpeed;
       dropMaterial(e.position, kGateDrops, spread: 30);
       world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
       return;
@@ -1001,7 +1001,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (e.type == EnemyType.puffball) world.add(PoisonCloud(e.position.clone(), e.dmg));
     // Kinder von Spawnern lassen nichts fallen
     if (e.child) return;
-    final fall = r.difficultyDef.dropFallSpeed;
+    final fall = r.dropFallSpeed;
     // Elite: Modifikator beim Tod, mehr Material, manchmal ein Geschenk
     switch (e.elite) {
       case EliteMod.volatile:

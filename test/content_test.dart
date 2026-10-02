@@ -156,6 +156,12 @@ void main() {
       expect(night / day, closeTo(1.2 / 0.9, 0.001));
     });
 
+    test('Frack: Material fällt auf jeder Stufe zu Boden', () {
+      expect(RunState(null, difficulty: 1).dropFallSpeed, 0);
+      expect(RunState(null, difficulty: 1, characterId: 'frack').dropFallSpeed, 70);
+      expect(RunState(null, difficulty: 5, characterId: 'frack').dropFallSpeed, 70);
+    });
+
     test('Glitzer: Shop 15 % günstiger, nur 4 Slots', () {
       final s = RunState(null), g = RunState(null, characterId: 'glitzer');
       expect(g.weaponPrice('rail', 0), (s.weaponPrice('rail', 0) / 1 * 0.85).round());

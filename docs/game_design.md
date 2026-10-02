@@ -318,7 +318,7 @@ Darstellung: Regenschleier mit Pfützen am Boden, die sich füllen und danach wi
  
 Material ist gleichzeitig Währung und Erfahrung: Jedes aufgesammelte Stück gibt 1 Geld und 1 XP. Jeder Run startet mit 15 Geld (ohne XP). Für Level L braucht der Spieler (L + 3)² XP; jedes Level gibt sofort +1 Max-HP und eine Verbesserung nach der Welle.
  
-- **Drops:** Gegner lassen Material dort, wo sie sterben. Es springt kurz auf; auf Küken und Spatz bleibt es dann schwebend an dieser Stelle (leichtes Wippen) – man holt es sich im Flug. Ab Falke sinkt es zu Boden, je höher die Stufe desto schneller (höchstens 12 / 35 / 70 Einheiten pro Sekunde, bei Regen × 1,5), und bleibt dort liegen; wer es spät noch will, muss tief zu den Käfern hinunter. Im Sammelradius (70 + Bonus) fliegt es zum Spieler. 4 % Chance auf ein Herz (+3 HP, bei Ruß +2), das sich genauso verhält.
+- **Drops:** Gegner lassen Material dort, wo sie sterben. Es springt kurz auf; auf Küken und Spatz bleibt es dann schwebend an dieser Stelle (leichtes Wippen) – man holt es sich im Flug. Ab Falke sinkt es zu Boden (mit Frack auf jeder Stufe mit 70/s), je höher die Stufe desto schneller (höchstens 12 / 35 / 70 Einheiten pro Sekunde, bei Regen × 1,5), und bleibt dort liegen; wer es spät noch will, muss tief zu den Käfern hinunter. Im Sammelradius (70 + Bonus) fliegt es zum Spieler. 4 % Chance auf ein Herz (+3 HP, bei Ruß +2), das sich genauso verhält.
 - **Kristallwerte:** Die Ausbeute eines Gegners fällt als möglichst wenige Kristalle: Wert 10 (gold, größer), 5 (violett), 3 (blau), 1 (mint) – z. B. 9 Material als 5 + 3 + 1. Jeder Kristall gibt beim Einsammeln seinen Wert als Geld und XP.
 - **Level-up-Auswahl:** 4 zufällige Optionen, jede mit 20 % Chance „selten“ (doppelter Wert).
  
@@ -485,7 +485,7 @@ Zehn spielbare Vögel. Jeder hat eine Stärke, einen Nachteil und vor allem ein 
 | Böe (Schwalbe) | Wind | +20 % Angriffstempo, schnellster Flieger | −5 Max-HP | sehr schnell, enge Kurven | Böenschwarm / Federwirbel / Pusteblume |
 | Schillerchen (Kolibri) | Licht | +15 % Krit, winzige Trefferfläche | −40 % Max-HP | fliegt frei in alle Richtungen, steht in der Luft | Diskokugel / Lichtfeder / Sonnenstrahl |
 | Ruß (Rabe, abtrünnige Fäulnis-Krähe) | Böse | Böse-Waffen +25 %, +3 % Lebensraub | Herzen heilen nur 2 statt 3 | schwer, gleitet lange | Dornenranke / Krähenruf / Paktlaterne |
-| Frack (Pinguin) | Wasser | +50 % Max-HP, +3 Rüstung | kann kaum fliegen | mühsam in der Luft, am Boden rasend schnell | Wasserpistole / Seifenblasen / Regenwolke + Bauchrutscher |
+| Frack (Pinguin) | Wasser | +50 % Max-HP, +3 Rüstung; Material fällt auf jeder Stufe schnell zu Boden (70/s, wie auf Phönix), weil er schwebendes kaum erreicht | kann kaum fliegen | mühsam in der Luft, am Boden rasend schnell | Wasserpistole / Seifenblasen / Regenwolke + Bauchrutscher |
 | Hacki (Specht) | Stein | Stein-Waffen +25 %, +3 Rüstung | −15 % Angriffstempo | ruckartig, klammert sich an den Weltrand | Kieselschleuder / Gartenzwergwerfer / Bowlingkugel + Trommelwirbel |
 | Professor Uhu (Eule) | Licht/Böse | +25 % Erfahrung; in Wald, Gebirge, Gipfel +20 % Schaden | in Feldern und Dorf −10 % Schaden | lautlos, sinkt sehr langsam | Lichtfeder / Sonnenstrahl / Krähenruf + Lichtblitz |
 | Glitzer (Elster) | Wirtschaft | Shop −15 %; 1 % je Kill ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item) | nur 4 Waffenslots | normal | Wasserpistole / Diskokugel / Kieselschleuder + Klauen |

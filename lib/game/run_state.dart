@@ -92,6 +92,9 @@ class RunState {
   final int difficulty;
   DifficultyDef get difficultyDef => difficultyDefs[difficulty - 1];
 
+  /// Sinkgeschwindigkeit des Materials: Stufe, aber mindestens die des Vogels (Frack).
+  double get dropFallSpeed => max(difficultyDef.dropFallSpeed, character.minDropFall);
+
   /// Aktuelle Welt (für Tag/Nacht-Boni), vom Spiel je Welle gesetzt.
   Biome biome = Biome.fields;
 

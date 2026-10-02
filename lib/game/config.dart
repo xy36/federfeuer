@@ -667,6 +667,7 @@ class CharacterDef {
     this.stamina = 0,
     this.wallCling = false,
     this.freeFlight = false,
+    this.minDropFall = 0,
     this.radius = 16,
     this.scale = 1,
   });
@@ -703,6 +704,9 @@ class CharacterDef {
 
   /// Hält sich am Weltrand fest, statt abzurutschen (Specht).
   final bool wallCling;
+
+  /// Material fällt mindestens so schnell zu Boden (Frack kommt kaum hoch, schwebendes Material wäre unerreichbar).
+  final double minDropFall;
 
   /// Freier Flug ohne Schwerkraft: hoch und runter per Stick bzw. Tasten, bleibt beim Loslassen stehen (Kolibri).
   final bool freeFlight;
@@ -748,10 +752,10 @@ const characterDefs = [
   ),
   CharacterDef(
     id: 'frack', name: 'Frack', species: 'Pinguin', icon: '🐧', role: 'Wasser',
-    strength: '+50 % Max-HP, +3 Rüstung', weakness: 'kann kaum fliegen', flight: 'mühsam in der Luft, am Boden rasend schnell',
+    strength: '+50 % Max-HP, +3 Rüstung; Material fällt immer zu Boden', weakness: 'kann kaum fliegen', flight: 'mühsam in der Luft, am Boden rasend schnell',
     look: BirdLook.penguin, glow: Color(0xFF9FE4FF), body: Color(0xFF26304A), belly: Color(0xFFF4FAFF),
     startWeapons: ['water', 'bubbles', 'raincloud'], startAction: ActionId.bellySlide, mods: {Stat.armor: 3}, maxHpMul: 1.5,
-    thrustMul: 0.62, glideMul: 1.4, groundMul: 1.7, scale: 1.1, radius: 17,
+    thrustMul: 0.62, glideMul: 1.4, groundMul: 1.7, minDropFall: 70, scale: 1.1, radius: 17,
     unlock: UnlockDef(UnlockKind.classWave, 'Welle 10 mit mindestens 3 Wasser-Waffen erreichen',
         cls: WeaponClass.water, amount: 3, wave: 10),
   ),

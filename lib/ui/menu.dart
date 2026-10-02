@@ -351,15 +351,19 @@ class _PlayPageState extends State<_PlayPage> {
         Pill('HP ×${fmtFactor(sel.hp)}'),
         Pill('Schaden ×${fmtFactor(sel.dmg)}'),
         Pill('Spawns ×${fmtFactor(sel.spawn)}'),
-        Pill(
-          switch (sel.dropFallSpeed) {
-            0 => 'Material schwebt',
-            < 20 => 'Material sinkt langsam',
-            < 50 => 'Material sinkt',
-            _ => 'Material fällt schnell',
-          },
-          icon: sel.dropsFall ? '⬇' : '✦',
-        ),
+        // Mit dem gewählten Vogel (Frack lässt Material immer fallen)
+        Builder(builder: (context) {
+          final fall = max(sel.dropFallSpeed, characterById[p.selectedCharacter]!.minDropFall);
+          return Pill(
+            switch (fall) {
+              0 => 'Material schwebt',
+              < 20 => 'Material sinkt langsam',
+              < 50 => 'Material sinkt',
+              _ => 'Material fällt schnell',
+            },
+            icon: fall > 0 ? '⬇' : '✦',
+          );
+        }),
         if (best > 0) Pill(best > kMaxWave ? 'Geschafft!' : 'Rekord: Welle $best', icon: '🏆', color: const Color(0x33FFD23F)),
       ]),
       if (p.unlocked < kDifficultyCount && !p.debugUnlockAll)
