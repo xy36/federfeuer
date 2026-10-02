@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:gamepads/gamepads.dart';
 
 import '../game/config.dart';
 import '../game/federfeuer_game.dart';
 import '../game/run_state.dart';
 import '../platform/desktop_window.dart';
+import 'bird_preview.dart';
 import 'widgets.dart';
 
 // ---------------- Level-up ----------------
@@ -23,6 +25,7 @@ class _LevelUpOverlayState extends State<LevelUpOverlay> {
     final r = game.run!;
     return Panel(
       maxWidth: 820,
+      hints: const [(GamepadButton.a, 'Verbesserung wählen'), (null, 'Navigieren')],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -75,6 +78,7 @@ class PauseOverlay extends StatelessWidget {
     final r = game.run!;
     return Panel(
       maxWidth: 440,
+      hints: const [(GamepadButton.a, 'Auswählen'), (GamepadButton.b, 'Weiterspielen'), (null, 'Navigieren')],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
@@ -110,6 +114,7 @@ class GameOverOverlay extends StatelessWidget {
     final unlocked = game.newlyUnlocked;
     return Panel(
       maxWidth: 480,
+      hints: const [(GamepadButton.a, 'Auswählen'), (null, 'Navigieren')],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
@@ -117,7 +122,7 @@ class GameOverOverlay extends StatelessWidget {
           OutlinedLabel(game.won ? 'SIEG!' : 'ABGESTÜRZT', size: 44, color: game.won ? Palette.sun : Palette.coral, align: TextAlign.center),
           const SizedBox(height: 8),
           Text(
-            game.won ? 'Der Geierkönig ist gefallen.' : 'Der Kampfspatz ist abgestürzt.',
+            game.won ? 'Der Geierkönig ist gefallen.' : '${r.character.name} ist abgestürzt.',
             style: bodyText(14, color: Ui.muted),
           ),
           const SizedBox(height: 16),
@@ -140,6 +145,23 @@ class GameOverOverlay extends StatelessWidget {
               ),
               child: Text('🔓 Neue Stufe: ${difficultyDef(unlocked).name}',
                   style: displayStyle(17, const Color(0xFFCFFFE0)).copyWith(shadows: glowShadows(Palette.mint))),
+            ),
+          for (final c in game.newCharacters)
+            Container(
+              margin: const EdgeInsets.only(top: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: c.glow.withAlpha(36),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: c.glow.withAlpha(180), width: 1.4),
+                boxShadow: [BoxShadow(color: c.glow.withAlpha(70), blurRadius: 20)],
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                BirdPreview(character: c, size: 40),
+                const SizedBox(width: 8),
+                Text('Neuer Vogel: ${c.name}',
+                    style: displayStyle(16, Color.lerp(c.glow, Colors.white, 0.5)!).copyWith(shadows: glowShadows(c.glow))),
+              ]),
             ),
           const SizedBox(height: 16),
           Wrap(alignment: WrapAlignment.center, spacing: 12, children: [

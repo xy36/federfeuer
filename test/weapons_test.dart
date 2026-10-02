@@ -68,9 +68,57 @@ void main() {
       expect(r.weapons.where((w) => w.id == 'rail').single.tier, 1);
     });
 
-    test('Angebote bleiben gültig', () {
+    test('Vier Angebote plus immer ein Aktions-Angebot', () {
+      for (var seed = 0; seed < 50; seed++) {
+        final r = RunState('pistol')..rollOffers(Random(seed));
+        expect(r.offers.length, kShopOffers + 1);
+        expect(itemById[r.offers.last.id]?.action, isNotNull, reason: 'letztes Feld ist eine Aktion');
+        expect(r.offers.take(kShopOffers).where((o) => !o.isWeapon && itemById[o.id]!.action != null), isEmpty);
+        expect(r.offers.where((o) => o.isWeapon).length, greaterThanOrEqualTo(kEarlyMinWeapons), reason: 'früh viele Waffen');
+      }
+    });
+
+    test('Zurückgehaltene Angebote bleiben beim Neu würfeln und im nächsten Shop', () {
       final r = RunState('pistol')..rollOffers(Random(1));
-      expect(r.offers.length, 4);
+      final weapon = r.offers[0], action = r.offers.last;
+      r.toggleLock(0);
+      r.toggleLock(r.offers.length - 1);
+      r.money = 999;
+      r.reroll(Random(2));
+      expect(r.offers[0], same(weapon));
+      expect(r.offers.last, same(action));
+      // Nächste Welle: noch da, Preis der neuen Welle
+      r.wave = 6;
+      r.rollOffers(Random(3));
+      expect(r.offers[0], same(weapon));
+      expect(weapon.price, r.weaponPrice(weapon.id, weapon.tier));
+      // Gekauft: verschwindet beim nächsten Wurf
+      r.buy(0);
+      r.rollOffers(Random(4));
+      expect(r.offers[0], isNot(same(weapon)));
+      // Entsperrt: wird neu gewürfelt
+      r.toggleLock(r.offers.length - 1);
+      final act = r.offers.last;
+      r.rollOffers(Random(5));
+      expect(r.offers.last, isNot(same(act)));
+    });
+
+    test('Früh mehr Waffen, später mehr Items', () {
+      double share(int wave) {
+        var w = 0;
+        for (var seed = 0; seed < 400; seed++) {
+          final r = RunState('pistol')..wave = wave;
+          r.rollOffers(Random(seed));
+          w += r.offers.take(kShopOffers).where((o) => o.isWeapon).length;
+        }
+        return w / (400 * kShopOffers);
+      }
+
+      expect(weaponOfferChance(1), 0.8);
+      expect(weaponOfferChance(9), closeTo(0.4, 1e-9));
+      expect(weaponOfferChance(14), 0.4);
+      expect(share(1), greaterThan(0.75));
+      expect(share(12), closeTo(0.4, 0.06));
     });
   });
 

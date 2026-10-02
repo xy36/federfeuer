@@ -51,7 +51,8 @@ void main() {
     // Obergrenze für schwebende Schadenszahlen hält, Zähler stimmt
     final floats = game.world.children.where((c) => c.runtimeType.toString() == 'FloatText').length;
     expect(floats, lessThanOrEqualTo(FederfeuerGame.maxFloatTexts));
-    expect(game.floatTextCount, floats);
+    expect(game.floatTextCount, greaterThanOrEqualTo(floats), reason: 'zählt auch gerade angelegte Zahlen');
+    expect(game.floatTextCount, lessThanOrEqualTo(FederfeuerGame.maxFloatTexts));
   });
 
   testWidgets('Render-Analyse misst jeden Bildteil einzeln und räumt danach auf', (tester) async {

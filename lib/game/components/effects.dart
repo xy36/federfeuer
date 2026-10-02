@@ -59,8 +59,9 @@ class Burst extends Component with Transient {
 }
 
 class Ring extends PositionComponent with Transient {
-  Ring(Vector2 pos, this.radius) : super(position: pos, priority: 19);
+  Ring(Vector2 pos, this.radius, {this.color = const Color(0xFFFF9F1C)}) : super(position: pos, priority: 19);
   final double radius;
+  final Color color;
   double life = 0.25;
   final _paint = Paint()
     ..style = PaintingStyle.stroke
@@ -80,11 +81,11 @@ class Ring extends PositionComponent with Transient {
     // Breiter, schwacher Strich als Schein, schmaler heller Strich als Kern
     _paint
       ..strokeWidth = 12
-      ..color = Color.fromRGBO(255, 159, 28, 0.3 * k);
+      ..color = color.withValues(alpha: 0.3 * k);
     c.drawCircle(Offset.zero, rr, _paint);
     _paint
       ..strokeWidth = 3
-      ..color = Color.fromRGBO(255, 210, 140, k);
+      ..color = Color.lerp(color, const Color(0xFFFFFFFF), 0.45)!.withValues(alpha: k);
     c.drawCircle(Offset.zero, rr, _paint);
   }
 }
@@ -97,13 +98,7 @@ class FloatText extends PositionComponent with HasGameReference<FederfeuerGame>,
   final double fontSize;
   double life = 0.8;
 
-  // Zähler für die Obergrenze gleichzeitiger Zahlen
-  @override
-  void onMount() {
-    super.onMount();
-    game.floatTextCount++;
-  }
-
+  // Zähler für die Obergrenze gleichzeitiger Zahlen: erhöht beim Anlegen (FederfeuerGame.floatText)
   @override
   void onRemove() {
     game.floatTextCount--;

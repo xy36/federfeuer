@@ -9,14 +9,14 @@ import 'draw.dart';
 import 'light.dart';
 import 'transient.dart';
 
-/// Material (Geld + XP) oder Herz (Heilung).
+/// Material (Geld + XP), Herz (Heilung) oder Geschenk der Elster (zufälliges Item).
 class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
-  Drop(Vector2 pos, {required this.material, required Random rng, this.fallSpeed = 70})
+  Drop(Vector2 pos, {required this.material, required Random rng, this.fallSpeed = 70, this.gift = false})
       : vel = Vector2((rng.nextDouble() - 0.5) * 80, material ? -20 - rng.nextDouble() * 60 : -60),
         _phase = rng.nextDouble() * 6.28,
         super(position: pos, priority: 1);
 
-  final bool material;
+  final bool material, gift;
 
   /// Höchste Sinkgeschwindigkeit (je Schwierigkeit); 0 = schwebt am Todesort.
   final double fallSpeed;
@@ -27,6 +27,9 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
 
   /// Schon im Sammelradius erfasst und auf dem Weg zum Spieler.
   bool get pulled => _pulled;
+
+  /// Magnetpfiff / Klauen: fliegt sofort zum Spieler.
+  void pull() => _pulled = true;
 
   @override
   void update(double dt) {
@@ -56,10 +59,12 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
     }
     if (dist < game.player.r + 8) {
       taken = true;
-      if (material) {
+      if (gift) {
+        game.giveGift();
+      } else if (material) {
         game.gain(1);
       } else {
-        game.heal(3);
+        game.healHeart();
       }
       removeFromParent();
     }
@@ -68,7 +73,15 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
   @override
   void render(Canvas c) {
     final pulse = 0.75 + 0.25 * sin(game.clock * 5 + x * 0.1);
-    if (material) {
+    if (gift) {
+      // Geschenk: blaues Päckchen mit Schleife
+      Glow.draw(c, 0, 0, 26, const Color(0xFF9FD4FF).withAlpha((170 * pulse).round()));
+      drawRect(c, -6, -5, 12, 10, const Color(0xFF5A9BFF));
+      drawRect(c, -1.5, -5, 3, 10, const Color(0xFFFFE066));
+      drawRect(c, -6, -1.5, 12, 3, const Color(0xFFFFE066));
+      drawCircle(c, -2.5, -7, 2.4, const Color(0xFFFFE066));
+      drawCircle(c, 2.5, -7, 2.4, const Color(0xFFFFE066));
+    } else if (material) {
       // Leuchtender Mint-Kristall
       Glow.draw(c, 0, 0, 18, Palette.mint.withAlpha((150 * pulse).round()));
       c.save();

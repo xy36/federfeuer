@@ -1,0 +1,302 @@
+import 'package:flutter/material.dart';
+
+import '../game/config.dart';
+import '../game/progress.dart';
+import '../game/run_state.dart';
+import 'widgets.dart';
+
+/// Inhalte der Info-Panels im Shop: Waffen, Items, Aktionen, Set-Boni, Werte.
+
+Widget _head(String icon, String title, String sub, Color color) => Row(children: [
+      Container(
+        width: 34,
+        height: 34,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: color.withAlpha(40),
+          border: Border.all(color: color.withAlpha(160), width: 1.4),
+        ),
+        child: Text(icon, style: const TextStyle(fontSize: 17)),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: displayStyle(16, Color.lerp(color, Colors.white, 0.45)!)),
+          Text(sub, style: bodyText(11.5, color: Ui.muted)),
+        ]),
+      ),
+    ]);
+
+Widget _line(String label, String value, {Color color = Ui.text}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 1),
+      child: Row(children: [
+        Expanded(child: Text(label, style: bodyText(12, color: Ui.muted))),
+        Text(value, style: bodyText(12.5, color: color, weight: 900)),
+      ]),
+    );
+
+Widget _section(String t) => Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 3),
+      child: Text(t.toUpperCase(), style: displayStyle(10.5, Ui.muted).copyWith(letterSpacing: 1.5)),
+    );
+
+Widget _text(String t, {Color color = Ui.text}) => Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Text(t, style: bodyText(12.5, color: color)),
+    );
+
+const _good = Color(0xFF8CF5B0), _bad = Color(0xFFFF8A9A);
+
+String _s(double v) => '${fmtNum(v)} s';
+String _pct(double v) => '${(v * 100).round()} %';
+
+/// Waffe in Stufe [tier]; [owned] = Slot im Inventar (zeigt Verkaufspreis).
+Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? price}) {
+  final d = weaponDefs[id]!, t = tiers[tier], s = r.weaponStats(id, tier);
+  final kind = switch (d.kind) {
+    WeaponKind.shot => 'Schuss',
+    WeaponKind.lob => 'Wurf im Bogen',
+    WeaponKind.orbit => 'Nahkampf, kreist um dich',
+    WeaponKind.whip => 'Nahkampf, Hieb im Bogen',
+    WeaponKind.summon => 'Begleiter',
+    WeaponKind.cloud => 'Wolke über dem Ziel',
+    WeaponKind.roll => 'rollt über den Boden',
+    WeaponKind.disco => 'rundum, zielt nicht',
+  };
+  final have = r.classCount(d.cls), lvl = setLevel(have), next = owned == null ? setLevel(have + 1) : lvl;
+  final fx = <String>[
+    if (d.count > 1) '${d.count} Projektile${d.kind == WeaponKind.orbit ? ' (Klingen)' : ''}',
+    if (d.pierce > 0) 'durchschlägt alles',
+    if (s.explosion > 0) 'Explosion, Radius ${s.explosion.round()}${d.fuse > 0 ? ' nach ${_s(d.fuse)}' : ''}',
+    if (s.burnTime > 0) 'Brand ${_s(s.burnTime)}, ${fmtNum(s.burnDps)} Schaden/s',
+    if (s.slow > 0) 'verlangsamt um ${_pct(s.slow)} für ${_s(s.slowTime)}',
+    if (s.stun > 0) 'betäubt ${_s(s.stun)}',
+    if (s.trap > 0) 'fängt ${_s(s.trap)} in einer Blase ein',
+    if (s.curse > 0) 'verflucht ${_s(s.curse)} (+${_pct(r.curseBonus)} Schaden)',
+    if (s.stickTime > 0) 'klebt ${_s(s.stickTime)}, ${fmtNum(s.stickDps)} Schaden/s',
+    if (s.lifesteal > 0) '${s.lifesteal.round()} % Chance je Treffer auf +1 HP',
+    if (d.hpCost > 0) 'kostet ${d.hpCost} HP pro Schuss',
+    if (s.knock >= 15) 'starker Rückstoß (${s.knock.round()})',
+    if (d.heavy) 'langsam und schwer: profitiert vom Stein-Set',
+  ];
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head(d.icon, d.name, 'Stufe ${t.label} · ${d.cls.label} · $kind', t.color),
+    _text(d.desc),
+    _section('Werte'),
+    _line('Schaden', '${fmtNum(s.dmg)}${d.count > 1 ? ' ×${d.count}' : ''}'),
+    _line(d.kind == WeaponKind.orbit ? 'Treffer je Gegner alle' : 'Abklingzeit', '${s.cooldown.toStringAsFixed(2)} s'),
+    _line(d.kind == WeaponKind.orbit ? 'Kreisradius' : 'Reichweite', '${s.range.round()}'),
+    if (fx.isNotEmpty) ...[
+      _section('Effekte'),
+      for (final f in fx) _text('• $f'),
+    ],
+    _section('Klasse ${d.cls.label}'),
+    for (var i = 0; i < 3; i++)
+      _text('${[2, 4, 6][i]} Waffen: ${d.cls.bonusTexts[i]}',
+          color: lvl > i ? _good : (next > i ? Palette.sun : Ui.muted)),
+    _text(owned == null ? 'Du hast $have ${d.cls.label}-Waffen${next > lvl ? ' – Kauf erreicht den nächsten Bonus!' : ''}' : 'Du hast $have ${d.cls.label}-Waffen',
+        color: Ui.muted),
+    if (r.character.classBonus == d.cls) _text('${r.character.name}: +25 % Schaden mit dieser Klasse', color: _good),
+    if (tier < 3) ...[
+      _section('Nächste Stufe ${tiers[tier + 1].label}'),
+      _line('Schaden', fmtNum(r.weaponStats(id, tier + 1).dmg)),
+      _text('Zwei gleiche Waffen gleicher Stufe verschmelzen im Shop.', color: Ui.muted),
+    ],
+    if (owned != null) ...[
+      _section('Verkaufen'),
+      _line('Erlös', '${r.sellPrice(owned)}', color: Palette.mint),
+    ],
+    if (price != null) _line('Preis', '$price', color: Palette.sun),
+  ]);
+}
+
+Widget itemInfo(RunState r, String id, {int? price}) {
+  final it = itemById[id]!, owned = r.items[id] ?? 0;
+  final act = it.action;
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head(it.icon, it.name, act != null ? 'Aktions-Item · ${it.rarity.label}' : it.rarity.label, it.rarity.color),
+    if (it.desc.isNotEmpty) _text(it.desc),
+    if (it.mods.isNotEmpty) ...[
+      _section('Werte'),
+      for (final e in it.mods.entries)
+        _line(e.key.label, '${e.value > 0 ? '+' : ''}${fmtNum(e.value)}${e.key.unit}', color: e.value < 0 ? _bad : _good),
+    ],
+    if (act != null) ...actionDetails(r, OwnedAction(act), buying: true),
+    if (act == null) ...[
+      _section('Besitz'),
+      _text(owned > 0 ? 'Schon $owned× im Besitz.' : 'Noch nicht im Besitz.', color: Ui.muted),
+      _text(it.unique ? 'Nur einmal pro Run.' : 'Stapelt sich unbegrenzt.', color: Ui.muted),
+    ],
+    if (price != null) _line('Preis', '$price', color: Palette.sun),
+  ]);
+}
+
+/// Aktion: Wirkung, Abklingzeit, Stufe II, Rezepte; [buying]: aus Sicht eines Kaufs.
+List<Widget> actionDetails(RunState r, OwnedAction a, {bool buying = false}) {
+  final id = a.id;
+  final buy = buying ? r.actionBuy(id) : null;
+  final recipes = recipesWith(id).toList();
+  return [
+    _section('Aktion'),
+    _text(id.desc),
+    _line('Abklingzeit', _s(a.cooldown)),
+    if (!id.evolved) _line('Stufe II', '${_s(id.cooldown * kActionLv2Cooldown)}, Wirkung ×${fmtNum(kActionLv2Power)}'),
+    if (buy == ActionBuy.upgrade) _text('Kauf hebt deine ${id.label} auf Stufe II.', color: _good),
+    if (buy == ActionBuy.add) _text('Kommt in den freien Aktionsplatz.', color: Ui.muted),
+    if (buy == ActionBuy.replace) _text('Beide Plätze belegt – beim Kauf wählst du, welche Aktion ersetzt wird.', color: Palette.sun),
+    if (id.evolved) _text('Evolution – entsteht nur durch Verschmelzen.', color: const Color(0xFFFFC94A)),
+    if (recipes.isNotEmpty) ...[
+      _section('Rezepte'),
+      for (final rec in recipes)
+        _text(
+          '${rec.a.label} + ${rec.b.label} → ${rec.result.label}: ${rec.result.desc}',
+          color: r.actions.any((o) => o.id != id && (o.id == rec.a || o.id == rec.b)) ? _good : Ui.text,
+        ),
+    ],
+  ];
+}
+
+Widget actionInfo(RunState r, OwnedAction a, int slot) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _head(a.id.icon, a.label, 'Aktionsplatz ${slot + 1}', a.id.evolved ? const Color(0xFFFFC94A) : Palette.sun),
+        ...actionDetails(r, a),
+      ],
+    );
+
+Widget setInfo(RunState r, WeaponClass cls) {
+  final n = r.classCount(cls), lvl = setLevel(n);
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head('◆', 'Set ${cls.label}', '$n ${cls.label}-Waffen', cls.color),
+    _section('Boni'),
+    for (var i = 0; i < 3; i++) _text('${[2, 4, 6][i]} Waffen: ${cls.bonusTexts[i]}', color: lvl > i ? _good : Ui.muted),
+    _section('Waffen dieser Klasse'),
+    _text(weaponDefs.values.where((w) => w.cls == cls).map((w) => w.name).join(', '), color: Ui.muted),
+  ]);
+}
+
+Widget statInfo(RunState r, Stat s) {
+  final base = r.stats[s]!, total = r.stat(s);
+  final desc = switch (s) {
+    Stat.maxHp => 'Höchste Lebenspunkte. Jedes Level gibt +1.',
+    Stat.regen => 'Heilt (Wert ÷ 5) HP pro Sekunde.',
+    Stat.dmg => 'Multipliziert den Schaden aller Waffen und Aktionen.',
+    Stat.atk => 'Verkürzt die Abklingzeit aller Waffen (höchstens auf 30 %).',
+    Stat.range => 'Addiert sich auf die Reichweite aller Waffen.',
+    Stat.speed => 'Bewegungstempo.',
+    Stat.armor => 'Erlittener Schaden × 15 / (15 + Rüstung); negativ erhöht ihn.',
+    Stat.lifesteal => 'Chance pro Treffer auf +1 HP.',
+    Stat.crit => 'Chance auf doppelten Schaden pro Treffer.',
+    Stat.pickup => 'Material in diesem Radius fliegt zu dir (Grundradius 70).',
+    Stat.thrust => 'Stärkerer Schub beim Fliegen (Kolibri: schneller hoch und runter).',
+    Stat.glide => 'Langsameres Sinken beim Gleiten.',
+  };
+  final bonus = total - base;
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head('◆', s.label, '${fmtNum(total)}${s.unit.isEmpty ? '' : ' ${s.unit}'}', Palette.cyan),
+    _text(desc),
+    if (bonus != 0) ...[
+      _section('Zusammensetzung'),
+      _line('Grundwert', fmtNum(base)),
+      _line('Set-Boni und Items', '${bonus > 0 ? '+' : ''}${fmtNum(bonus)}', color: bonus > 0 ? _good : _bad),
+    ],
+  ]);
+}
+
+Widget characterInfo(Progress p, CharacterDef c) {
+  final has = p.hasCharacter(c.id);
+  final w = c.startWeapon == null ? null : weaponDefs[c.startWeapon]!;
+  final prog = p.unlockProgress(c.unlock);
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head(c.icon, c.name, '${c.species} · ${c.role}', c.glow),
+    _section('Stärke'),
+    _text(c.strength, color: _good),
+    _section('Nachteil'),
+    _text(c.weakness, color: _bad),
+    _section('Fliegt'),
+    _text(c.flight),
+    _section('Start'),
+    _text([
+      w?.name ?? 'keine Waffe',
+      if (c.startAction != null) c.startAction!.label,
+      if (c.maxWeapons != 6) '${c.maxWeapons} Waffenslots',
+    ].join(' · ')),
+    _section(has ? 'Freigeschaltet' : 'Gesperrt'),
+    _text(has ? 'Wählbar unter „Spielen“.' : '${c.unlock.text}${prog == null ? '' : ' (${prog.$1} / ${prog.$2})'}',
+        color: has ? _good : Palette.sun),
+  ]);
+}
+
+Widget enemyInfo(EnemyType t) {
+  final d = enemyDefs[t]!;
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head(t.icon, t.label, d.flying ? 'fliegt' : 'am Boden', const Color(0xFFC77DFF)),
+    _text(t.desc),
+    _section('Grundwerte (Welle 1, Stufe Küken)'),
+    _line('Lebenspunkte', fmtNum(d.hp)),
+    _line('Berührungsschaden', fmtNum(d.dmg)),
+    _line('Tempo', fmtNum(d.speed)),
+    if (d.drop > 0) _line('Material', '${d.drop}', color: Palette.mint),
+  ]);
+}
+
+/// Platzhalter für noch nicht Entdecktes.
+Widget unknownInfo(String hint) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      _head('?', '???', 'Noch nicht entdeckt', Ui.muted),
+      _text(hint, color: Ui.muted),
+    ]);
+
+Widget recipeInfo(RunState r, ActionRecipe rec, {required bool evolved}) => Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _head(rec.result.icon, rec.result.label, '${rec.a.label} + ${rec.b.label}', const Color(0xFFFFC94A)),
+        ...actionDetails(r, OwnedAction(rec.result)),
+        _section('Status'),
+        _text(evolved ? 'Schon selbst verschmolzen ✓' : 'Noch nie verschmolzen', color: evolved ? _good : Ui.muted),
+      ],
+    );
+
+/// Vorschau beim Verschmelzen zweier Aktionen.
+Widget evolutionPreview(RunState r, ActionRecipe rec) {
+  final lost = r.actions.where((a) => a.level > 0).map((a) => a.id.label).toList();
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head(rec.result.icon, rec.result.label, 'Evolution aus ${rec.a.label} + ${rec.b.label}', const Color(0xFFFFC94A)),
+    ...actionDetails(r, OwnedAction(rec.result)),
+    _section('Beim Verschmelzen'),
+    _text('• ${rec.a.label} und ${rec.b.label} werden zu ${rec.result.label} (Aktionsplatz 1).'),
+    _text('• Aktionsplatz 2 wird frei.', color: _good),
+    if (lost.isNotEmpty) _text('• Stufe II von ${lost.join(' und ')} geht verloren.', color: _bad),
+    _text('• Evolutionen haben keine Stufe II.', color: Ui.muted),
+  ]);
+}
+
+/// Vorschau beim Verschmelzen zweier gleicher Waffen: Werte vorher → nachher.
+Widget weaponMergePreview(RunState r, OwnedWeapon w) {
+  final d = w.def, a = r.weaponStats(w.id, w.tier), b = r.weaponStats(w.id, w.tier + 1);
+  final ta = tiers[w.tier], tb = tiers[w.tier + 1];
+  Widget cmp(String label, String from, String to) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 1),
+        child: Row(children: [
+          Expanded(child: Text(label, style: bodyText(12, color: Ui.muted))),
+          Text(from, style: bodyText(12.5, color: Ui.muted, weight: 900)),
+          Text('  →  ', style: bodyText(12, color: Ui.muted)),
+          Text(to, style: bodyText(12.5, color: _good, weight: 900)),
+        ]),
+      );
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head(d.icon, d.name, 'Verschmelzen: Stufe ${ta.label} + ${ta.label} → ${tb.label}', tb.color),
+    _section('Werte'),
+    cmp('Schaden', fmtNum(a.dmg), fmtNum(b.dmg)),
+    cmp(d.kind == WeaponKind.orbit ? 'Treffer je Gegner alle' : 'Abklingzeit', '${a.cooldown.toStringAsFixed(2)} s',
+        '${b.cooldown.toStringAsFixed(2)} s'),
+    if (a.burnDps > 0 && a.burnTime > 0) cmp('Brand / s', fmtNum(a.burnDps), fmtNum(b.burnDps)),
+    if (a.stickDps > 0) cmp('Kleben / s', fmtNum(a.stickDps), fmtNum(b.stickDps)),
+    _line('Verkaufswert', '${r.sellPrice(w)} → ${(r.weaponPrice(w.id, w.tier + 1) * 0.4).round()}', color: Palette.mint),
+    _section('Beim Verschmelzen'),
+    _text('• Dieser Slot steigt auf Stufe ${tb.label}.'),
+    _text('• Die zweite ${d.name} (Stufe ${ta.label}) verschwindet, ihr Slot wird frei.', color: _good),
+  ]);
+}

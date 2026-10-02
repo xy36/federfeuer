@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../config.dart';
 import '../federfeuer_game.dart';
 import '../perf.dart';
+import '../run_state.dart';
 import 'draw.dart';
 import 'light.dart';
 import 'pickups.dart';
@@ -36,6 +37,73 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   bool dead = false;
   final vel = Vector2.zero();
 
+  // ---------------- Statuseffekte ----------------
+
+  /// Restdauer (s) von Brand, Kleben, Verlangsamung, Betäubung, Einfangen, Fluch und Furcht.
+  double burnT = 0, stickT = 0, slowT = 0, stunT = 0, trapT = 0, curseT = 0, fearT = 0;
+  double burnDps = 0, stickDps = 0, slowAmt = 0;
+  double _dotAcc = 0;
+
+  bool get boss => type == EnemyType.boss;
+  bool get disabled => stunT > 0 || trapT > 0;
+  bool get cursed => curseT > 0;
+
+  /// Treffereffekte einer Waffe anwenden. Der Boss lässt sich nicht einfangen und nur kurz betäuben.
+  void applyEffects(WeaponStats s) {
+    if (s.burnTime > 0) {
+      burnT = max(burnT, s.burnTime);
+      burnDps = max(burnDps, s.burnDps);
+    }
+    if (s.stickTime > 0) {
+      stickT = max(stickT, s.stickTime);
+      stickDps = max(stickDps, s.stickDps);
+    }
+    if (s.slow > 0) slow(s.slow, s.slowTime);
+    if (s.stun > 0) stun(s.stun);
+    if (s.trap > 0) {
+      if (boss) {
+        slow(0.5, s.trap);
+      } else {
+        trapT = max(trapT, s.trap);
+        vel.setZero();
+      }
+    }
+    if (s.curse > 0) curseT = max(curseT, s.curse);
+  }
+
+  void slow(double amount, double time) {
+    slowAmt = max(slowT > 0 ? slowAmt : 0, amount);
+    slowT = max(slowT, time);
+  }
+
+  void stun(double time) => stunT = max(stunT, boss ? time * 0.3 : time);
+
+  void ignite(double time, double dps) {
+    burnT = max(burnT, time);
+    burnDps = max(burnDps, dps);
+  }
+
+  void _tickStatus(double dt) {
+    burnT = max(0.0, burnT - dt);
+    stickT = max(0.0, stickT - dt);
+    slowT = max(0.0, slowT - dt);
+    stunT = max(0.0, stunT - dt);
+    trapT = max(0.0, trapT - dt);
+    curseT = max(0.0, curseT - dt);
+    fearT = max(0.0, fearT - dt);
+    // Schaden über Zeit in Schritten von 0,5 s
+    final dps = (burnT > 0 ? burnDps : 0) + (stickT > 0 ? stickDps : 0);
+    if (dps <= 0) {
+      _dotAcc = 0;
+      return;
+    }
+    _dotAcc += dt;
+    if (_dotAcc >= 0.5) {
+      _dotAcc -= 0.5;
+      game.hurtEnemy(this, dps * 0.5, false, 0, dot: true);
+    }
+  }
+
   /// Wie stark der Wind diesen Gegner verschiebt.
   double get windFactor => switch (type) {
         EnemyType.crow => WeatherConfig.windFactorLight,
@@ -48,12 +116,28 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   @override
   void update(double dt) {
     if (dead || !game.playing) return;
-    t += dt;
+    _tickStatus(dt);
+    if (dead) return;
     flash -= dt;
+    // Verlangsamung und Zeitlupe (Taschenuhr) wirken auf Bewegung und Angriffe
+    final realDt = dt;
+    dt *= (slowT > 0 ? 1 - slowAmt : 1) * (game.timeSlowT > 0 ? 0.3 : 1);
+    t += dt;
     final p = game.player.position;
     final dx = p.x - x, dy = p.y - y;
     final d = max(1.0, sqrt(dx * dx + dy * dy));
 
+    if (trapT > 0) {
+      // In der Blase: treibt hilflos nach oben
+      vel.x *= pow(0.05, realDt).toDouble();
+      vel.y = -55;
+    } else if (stunT > 0) {
+      vel.scale(pow(0.02, realDt).toDouble());
+    } else if (fearT > 0) {
+      // Flieht vom Spieler weg
+      vel.x += (-dx / d * spd * 1.3 - vel.x) * 4 * dt;
+      if (fly) vel.y += (-dy / d * spd - vel.y) * 4 * dt;
+    } else {
     switch (type) {
       case EnemyType.crow:
         {
@@ -119,6 +203,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         }
     }
 
+    }
+
     position.x = clampD(x + (vel.x + game.weather.windX * windFactor) * dt, r, game.worldW - r);
     position.y += vel.y * dt;
     if (y > kGround - r) {
@@ -129,7 +215,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       position.y = kCeil + r;
       vel.y = max(0.0, vel.y);
     }
-    if (position.distanceTo(p) < r + game.player.r - 3) game.hurtPlayer(dmg);
+    if (!disabled && position.distanceTo(p) < r + game.player.r - 3) game.hurtPlayer(dmg, source: this);
   }
 
   // ---------------- Darstellung: dunkle Fäulnis-Kreaturen ----------------
@@ -138,6 +224,9 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   static const _aura = Color(0xFFB44CFF), _eye = Color(0xFFFF4D6D), _ember = Color(0xFFFF8A3D);
   static const _toxic = Color(0xFF9CFF5A), _crown = Color(0xFFFF5AE0);
 
+  static final _bubble = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2;
   static final _leg = Paint()
     ..strokeWidth = 2.2
     ..strokeCap = StrokeCap.round;
@@ -244,6 +333,19 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     }
     c.restore();
 
+    if (trapT > 0) {
+      // Schillernde Blase
+      _bubble.color = Color.fromRGBO(220, 245, 255, 0.55 + 0.2 * sin(t * 6));
+      c.drawCircle(Offset.zero, r + 7, _bubble);
+      drawCircle(c, -r * 0.4, -r * 0.5, 3, const Color(0xB3FFFFFF));
+    }
+    if (stunT > 0) {
+      for (var i = 0; i < 3; i++) {
+        final a = game.clock * 6 + i * 2.09;
+        drawCircle(c, cos(a) * r * 0.8, -r - 8 + sin(a) * 3, 2.6, const Color(0xFFFFF2A8));
+      }
+    }
+
     if (type == EnemyType.rock && hp < maxHp) {
       drawRect(c, -20, -r - 10, 40, 4, const Color(0xCC120A1E));
       drawRect(c, -20, -r - 10, 40 * clampD(hp / maxHp, 0, 1), 4, _ember);
@@ -262,6 +364,12 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     final pulse = 0.5 + 0.5 * sin(t * 3);
     void f(double lx, double ly, double rad, Color col) => front.add(x + face * lx, y + ly, rad, col);
     void eye(double lx, double ly, double rad, Color col) => f(lx, ly, rad * 6, col.withAlpha(170));
+
+    // Statuseffekte
+    if (burnT > 0) front.add(x, y + r * 0.2, r * 1.7, Color.fromRGBO(255, 130, 40, 0.45 + 0.2 * sin(t * 18)));
+    if (stickT > 0) front.add(x, y, r * 1.3, const Color(0x66FFFFE0));
+    if (slowT > 0) front.add(x, y, r * 1.5, const Color(0x5578C8FF));
+    if (curseT > 0) front.add(x, y - r - 10, 14, const Color(0xCCB44CFF));
 
     // Violette Aura, damit die dunklen Körper vor dunklem Hintergrund lesbar bleiben
     back.add(x, y, r * (type == EnemyType.boss ? 3.0 : 1.9),

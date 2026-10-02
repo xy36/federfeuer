@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:federfeuer/game/gamepad_input.dart';
+import 'package:federfeuer/game/input_bindings.dart';
 import 'package:gamepads/gamepads.dart';
 
 NormalizedGamepadEvent _button(GamepadButton b, double v) => NormalizedGamepadEvent(
@@ -83,6 +84,34 @@ void main() {
       pad.handle(_axis(GamepadAxis.leftStickX, 1));
       pad.clear();
       expect(pad.fly || pad.right, isFalse);
+    });
+
+    test('Neu belegte Knöpfe steuern Fliegen und Aktionen; Menü-A bleibt fest', () {
+      final actions = <int>[];
+      final p = GamepadInput(
+        onNavigate: nav.add,
+        onConfirm: () => confirms++,
+        onBack: () => backs++,
+        onStart: () => starts++,
+        onAction: actions.add,
+      );
+      p.bindings.setPad(InputAction.fly, 0, GamepadButton.b);
+      p.bindings.setPad(InputAction.action2, 0, GamepadButton.a);
+      p.handle(_button(GamepadButton.b, 1));
+      expect(p.fly, isTrue);
+      p.handle(_button(GamepadButton.a, 1));
+      expect(actions, [1]);
+      expect(confirms, 1, reason: 'A bestätigt in Menüs weiterhin');
+      p.handle(_button(GamepadButton.y, 1));
+      expect(actions, [1], reason: 'Y ist nicht mehr belegt');
+    });
+
+    test('Während der Neubelegung geht der Knopf nur an die Erfassung', () {
+      GamepadButton? got;
+      pad.onCapture = (b) => got = b;
+      pad.handle(_button(GamepadButton.start, 1));
+      expect(got, GamepadButton.start);
+      expect(starts, 0);
     });
   });
 }
