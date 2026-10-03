@@ -133,7 +133,7 @@ class Progress {
         UnlockKind.classWave => r.wave >= u.wave && r.classCount(u.cls!) >= u.amount,
         UnlockKind.runLevel => bestLevel >= u.amount,
         UnlockKind.totalMaterial => material >= u.amount,
-        UnlockKind.winWith => won && r.character.id == u.character && r.difficulty >= u.difficulty,
+        UnlockKind.winWith => won && (u.character == null || r.character.id == u.character) && r.difficulty >= u.difficulty,
         UnlockKind.waveWith => r.character.id == u.character && (won || r.wave >= u.wave),
       };
       if (ok) {

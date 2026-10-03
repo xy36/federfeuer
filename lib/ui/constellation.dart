@@ -33,6 +33,7 @@ class ActionConstellation extends StatefulWidget {
     ActionId.magnet,
     ActionId.egg,
     ActionId.storm,
+    ActionId.screech, // zwischen Gewitterwolke und Lichtblitz
     ActionId.flash,
     ActionId.drumroll,
     ActionId.horn,

@@ -76,6 +76,7 @@ class BirdArt {
         BirdLook.owl => (const Offset(7, -8), 11),
         BirdLook.hummingbird => (const Offset(10, -5), 7.5),
         BirdLook.raven => (const Offset(10, -7), 9),
+        BirdLook.eagle => (const Offset(11, -7), 9),
         BirdLook.hen => (const Offset(9, -9), 8.5),
         _ => (const Offset(9, -6), 8.5),
       };
@@ -141,10 +142,12 @@ class BirdArt {
       BirdLook.swallow => 20.0,
       BirdLook.hummingbird => 14.0,
       BirdLook.raven || BirdLook.owl => 18.0,
+      BirdLook.eagle => 23.0,
       BirdLook.hen => 12.0,
       _ => 16.0,
     };
-    final spread = 0.13 + 0.09 * (1 + flap);
+    // Adler: weit gespreizte „Fingerfedern“
+    final spread = (ch.look == BirdLook.eagle ? 0.2 : 0.13) + 0.09 * (1 + flap);
     c.save();
     c.translate(at.dx, at.dy);
     c.rotate((far ? -0.55 : 0.3) - flap * (far ? 1.0 : 0.8));
@@ -208,6 +211,10 @@ class BirdArt {
         }
       case BirdLook.penguin:
         feather(dir, 7, 3, col);
+      case BirdLook.eagle: // weißer Fächer
+        for (var i = -2; i <= 2; i++) {
+          feather(dir + i * 0.15, 13, 3.2, i.isEven ? const Color(0xFFF6F2EA) : const Color(0xFFE0D8CC));
+        }
       case BirdLook.owl:
         for (var i = -2; i <= 2; i++) {
           feather(dir + i * 0.16, 11, 3, i.isEven ? col : tip);
@@ -252,6 +259,8 @@ class BirdArt {
         beak(14, 2.6, const Color(0xFF6A5A4A));
       case BirdLook.raven:
         beak(13, 3.4, const Color(0xFF1A1426), droop: 1.5);
+      case BirdLook.eagle: // kräftiger gelber Hakenschnabel
+        beak(11, 4, const Color(0xFFFFC94A), droop: 4);
       case BirdLook.owl:
         beak(5, 2.6, const Color(0xFF6A4A2A), droop: 2.5);
       case BirdLook.penguin:
@@ -302,6 +311,10 @@ class BirdArt {
         }
       case BirdLook.raven:
         eye(e, 2.6, iris: const Color(0xFFE6B8FF), sclera: const Color(0xFF3A2A50), glow: true);
+      case BirdLook.eagle:
+        eye(e, 2.7, iris: const Color(0xFFFFB347), sclera: const Color(0xFFFFE6A0));
+        // Strenge Braue
+        drawTri(c, e.dx - 4.5, e.dy - 2.4, e.dx + 4, e.dy - 4.2, e.dx + 4.2, e.dy - 2.2, const Color(0xFFE8E0D4));
       case BirdLook.penguin:
         // Weißer Fleck ums Auge
         drawOval(c, e.dx - 1, e.dy + 0.5, 4.5, 3.5, Colors.white);
@@ -339,6 +352,12 @@ class BirdArt {
       case BirdLook.magpie: // weißer Schulterfleck mit blauem Schimmer
         c.drawOval(Rect.fromCenter(center: const Offset(-7, 0), width: 11, height: 8), fillOf(const Color(0xFFF6F6F6)));
         Glow.draw(c, -10, -2, 12, const Color(0x669FD4FF));
+      case BirdLook.eagle: // weißer Kopf mit goldenem Nacken
+        c.drawCircle(head, hr, fillOf(const Color(0xFFF6F2EA)));
+        c.drawArc(Rect.fromCircle(center: head, radius: hr), pi * 0.55, pi * 0.6, false,
+            _line
+              ..strokeWidth = 2.4
+              ..color = const Color(0xFFFFD27A));
       case BirdLook.hen: // Kehllappen
         c.drawOval(Rect.fromCenter(center: head + Offset(hr * 0.75, hr * 0.85), width: 4.5, height: 7), fillOf(const Color(0xFFFF3B3B)));
       default:
@@ -377,6 +396,7 @@ class BirdArt {
     final col = switch (ch.look) {
       BirdLook.penguin || BirdLook.hen => const Color(0xFFFF9F43),
       BirdLook.owl => const Color(0xFFE8D8C0),
+      BirdLook.eagle => const Color(0xFFFFC94A),
       _ => const Color(0xFFE08A3A),
     };
     _line

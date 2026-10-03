@@ -407,6 +407,7 @@ enum ActionId {
   steal('Klauen', 14, '🫳', 'Zieht Material und Herzen im Bild heran.'),
   egg('Ei legen', 2.5, '🥚', 'Ei rollt los und explodiert.'),
   kick('Straußentritt', 4, '🦶', 'Kräftiger Tritt nach vorn: viel Schaden, starker Rückstoß.'),
+  screech('Königsschrei', 10, '🦅', 'Alle Gegner im Bild sind 4 s verflucht und weichen zurück.'),
   // ---- Evolutionen (aus zwei Aktionen verschmolzen)
   sonicBoom('Überschallknall', 4, '💥', 'Sturzflug, am Ende eine Druckwelle mit Schaden und Rückstoß.', evolved: true),
   bubbleRocket('Blasenrakete', 6, '🚀', 'Sturzflug in der Blase – Gegner auf dem Weg werden eingefangen.', evolved: true),
@@ -433,7 +434,9 @@ enum ActionId {
   strobe('Stroboskop', 12, '🔦', 'Drei Lichtblitze nacheinander betäuben Gegner im Bild und schaden ihnen.', evolved: true),
   pickpocket('Langfinger', 18, '🧤', 'Zieht alles im Bild heran, Gegner 4 s in Zeitlupe.', evolved: true),
   sprintKick('Sprintstoß', 6, '💨', 'Sprint nach vorn, der alles auf dem Weg umtritt.', evolved: true),
-  dustCloud('Staubwolke', 10, '🌪️', 'Wirbelt Staub auf: Gegner rundum sind betäubt, nehmen Schaden und fliehen.', evolved: true);
+  dustCloud('Staubwolke', 10, '🌪️', 'Wirbelt Staub auf: Gegner rundum sind betäubt, nehmen Schaden und fliehen.', evolved: true),
+  sunEagle('Sonnenadler', 14, '🌞', 'Blendet und verflucht alle Gegner im Bild, Lichtstrahlen schaden ihnen.', evolved: true),
+  thunderbird('Donnervogel', 16, '⚡', 'Ein Blitz schlägt in jeden Gegner im Bild ein.', evolved: true);
 
   const ActionId(this.label, this.cooldown, this.icon, this.desc, {this.evolved = false});
   final String label, icon, desc;
@@ -487,6 +490,8 @@ const actionRecipes = [
   ActionRecipe(ActionId.steal, ActionId.clock, ActionId.pickpocket),
   ActionRecipe(ActionId.kick, ActionId.dash, ActionId.sprintKick),
   ActionRecipe(ActionId.kick, ActionId.horn, ActionId.dustCloud),
+  ActionRecipe(ActionId.screech, ActionId.flash, ActionId.sunEagle),
+  ActionRecipe(ActionId.screech, ActionId.storm, ActionId.thunderbird),
 ];
 
 ActionRecipe? recipeFor(ActionId x, ActionId y) {
@@ -620,7 +625,7 @@ final Map<String, ItemDef> itemById = {for (final i in itemDefs) i.id: i};
 // ---------------- Charaktere ----------------
 
 /// Aussehen-Variante des Geistvogels.
-enum BirdLook { sparrow, robin, swallow, hummingbird, raven, penguin, woodpecker, owl, magpie, hen, ostrich }
+enum BirdLook { sparrow, robin, swallow, hummingbird, raven, penguin, woodpecker, owl, magpie, hen, ostrich, eagle }
 
 /// Freischalt-Aufgabe eines Charakters.
 enum UnlockKind { start, burnKills, reachWave, winAny, totalKills, classWave, runLevel, totalMaterial, winWith, waveWith }
@@ -673,6 +678,7 @@ class CharacterDef {
     this.wallCling = false,
     this.freeFlight = false,
     this.minDropFall = 0,
+    this.critMul = 2,
     this.radius = 16,
     this.scale = 1,
   });
@@ -709,6 +715,9 @@ class CharacterDef {
 
   /// Hält sich am Weltrand fest, statt abzurutschen (Specht).
   final bool wallCling;
+
+  /// Schadensfaktor kritischer Treffer (Adler: 2,5).
+  final double critMul;
 
   /// Material fällt mindestens so schnell zu Boden (Frack kommt kaum hoch, schwebendes Material wäre unerreichbar).
   final double minDropFall;
@@ -805,6 +814,16 @@ const characterDefs = [
     mods: {Stat.armor: 2}, maxHpMul: 1.6, groundMul: 2.0, thrustMul: 1.25, glideMul: 2.6, stamina: 0.4,
     minDropFall: 70, scale: 1.2, radius: 18,
     unlock: UnlockDef(UnlockKind.waveWith, 'Mit Frack Welle 10 erreichen', character: 'frack', wave: 10),
+  ),
+  CharacterDef(
+    id: 'adler', name: 'Seine Hoheit Aurelius', species: 'Steinadler', icon: '🦅', role: 'Licht/Stein',
+    strength: '+20 % Schaden, Krits ×2,5 statt ×2, Adleraugen +80 Reichweite',
+    weakness: 'groß und leicht zu treffen, träge in Kurven', flight: 'majestätischer Gleiter, sinkt sehr langsam',
+    look: BirdLook.eagle, glow: Color(0xFFFFD27A), body: Color(0xFF5A3A22), belly: Color(0xFF8A6A4A),
+    startWeapons: ['rail', 'rocket', 'pebble'], startAction: ActionId.screech,
+    mods: {Stat.dmg: 20, Stat.range: 80}, critMul: 2.5, speedMul: 1.1, accelMul: 0.7, thrustMul: 1.1, glideMul: 0.4,
+    scale: 1.25, radius: 20,
+    unlock: UnlockDef(UnlockKind.winWith, 'Auf Stufe Adler gewinnen', difficulty: 4),
   ),
 ];
 

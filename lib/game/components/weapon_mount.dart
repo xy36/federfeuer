@@ -112,7 +112,7 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
         game.world.add(Bullet(
           position: position.clone(),
           vel: Vector2(dir * d.speed, 0),
-          dmg: s.dmg * (crit ? 2 : 1),
+          dmg: s.dmg * (crit ? game.run!.character.critMul : 1),
           crit: crit,
           pierce: d.pierce,
           life: s.range / d.speed,
@@ -150,7 +150,7 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
         game.world.add(Bullet(
           position: Vector2(x + cos(aim) * d.length, y + sin(aim) * d.length),
           vel: Vector2(cos(la), sin(la))..scale(speed),
-          dmg: s.dmg * (crit ? 2 : 1),
+          dmg: s.dmg * (crit ? game.run!.character.critMul : 1),
           crit: crit,
           pierce: d.pierce,
           life: lob ? 3 : s.range / d.speed * 1.1,
@@ -185,7 +185,7 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
       da = atan2(sin(da), cos(da));
       if (da.abs() > d.spread / 2 + 0.15) continue;
       final crit = _crit(run);
-      game.hurtEnemy(e, s.dmg * (crit ? 2 : 1), crit, dv.x.sign * s.knock, fx: s, cls: d.cls);
+      game.hurtEnemy(e, s.dmg * (crit ? game.run!.character.critMul : 1), crit, dv.x.sign * s.knock, fx: s, cls: d.cls);
     }
   }
 
@@ -208,7 +208,7 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
           _orbitHits[e] = s.cooldown;
           final crit = _crit(run);
           final dir = (e.x - game.player.x).sign;
-          game.hurtEnemy(e, s.dmg * (crit ? 2 : 1), crit, dir * s.knock, fx: s, cls: d.cls);
+          game.hurtEnemy(e, s.dmg * (crit ? game.run!.character.critMul : 1), crit, dir * s.knock, fx: s, cls: d.cls);
         }
       }
     }

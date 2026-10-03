@@ -1283,6 +1283,25 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         _strobeT = 0;
       case ActionId.kick:
         _kick(p, base);
+      case ActionId.screech:
+        _screech(p, 4 * pw);
+      case ActionId.sunEagle:
+        _screech(p, 4);
+        flashT = 0.35;
+        for (final e in [...enemies]) {
+          if (e.dead || !_inView(e.x)) continue;
+          e.stun(1.5);
+          world.add(Lightning(e.position.clone()));
+          hurtEnemy(e, base * 1.2, false, 0);
+        }
+      case ActionId.thunderbird:
+        shake = max(shake, 8);
+        for (final e in [...enemies]) {
+          if (e.dead || !_inView(e.x)) continue;
+          world.add(Lightning(e.position.clone()));
+          hurtEnemy(e, base * 1.6, false, 0);
+          e.stun(0.5);
+        }
       case ActionId.sprintKick:
         player.dash(0.32, 820);
         _sprintT = 0.32;
@@ -1315,6 +1334,17 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       if (d.length > 80 + e.r || d.x * f < -10) continue;
       hurtEnemy(e, base * 1.8, false, f * 60);
       e.stun(0.5);
+    }
+  }
+
+  /// Königsschrei: alle Gegner im Bild verflucht, sie weichen kurz zurück.
+  void _screech(Vector2 p, double curse) {
+    world.add(Ring(p.clone(), 300, color: const Color(0xFFFFD27A)));
+    shake = max(shake, 6);
+    for (final e in enemies) {
+      if (e.dead || !_inView(e.x)) continue;
+      e.curseT = max(e.curseT, curse);
+      e.fearT = max(e.fearT, 0.8);
     }
   }
 
