@@ -10,15 +10,20 @@ import 'draw.dart';
 import 'light.dart';
 import 'enemy.dart';
 import 'projectiles.dart';
+import 'weapon_art.dart';
 import 'weapon_fx.dart';
 
-/// Eine Waffe, die im Kreis um den Spieler schwebt und automatisch zielt.
+/// Eine Waffe des Spielers: die erste hält der Vogel in den Krallen, die übrigen schweben
+/// im Kreis um ihn. Alle zielen automatisch.
 class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame> {
   WeaponMount(this.weapon, this.index) : super(priority: 11);
 
   final OwnedWeapon weapon;
   final int index;
   double cd = 0.3, ang = 0, kick = 0;
+
+  /// Die erste Waffe hält der Vogel in den Krallen.
+  bool get held => index == 0;
 
   /// Federwirbel: Winkel der kreisenden Klingen, letzte Treffer je Gegner.
   double _orbit = 0;
@@ -34,9 +39,16 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
     if (run == null || !game.playing) return;
 
     final n = run.weapons.length;
-    final p = game.player.position;
-    final a = (n == 1 ? 0.0 : -pi / 2) + index / n * pi * 2;
-    position.setValues(p.x + cos(a) * 30, p.y + sin(a) * 24);
+    final pl = game.player, p = pl.position;
+    if (held) {
+      // In den Krallen: unter dem Bauch, folgt der Blickrichtung
+      final k = pl.character.scale;
+      position.setValues(p.x + pl.face * 3 * k, p.y + pl.r * 0.95);
+    } else {
+      final floaters = n - 1, slot = index - 1;
+      final a = (floaters == 1 ? -pi / 2 : -pi / 2) + slot / max(1, floaters) * pi * 2;
+      position.setValues(p.x + cos(a) * 40, p.y + sin(a) * 32);
+    }
     cd -= dt;
     kick = max(0.0, kick - dt * 8);
 
@@ -226,45 +238,22 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
         drawRect(c, -d.length * 0.5, -0.5, d.length, 1, const Color(0xFF7FBFAA));
         c.restore();
       }
-      return;
     }
-    if (d.kind == WeaponKind.disco) {
-      final bob = sin(game.clock * 3 + index) * 1.5;
-      Glow.draw(c, 0, bob, 30, const Color(0xAAF2D6FF));
-      drawCircle(c, 0, bob, 7, const Color(0xFFB8B0D0));
-      for (var i = 0; i < 6; i++) {
-        final a = _disco * 1.7 + i * pi / 3;
-        drawRect(c, cos(a) * 4 - 1.4, bob + sin(a) * 4 - 1.4, 2.8, 2.8,
-            i.isEven ? const Color(0xFFFFFFFF) : const Color(0xFFFF9FE6));
-      }
-      return;
-    }
+    // Eigenes Modell je Waffe; schwebende wippen leicht, die gehaltene schwingt mit dem Flügelschlag
+    final bob = held ? sin(game.player.anim) * 0.8 : sin(game.clock * 3 + index) * 1.5;
+    final scale = held ? 1.0 : 1.15;
     c.save();
-    c.rotate(ang);
-    if (cos(ang) < 0) c.scale(1, -1);
-    c.translate(-kick * 4, 0);
-    // Schwebender Lichtsplitter in Stufenfarbe, Spitze zeigt aufs Ziel
-    final col = tiers[weapon.tier].color;
-    final len = d.length + 2, w = weapon.id == 'rocket' ? 6.5 : (weapon.id == 'shotgun' ? 5.5 : 4.5);
-    final bob = sin(game.clock * 3 + index) * 1.5;
     c.translate(0, bob);
-    Glow.draw(c, len * 0.35, 0, len + 8, col.withAlpha(110));
-    final shard = Path()
-      ..moveTo(-len * 0.35, 0)
-      ..lineTo(len * 0.1, -w)
-      ..lineTo(len, 0)
-      ..lineTo(len * 0.1, w)
-      ..close();
-    c.drawPath(shard, fillOf(Color.lerp(col, Colors.white, 0.25)!));
-    final core = Path()
-      ..moveTo(-len * 0.15, 0)
-      ..lineTo(len * 0.15, -w * 0.4)
-      ..lineTo(len * 0.8, 0)
-      ..lineTo(len * 0.15, w * 0.4)
-      ..close();
-    c.drawPath(core, fillOf(Colors.white.withAlpha(230)));
-    // Mündungsblitz beim Schuss
-    if (kick > 0) Glow.draw(c, d.length + 2, 0, 10 + 14 * kick, Color.lerp(col, Colors.white, 0.6)!.withAlpha((230 * kick).round()));
+    c.scale(scale);
+    if (WeaponArt.upright(weapon.id)) {
+      // Rundum- und Henkelwaffen drehen nicht mit, nur Spiegelung nach Blickrichtung
+      if (game.player.face < 0) c.scale(-1, 1);
+    } else {
+      c.rotate(ang);
+      if (cos(ang) < 0) c.scale(1, -1);
+    }
+    WeaponArt.draw(c, weapon.id, kick: kick, t: game.clock + index * 0.7, tier: tiers[weapon.tier].color);
+    if (held) WeaponArt.claws(c, const Color(0xFFE08A3A));
     c.restore();
   }
 }
