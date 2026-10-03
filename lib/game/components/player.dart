@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../config.dart';
 import '../federfeuer_game.dart';
-import 'draw.dart';
+import 'bird_art.dart';
 import 'light.dart';
 
 class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
@@ -20,7 +20,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
   CharacterDef _character = characterDefs.first;
   set character(CharacterDef c) {
     _character = c;
-    _body = _bodyPaint(c);
+    _body = BirdArt.bodyPaint(c);
   }
 
   double get r => character.radius;
@@ -146,6 +146,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     }
     final flapping = fly || (c.freeFlight && !grounded);
     anim += dt * (flapping ? 24 : (grounded ? 3 : 8)) * (c.look == BirdLook.hummingbird ? 2.2 : 1);
+    _updateFace(dt);
     iframe = max(0.0, iframe - dt);
 
     _trailT -= dt;
@@ -154,6 +155,31 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
       _trail.insert(0, position.clone());
       if (_trail.length > 16) _trail.removeLast();
     }
+  }
+
+  /// Blinzeln alle paar Sekunden, Blick zum nächsten Gegner.
+  double _blinkT = 2, _blink = 0;
+  Offset _look = Offset.zero;
+
+  void _updateFace(double dt) {
+    _blinkT -= dt;
+    if (_blinkT <= 0) {
+      _blinkT = 2.5 + game.rng.nextDouble() * 3;
+    }
+    final b = _blinkT < 0.16 ? sin(_blinkT / 0.16 * pi) : 0.0;
+    _blink = b;
+    Vector2? near;
+    var best = 400.0 * 400;
+    for (final e in game.enemies) {
+      if (e.dead) continue;
+      final d2 = e.position.distanceToSquared(position);
+      if (d2 < best) {
+        best = d2;
+        near = e.position;
+      }
+    }
+    final target = near == null ? Offset.zero : Offset((near.x - x) * face, near.y - y) / max(1.0, sqrt(best)) * 1.0;
+    _look = Offset.lerp(_look, target, min(1.0, dt * 8))!;
   }
 
   /// Im Titelbildschirm zieht der Vogel ruhige Bögen unter dem Menü.
@@ -180,24 +206,8 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
   final _trail = <Vector2>[];
   double _trailT = 0;
 
-  static Paint bodyPaint(CharacterDef ch) => _bodyPaint(ch);
-  static Paint _bodyPaint(CharacterDef ch) => Paint()
-    ..shader = RadialGradient(
-      center: const Alignment(0.25, -0.3),
-      colors: [
-        const Color(0xFFFFFFFF),
-        Color.lerp(ch.belly, const Color(0xFFFFFFFF), 0.4)!,
-        ch.body,
-        Color.lerp(ch.body, const Color(0xFF000000), 0.35)!,
-      ],
-      stops: const [0, 0.28, 0.72, 1],
-    ).createShader(Rect.fromCircle(center: Offset.zero, radius: 16));
-  Paint _body = _bodyPaint(characterDefs.first);
-  static final _wing = Paint()..blendMode = BlendMode.plus;
-  static final _lens = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 1.5
-    ..color = const Color(0xFFE6FDFF);
+  static Paint bodyPaint(CharacterDef ch) => BirdArt.bodyPaint(ch);
+  Paint _body = BirdArt.bodyPaint(characterDefs.first);
   static final _bubble = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2.5;
@@ -236,7 +246,15 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     final upright = ch.look == BirdLook.penguin && slideT <= 0;
     c.rotate(slideT > 0 ? pi / 2.4 : (upright ? 0 : clampD(vel.y / 1000, -0.35, 0.35)));
     final fl = sin(anim) * 0.9;
-    drawBird(c, ch, _body, fl, upright);
+    drawBird(c, ch, _body, fl, upright, pose: BirdPose(
+      flap: fl,
+      upright: upright,
+      blink: _blink,
+      look: _look,
+      walk: grounded && vel.x.abs() > 20 && slideT <= 0 ? x * 0.12 : null,
+      holding: (game.run?.weapons.isNotEmpty ?? false) && !grounded,
+      sway: clampD(vel.x * face / 300, -1, 1),
+    ));
     if (webbed) _drawWeb(c);
     c.restore();
   }
@@ -257,131 +275,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
   }
 
   /// Vogel ohne Schein und Schweif in lokalen Koordinaten (auch für die Vorschau im Menü).
-  static void drawBird(Canvas c, CharacterDef ch, Paint body, double fl, bool upright) {
-    final g = ch.glow;
-    final dark = Color.lerp(ch.body, const Color(0xFF000000), 0.5)!;
+  static void drawBird(Canvas c, CharacterDef ch, Paint body, double fl, bool upright, {BirdPose? pose}) =>
+      BirdArt.draw(c, ch, body, pose ?? BirdPose(flap: fl, upright: upright));
 
-    // Hinterer Flügel und Schwanzfedern aus Licht
-    _wing.color = g.withValues(alpha: 0.6);
-    _feather(c, -3, -4, upright ? 10 : 15, 7, -0.6 + fl * (upright ? 0.4 : 1));
-    _tail(c, ch, g);
-
-    // Körper mit Lichtkern
-    if (upright) {
-      c.save();
-      c.scale(0.85, 1.2);
-      c.drawCircle(Offset.zero, 16, body);
-      c.restore();
-    } else {
-      c.drawCircle(Offset.zero, 16, body);
-    }
-    drawOval(c, 4, 6, 8, upright ? 11 : 6, ch.belly.withValues(alpha: 0.85));
-    _head(c, ch, dark);
-
-    // Vorderer Flügel, leuchtet beim Flügelschlag auf
-    _wing.color = Color.lerp(g, const Color(0xFFFFFFFF), 0.35)!.withValues(alpha: 0.75 + 0.2 * fl.abs());
-    _feather(c, -4, 3, upright ? 9 : 14, 7, 0.35 - fl * (upright ? 0.3 : 0.8));
-  }
-
-  /// Schwanz je Vogelart.
-  static void _tail(Canvas c, CharacterDef ch, Color g) {
-    final col = Color.lerp(ch.body, g, 0.4)!;
-    switch (ch.look) {
-      case BirdLook.swallow:
-        drawTri(c, -12, -3, -32, -13, -22, 0, col);
-        drawTri(c, -12, 2, -32, 10, -22, 0, col);
-      case BirdLook.magpie:
-        drawTri(c, -12, -3, -40, -6, -38, 3, col);
-      case BirdLook.penguin:
-        drawTri(c, -10, 12, -18, 20, -6, 18, col);
-      case BirdLook.hen:
-        drawTri(c, -12, -6, -24, -22, -18, 2, col);
-        drawTri(c, -12, -2, -26, -14, -20, 4, Color.lerp(col, const Color(0xFFFFFFFF), 0.3)!);
-      case BirdLook.hummingbird:
-        drawTri(c, -12, -2, -24, -6, -23, 3, col);
-      default:
-        drawTri(c, -13, -3, -27, -11, -25, 6, col);
-    }
-    Glow.draw(c, -24, -2, 16, g.withValues(alpha: 0.5));
-  }
-
-  /// Kopf, Schnabel und Augen je Vogelart.
-  static void _head(Canvas c, CharacterDef ch, Color dark) {
-    const beakOrange = Color(0xFFFF8A3D);
-    switch (ch.look) {
-      case BirdLook.sparrow:
-        drawTri(c, 13, -3, 24, 1, 13, 5, beakOrange);
-        // Fliegerbrille: dunkles Band, leuchtendes Glas
-        drawRect(c, -15, -9, 26, 4.5, const Color(0xFF3A2440));
-        Glow.draw(c, 7, -6.5, 14, const Color(0xB39BF6FF));
-        drawCircle(c, 7, -6.5, 5, const Color(0xFFBFF8FF));
-        c.drawCircle(const Offset(7, -6.5), 5, _lens);
-        drawCircle(c, 8.5, -6.5, 1.8, const Color(0xFF1B1030));
-      case BirdLook.robin:
-        drawTri(c, 13, -3, 22, 0, 13, 3, const Color(0xFF5A3A2A));
-        _eye(c, 8, -6, 2.6, const Color(0xFF1B1030));
-      case BirdLook.swallow:
-        drawTri(c, 13, -2, 21, 0, 13, 2, const Color(0xFF2A2A3A));
-        drawOval(c, 10, 1, 4, 3, const Color(0xFFB0402A));
-        _eye(c, 8, -6, 2.4, const Color(0xFF1B1030));
-      case BirdLook.hummingbird:
-        drawTri(c, 13, -2, 34, -1, 13, 1, const Color(0xFF2A2A3A));
-        _eye(c, 8, -6, 2.6, const Color(0xFF1B1030));
-        Glow.draw(c, 6, 4, 14, const Color(0x99FF5AD2));
-      case BirdLook.raven:
-        drawTri(c, 12, -5, 27, 1, 12, 5, const Color(0xFF1A1426));
-        Glow.draw(c, 8, -6, 14, const Color(0xCCB44CFF));
-        drawCircle(c, 8, -6, 2.8, const Color(0xFFE6B8FF));
-      case BirdLook.penguin:
-        drawTri(c, 12, -10, 22, -8, 12, -6, beakOrange);
-        drawOval(c, 4, -12, 9, 6, dark);
-        drawCircle(c, 8, -12, 2.6, const Color(0xFFFFFFFF));
-        drawCircle(c, 8.6, -12, 1.4, const Color(0xFF1B1030));
-      case BirdLook.woodpecker:
-        drawTri(c, 13, -4, 30, -1, 13, 2, const Color(0xFF6A5A4A));
-        drawOval(c, -2, -15, 9, 5, const Color(0xFFFF3B3B));
-        Glow.draw(c, -2, -15, 18, const Color(0x99FF3B3B));
-        drawRect(c, -10, -4, 22, 3, const Color(0xFFF2EEE6));
-        _eye(c, 8, -7, 2.4, const Color(0xFF1B1030));
-      case BirdLook.owl:
-        drawTri(c, -6, -12, -2, -24, 2, -12, dark);
-        drawTri(c, 4, -12, 10, -23, 12, -10, dark);
-        drawTri(c, 12, -1, 17, 3, 12, 6, const Color(0xFF6A4A2A));
-        Glow.draw(c, 5, -5, 22, const Color(0x99FFE08A));
-        drawCircle(c, 1, -5, 5, const Color(0xFFFFE08A));
-        drawCircle(c, 10, -5, 5, const Color(0xFFFFE08A));
-        drawCircle(c, 2, -5, 2.2, const Color(0xFF1B1030));
-        drawCircle(c, 11, -5, 2.2, const Color(0xFF1B1030));
-      case BirdLook.magpie:
-        drawTri(c, 13, -3, 23, 0, 13, 3, const Color(0xFF1A1A22));
-        drawOval(c, -6, 6, 6, 6, const Color(0xFFF6F6F6));
-        _eye(c, 8, -6, 2.4, const Color(0xFF1B1030));
-        Glow.draw(c, -10, -2, 12, const Color(0x999FD4FF));
-      case BirdLook.hen:
-        drawTri(c, 13, -3, 21, 0, 13, 3, const Color(0xFFFFB347));
-        drawCircle(c, 4, -16, 4, const Color(0xFFFF3B3B));
-        drawCircle(c, 9, -15, 3.5, const Color(0xFFFF3B3B));
-        drawOval(c, 14, 6, 2.5, 4, const Color(0xFFFF3B3B));
-        _eye(c, 8, -6, 2.4, const Color(0xFF1B1030));
-    }
-  }
-
-  static void _eye(Canvas c, double x, double y, double r, Color col) {
-    drawCircle(c, x, y, r + 1.4, const Color(0xFFFFFFFF));
-    drawCircle(c, x + 0.6, y, r, col);
-  }
-
-  /// Lichtflügel als gestreckte Tropfenform, additiv gezeichnet.
-  static void _feather(Canvas c, double x, double y, double rx, double ry, double rot) {
-    c.save();
-    c.translate(x, y);
-    c.rotate(rot);
-    final p = Path()
-      ..moveTo(rx, 0)
-      ..quadraticBezierTo(0, -ry * 1.3, -rx, 0)
-      ..quadraticBezierTo(0, ry * 1.1, rx, 0)
-      ..close();
-    c.drawPath(p, _wing);
-    c.restore();
-  }
 }
