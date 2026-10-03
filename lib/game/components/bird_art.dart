@@ -81,6 +81,10 @@ class BirdArt {
       };
 
   static void draw(Canvas c, CharacterDef ch, Paint body, BirdPose pose) {
+    if (ch.look == BirdLook.ostrich) {
+      _ostrich(c, ch, body, pose);
+      return;
+    }
     final g = ch.glow;
     final dark = Color.lerp(ch.body, Colors.black, 0.55)!;
     final up = pose.upright;
@@ -395,6 +399,116 @@ class BirdArt {
         c.drawLine(foot, foot + const Offset(3.5, 0), _line);
         c.drawLine(foot, foot + const Offset(-2, 0.5), _line);
       }
+    }
+  }
+
+  // ---------------- Strauß ----------------
+
+  /// Strauß: langer Hals, kleiner Kopf mit Wimpern, fluffiger dunkler Körper mit weißen
+  /// Flügelfedern, lange rosa Beine mit nach hinten gerichtetem Knie (immer sichtbar).
+  static void _ostrich(Canvas c, CharacterDef ch, Paint body, BirdPose pose) {
+    const skin = Color(0xFFE8A8B8), skinDark = Color(0xFFC07888);
+    final g = ch.glow;
+    final walk = pose.walk;
+
+    // Beine: Oberschenkel, Knie hinten, Unterschenkel, zwei Zehen
+    _line.strokeCap = StrokeCap.round;
+    for (final (i, hx) in [(0, -3.0), (1, 2.0)]) {
+      final ph = (walk ?? 0) + i * pi;
+      final swing = walk != null ? sin(ph) * 7 : (pose.holding ? 2.0 : -2.0 + i * 3);
+      final lift = walk != null ? max(0.0, cos(ph)) * 4 : 0.0;
+      final hip = Offset(hx, 2);
+      final knee = Offset(hx - 3 + swing * 0.3, 8 - lift * 0.5);
+      final foot = Offset(hx + swing, 15 - lift);
+      _line
+        ..strokeWidth = 3
+        ..color = i == 0 ? skinDark : skin;
+      c.drawLine(hip, knee, _line);
+      _line.strokeWidth = 2.2;
+      c.drawLine(knee, foot, _line);
+      c.drawLine(foot, foot + const Offset(4, 0.5), _line);
+      c.drawLine(foot, foot + const Offset(1.5, 1.5), _line);
+    }
+
+    // Hinterer Flügel (weiße Federn)
+    final lift = pose.flap * 0.25;
+    void plumes(Offset at, double rot, double alpha) {
+      c.save();
+      c.translate(at.dx, at.dy);
+      c.rotate(rot);
+      for (var i = 0; i < 4; i++) {
+        c.drawOval(Rect.fromCenter(center: Offset(-4.0 - i * 3, i * 1.2), width: 9, height: 5.5),
+            fillOf(Color.lerp(ch.belly, Colors.white, 0.3)!.withValues(alpha: alpha)));
+      }
+      c.restore();
+    }
+
+    plumes(const Offset(-6, -9), -0.4 - lift, 0.6);
+    // Schwanzbüschel
+    for (var i = 0; i < 3; i++) {
+      c.drawOval(Rect.fromCenter(center: Offset(-18 - i * 1.5, -9 + i * 3.0 + pose.sway * 2), width: 8, height: 5),
+          fillOf(Colors.white.withValues(alpha: 0.9)));
+    }
+
+    // Körper mit fluffigem Saum
+    final bodyRect = Rect.fromCenter(center: const Offset(-3, -4), width: 30, height: 20);
+    c.drawOval(bodyRect, body);
+    for (var i = 0; i < 7; i++) {
+      final x = bodyRect.left + 4 + i * 3.6;
+      drawCircle(c, x, bodyRect.bottom - 2 + (i.isEven ? 0.8 : 0), 2.4, Color.lerp(ch.body, Colors.black, 0.25)!);
+    }
+    _rim.color = g.withValues(alpha: 0.5);
+    c.drawArc(bodyRect.deflate(0.5), pi * 1.05, pi * 0.8, false, _rim);
+
+    // Hals mit leichter S-Kurve, wippt beim Laufen
+    final bob = walk != null ? sin(walk * 2) * 1.2 : 0.0;
+    final head = Offset(14, -26 + bob);
+    final neck = Path()
+      ..moveTo(7, -9)
+      ..cubicTo(13, -12, 9, -20, head.dx - 1, head.dy + 3);
+    _line
+      ..strokeWidth = 4.2
+      ..color = skin;
+    c.drawPath(neck, _line);
+    _line
+      ..strokeWidth = 1.4
+      ..color = Colors.white.withValues(alpha: 0.35);
+    c.drawPath(neck, _line);
+
+    // Vorderer Flügel
+    plumes(const Offset(-2, -6), 0.15 - lift * 0.6, 0.95);
+
+    // Kopf: flacher breiter Schnabel, großes Auge mit Wimpern
+    c.drawCircle(head, 5, fillOf(skin));
+    final beak = Path()
+      ..moveTo(head.dx + 3, head.dy - 1)
+      ..quadraticBezierTo(head.dx + 10, head.dy - 0.5, head.dx + 10, head.dy + 1.2)
+      ..quadraticBezierTo(head.dx + 6, head.dy + 2.6, head.dx + 3, head.dy + 2)
+      ..close();
+    c.drawPath(beak, fillOf(const Color(0xFFE8C090)));
+    final eye = head + const Offset(1.5, -1);
+    drawCircle(c, eye.dx, eye.dy, 2.9, Colors.white);
+    final look = Offset(pose.look.dx.clamp(-1.0, 1.0), pose.look.dy.clamp(-1.0, 1.0));
+    final pp = eye + look * 0.9;
+    drawCircle(c, pp.dx, pp.dy, 1.8, const Color(0xFF1B1030));
+    drawCircle(c, pp.dx - 0.6, pp.dy - 0.7, 0.6, Colors.white);
+    if (pose.blink > 0) {
+      c.save();
+      c.clipRect(Rect.fromLTRB(eye.dx - 3.5, eye.dy - 3.5, eye.dx + 3.5, eye.dy - 3.5 + 7 * pose.blink));
+      drawCircle(c, eye.dx, eye.dy, 3.2, skin);
+      c.restore();
+    }
+    // Wimpern
+    _line
+      ..strokeWidth = 0.8
+      ..color = const Color(0xFF1B1030);
+    for (var i = 0; i < 3; i++) {
+      final a = -pi / 2 - 0.5 + i * 0.5;
+      c.drawLine(eye + Offset(cos(a) * 2.9, sin(a) * 2.9), eye + Offset(cos(a) * 4.6, sin(a) * 4.6), _line);
+    }
+    // Ein paar Federn auf dem Kopf
+    for (var i = 0; i < 3; i++) {
+      drawCircle(c, head.dx - 2 + i * 1.6, head.dy - 4.6, 1.3, Color.lerp(skin, Colors.white, 0.4)!);
     }
   }
 }

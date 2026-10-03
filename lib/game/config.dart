@@ -406,6 +406,7 @@ enum ActionId {
   drumroll('Trommelwirbel', 9, '🥁', 'Betäubt nahe Gegner.'),
   steal('Klauen', 14, '🫳', 'Zieht Material und Herzen im Bild heran.'),
   egg('Ei legen', 2.5, '🥚', 'Ei rollt los und explodiert.'),
+  kick('Straußentritt', 4, '🦶', 'Kräftiger Tritt nach vorn: viel Schaden, starker Rückstoß.'),
   // ---- Evolutionen (aus zwei Aktionen verschmolzen)
   sonicBoom('Überschallknall', 4, '💥', 'Sturzflug, am Ende eine Druckwelle mit Schaden und Rückstoß.', evolved: true),
   bubbleRocket('Blasenrakete', 6, '🚀', 'Sturzflug in der Blase – Gegner auf dem Weg werden eingefangen.', evolved: true),
@@ -430,7 +431,9 @@ enum ActionId {
   goldenEgg('Goldenes Ei', 5, '🪺', 'Ei wie gewohnt – die Explosion lässt 5 Material regnen.', evolved: true),
   sledRide('Schlittenfahrt', 8, '❄️', 'Rutscht 1,2 s in einer Blase; berührte Gegner werden eingefangen.', evolved: true),
   strobe('Stroboskop', 12, '🔦', 'Drei Lichtblitze nacheinander betäuben Gegner im Bild und schaden ihnen.', evolved: true),
-  pickpocket('Langfinger', 18, '🧤', 'Zieht alles im Bild heran, Gegner 4 s in Zeitlupe.', evolved: true);
+  pickpocket('Langfinger', 18, '🧤', 'Zieht alles im Bild heran, Gegner 4 s in Zeitlupe.', evolved: true),
+  sprintKick('Sprintstoß', 6, '💨', 'Sprint nach vorn, der alles auf dem Weg umtritt.', evolved: true),
+  dustCloud('Staubwolke', 10, '🌪️', 'Wirbelt Staub auf: Gegner rundum sind betäubt, nehmen Schaden und fliehen.', evolved: true);
 
   const ActionId(this.label, this.cooldown, this.icon, this.desc, {this.evolved = false});
   final String label, icon, desc;
@@ -482,6 +485,8 @@ const actionRecipes = [
   ActionRecipe(ActionId.bellySlide, ActionId.bubbleShield, ActionId.sledRide),
   ActionRecipe(ActionId.drumroll, ActionId.flash, ActionId.strobe),
   ActionRecipe(ActionId.steal, ActionId.clock, ActionId.pickpocket),
+  ActionRecipe(ActionId.kick, ActionId.dash, ActionId.sprintKick),
+  ActionRecipe(ActionId.kick, ActionId.horn, ActionId.dustCloud),
 ];
 
 ActionRecipe? recipeFor(ActionId x, ActionId y) {
@@ -615,10 +620,10 @@ final Map<String, ItemDef> itemById = {for (final i in itemDefs) i.id: i};
 // ---------------- Charaktere ----------------
 
 /// Aussehen-Variante des Geistvogels.
-enum BirdLook { sparrow, robin, swallow, hummingbird, raven, penguin, woodpecker, owl, magpie, hen }
+enum BirdLook { sparrow, robin, swallow, hummingbird, raven, penguin, woodpecker, owl, magpie, hen, ostrich }
 
 /// Freischalt-Aufgabe eines Charakters.
-enum UnlockKind { start, burnKills, reachWave, winAny, totalKills, classWave, runLevel, totalMaterial, winWith }
+enum UnlockKind { start, burnKills, reachWave, winAny, totalKills, classWave, runLevel, totalMaterial, winWith, waveWith }
 
 class UnlockDef {
   const UnlockDef(this.kind, this.text, {this.amount = 0, this.cls, this.wave = 0, this.character, this.difficulty = 1});
@@ -790,6 +795,16 @@ const characterDefs = [
     look: BirdLook.hen, glow: Color(0xFFFFE08A), body: Color(0xFFF6EEDC), belly: Color(0xFFFFFFFF),
     startAction: ActionId.egg, mods: {Stat.armor: 2}, maxHpMul: 1.4, stamina: 0.55, groundMul: 1.1, scale: 1.1, radius: 17,
     unlock: UnlockDef(UnlockKind.winWith, 'Mit dem Kampfspatz auf Falke gewinnen', character: 'spatz', difficulty: 3),
+  ),
+  CharacterDef(
+    id: 'strauss', name: 'Rudi Rennfeder', species: 'Strauß', icon: '🦤', role: 'Boden/Stein',
+    strength: 'schnellster Läufer (+100 % am Boden), +60 % Max-HP, +2 Rüstung; Material fällt immer zu Boden',
+    weakness: 'kann nicht fliegen – nur hohe Sprünge, sinkt schnell', flight: 'rennt und springt, keine Flügel zum Fliegen',
+    look: BirdLook.ostrich, glow: Color(0xFFFFC2D6), body: Color(0xFF2A2430), belly: Color(0xFFF4EEF4),
+    startWeapons: ['pebble', 'bowling', 'feather'], startAction: ActionId.kick,
+    mods: {Stat.armor: 2}, maxHpMul: 1.6, groundMul: 2.0, thrustMul: 1.25, glideMul: 2.6, stamina: 0.4,
+    minDropFall: 70, scale: 1.2, radius: 18,
+    unlock: UnlockDef(UnlockKind.waveWith, 'Mit Frack Welle 10 erreichen', character: 'frack', wave: 10),
   ),
 ];
 

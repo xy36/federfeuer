@@ -325,7 +325,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     r.biome = biome;
     timeSlowT = shieldT = stormT = slideT = flashT = freezeT = 0;
     timeBubbleT = vacuumT = goldenT = hoardT = _boomT = _rocketT = 0;
-    _cometT = _bounceT = _magnetT = _strobeT = 0;
+    _sprintT = _cometT = _bounceT = _magnetT = _strobeT = 0;
     _drums = _strobes = 0;
     lightShieldCd = 0;
     _puddles.setArenaWidth(worldW);
@@ -1062,7 +1062,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   double _stormEvery = 0.25, _stormRadius = 460;
 
   /// Kometenschweif, Prallblase, Elektromagnet, Stroboskop.
-  double _cometT = 0, _bounceT = 0, _magnetT = 0, _magnetTick = 0, _strobeT = 0;
+  double _sprintT = 0, _cometT = 0, _bounceT = 0, _magnetT = 0, _magnetTick = 0, _strobeT = 0;
   int _strobes = 0;
   bool _slideTrap = false;
   final _bounceCd = <Enemy, double>{};
@@ -1281,10 +1281,40 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       case ActionId.strobe:
         _strobes = 3;
         _strobeT = 0;
+      case ActionId.kick:
+        _kick(p, base);
+      case ActionId.sprintKick:
+        player.dash(0.32, 820);
+        _sprintT = 0.32;
+        _slideHit.clear();
+      case ActionId.dustCloud:
+        _kick(p, base);
+        world.add(Ring(p.clone(), 210, color: const Color(0xFFD8C8B0)));
+        burst(p, const Color(0xFFD8C8B0), 26, 240);
+        for (final e in [...enemies]) {
+          if (e.dead || e.position.distanceTo(p) > 210 + e.r) continue;
+          e.stun(1.2);
+          e.fearT = max(e.fearT, 3);
+          hurtEnemy(e, base * 0.8, false, 0);
+        }
       case ActionId.pickpocket:
         _pullDrops();
         timeSlowT = max(timeSlowT, 4);
         burst(p, const Color(0xFF9FD4FF), 16, 240);
+    }
+  }
+
+  /// Straußentritt: Halbkreis vor dem Vogel (Reichweite 80), viel Schaden und Rückstoß.
+  void _kick(Vector2 p, double base) {
+    final f = player.face;
+    world.add(WhipArc(p.clone()..y += player.r * 0.6, f > 0 ? 0 : pi, 80, 1.8));
+    shake = max(shake, 5);
+    for (final e in [...enemies]) {
+      if (e.dead) continue;
+      final d = e.position - p;
+      if (d.length > 80 + e.r || d.x * f < -10) continue;
+      hurtEnemy(e, base * 1.8, false, f * 60);
+      e.stun(0.5);
     }
   }
 
@@ -1373,6 +1403,16 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       if (vacuumT <= 0) {
         shake = max(shake, 9);
         _pushAway(p, 190, 1.5, dmg: actionDamage * 1.5, color: const Color(0xFFCFFFF0));
+      }
+    }
+    if (_sprintT > 0) {
+      // Sprintstoß: tritt alles auf dem Weg um
+      _sprintT -= dt;
+      for (final e in [...enemies]) {
+        if (e.dead || _slideHit.contains(e) || e.position.distanceTo(p) > e.r + player.r + 22) continue;
+        _slideHit.add(e);
+        hurtEnemy(e, actionDamage * 1.4 * _actionPower, false, player.face * 50);
+        e.stun(0.6);
       }
     }
     if (_cometT > 0) {

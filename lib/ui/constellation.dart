@@ -36,6 +36,7 @@ class ActionConstellation extends StatefulWidget {
     ActionId.flash,
     ActionId.drumroll,
     ActionId.horn,
+    ActionId.kick, // zwischen Hupe und (am Kreis wieder vorn) Sturzflug
   ];
 
   @override

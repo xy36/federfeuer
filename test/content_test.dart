@@ -42,8 +42,8 @@ void main() {
       }
     });
 
-    test('Zehn Vögel, alle Startwaffen existieren, nur der Spatz ist frei', () {
-      expect(characterDefs.length, 10);
+    test('Elf Vögel, alle Startwaffen existieren, nur der Spatz ist frei', () {
+      expect(characterDefs.length, 11);
       for (final c in characterDefs) {
         if (c.startWeapon != null) expect(weaponDefs.containsKey(c.startWeapon), isTrue, reason: c.id);
       }
@@ -160,6 +160,16 @@ void main() {
       expect(RunState(null, difficulty: 1).dropFallSpeed, 0);
       expect(RunState(null, difficulty: 1, characterId: 'frack').dropFallSpeed, 70);
       expect(RunState(null, difficulty: 5, characterId: 'frack').dropFallSpeed, 70);
+    });
+
+    test('Strauß: zäh, schnell am Boden, Material fällt; frei mit Frack ab Welle 10', () {
+      final r = RunState(null, characterId: 'strauss');
+      expect(r.maxHp, (20 * 1.6).roundToDouble());
+      expect(r.actions.single.id, ActionId.kick);
+      expect(r.dropFallSpeed, 70);
+      final p = Progress();
+      expect(p.checkUnlocks(RunState(null, characterId: 'frack')..wave = 9, won: false).map((c) => c.id), isNot(contains('strauss')));
+      expect(p.checkUnlocks(RunState(null, characterId: 'frack')..wave = 10, won: false).map((c) => c.id), contains('strauss'));
     });
 
     test('Glitzer: Shop 15 % günstiger, nur 4 Slots', () {

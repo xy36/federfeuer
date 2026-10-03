@@ -134,6 +134,7 @@ class Progress {
         UnlockKind.runLevel => bestLevel >= u.amount,
         UnlockKind.totalMaterial => material >= u.amount,
         UnlockKind.winWith => won && r.character.id == u.character && r.difficulty >= u.difficulty,
+        UnlockKind.waveWith => r.character.id == u.character && (won || r.wave >= u.wave),
       };
       if (ok) {
         characters.add(c.id);
