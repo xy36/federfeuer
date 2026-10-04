@@ -12,6 +12,7 @@ import 'effects.dart';
 import 'light.dart';
 import 'pickups.dart';
 import 'projectiles.dart';
+import 'rot_art.dart';
 import 'transient.dart';
 
 part 'enemy_boss.dart';
@@ -343,14 +344,9 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.rift:
         _spawnerRender(c, k, pulse);
       case EnemyType.crow:
-        final fl = sin(t * 16);
-        // Zerfranste Flügel
-        drawTri(c, -4, -2, -20, -15 - fl * 8, 6, -4, k(_body2));
-        drawTri(c, -10, -4, -22, -6 - fl * 6, -4, -1, k(_body2));
-        drawOval(c, 0, 0, 14, 10, k(_body));
-        drawTri(c, -2, 0, -18, 9 + fl * 6, 6, 2, k(_body2));
-        drawTri(c, 11, -3, 21, 1, 11, 3, k(const Color(0xFF3A2440)));
-        _glowEye(c, 6, -3, 2.4, _eye);
+        // Fäulnis-Stil (Test an der Krähe)
+        RotArt.crow(c, t, sin(t * 16), pulse, hit: hit);
+        _slitEye(c, 6, -5, 2.6, _eye);
       case EnemyType.beetle:
         for (var i = -1; i <= 1; i++) {
           final lg = sin(t * 14 + i) * 3;
@@ -458,6 +454,16 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     }
   }
 
+  /// Glühendes Schlitzauge (Fäulnis-Stil).
+  static void _slitEye(Canvas c, double x, double y, double r, Color col) {
+    final p = Path()
+      ..moveTo(x - r * 1.2, y + r * 0.2)
+      ..quadraticBezierTo(x, y - r * 0.9, x + r * 1.1, y - r * 0.3)
+      ..quadraticBezierTo(x, y + r * 0.5, x - r * 1.2, y + r * 0.2)
+      ..close();
+    c.drawPath(p, fillOf(Color.lerp(col, Colors.white, 0.35)!));
+  }
+
   static void _glowEye(Canvas c, double x, double y, double r, Color col) {
     drawCircle(c, x, y, r, Color.lerp(col, Colors.white, 0.45)!);
   }
@@ -512,7 +518,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.rift:
         _spawnerGlows(f, front, pulse);
       case EnemyType.crow:
-        eye(6, -3, 2.4, _eye);
+        // Schlitzauge: kleines, scharfes Glühen statt großem Lichthof
+        f(6, -5, 7, _eye.withAlpha(200));
       case EnemyType.beetle:
         f(-2, -3, 16, _ember.withAlpha((60 + 50 * pulse).round()));
         eye(17, -1.5, 2, _ember);
