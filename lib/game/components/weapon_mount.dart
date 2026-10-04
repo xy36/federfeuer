@@ -253,7 +253,7 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
       if (cos(ang) < 0) c.scale(1, -1);
     }
     WeaponArt.draw(c, weapon.id, kick: kick, t: game.clock + index * 0.7, tier: tiers[weapon.tier].color);
-    if (held) WeaponArt.claws(c, const Color(0xFFE08A3A));
+    if (held) WeaponArt.claws(c, Color.lerp(game.player.character.glow, Colors.white, 0.4)!.withValues(alpha: 0.85));
     c.restore();
   }
 }

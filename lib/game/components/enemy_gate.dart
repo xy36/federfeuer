@@ -131,68 +131,14 @@ extension _Gatekeepers on Enemy {
   // ---------------- Darstellung ----------------
 
   void _gateRender(Canvas c, Color Function(Color) k, double pulse) {
-    const body = Enemy._body, body2 = Enemy._body2;
+    final look = _bossLook(flash > 0, pulse);
     switch (type) {
       case EnemyType.strawKing:
-        // Riesige Vogelscheuche mit Kürbiskopf und Strohkrone
-        drawRect(c, -4, -10, 8, r + 12, k(const Color(0xFF2A1B12)));
-        drawRect(c, -r * 1.2, -14, r * 2.4, 6, k(const Color(0xFF2A1B12)));
-        for (final sx in [-r * 1.2, r * 1.2 - 8]) {
-          drawTri(c, sx, -14, sx + 8, -14, sx + 4, 8, k(const Color(0xFF6A5222)));
-        }
-        drawOval(c, 0, 8, 18, 22, k(body2));
-        drawOval(c, 0, -30, 20, 17, k(const Color(0xFF3A2410)));
-        for (var i = 0; i < 5; i++) {
-          final sx = -16.0 + i * 8;
-          drawTri(c, sx - 3, -44, sx + 3, -44, sx, -60 - (i.isEven ? 6 : 0), k(const Color(0xFF8A6A2A)));
-        }
-        // Glühendes Kürbisgesicht
-        final glow = Color.lerp(Enemy._ember, Colors.white, 0.3 + 0.4 * warn)!;
-        drawTri(c, -11, -36, -4, -36, -7.5, -29, glow);
-        drawTri(c, 4, -36, 11, -36, 7.5, -29, glow);
-        drawRect(c, -10, -24, 20, 4, glow);
+        BossArt.strawKing(c, look, r);
       case EnemyType.bell:
-        // Glocke an einer Kette, Klöppel schwingt
-        final sw = sin(t * 3) * 0.15;
-        c.save();
-        c.rotate(sw);
-        final bell = Path()
-          ..moveTo(-12, -r)
-          ..quadraticBezierTo(-r * 0.9, -r * 0.6, -r, r * 0.7)
-          ..lineTo(r, r * 0.7)
-          ..quadraticBezierTo(r * 0.9, -r * 0.6, 12, -r)
-          ..close();
-        c.drawPath(bell, fillOf(k(body)));
-        drawRect(c, -r - 3, r * 0.6, r * 2 + 6, 6, k(body2));
-        Enemy._crack.color = const Color(0xFFFFC94A).withAlpha((120 + 110 * max(pulse, warn)).round());
-        c.drawPath(
-            Path()
-              ..moveTo(-r * 0.3, -r * 0.6)
-              ..lineTo(-r * 0.1, -r * 0.1)
-              ..lineTo(-r * 0.35, r * 0.25)
-              ..moveTo(r * 0.2, -r * 0.4)
-              ..lineTo(r * 0.35, r * 0.3),
-            Enemy._crack);
-        drawCircle(c, sin(t * 3 + 1) * 8, r * 0.85, 6, k(body2));
-        c.restore();
+        BossArt.bell(c, look, r);
       case EnemyType.spiderMother:
-        for (var i = 0; i < 4; i++) {
-          final lg = sin(t * 5 + i) * 3;
-          final ly = -12.0 + i * 8;
-          Enemy._leg
-            ..color = k(body2)
-            ..strokeWidth = 3.5;
-          c.drawLine(Offset(-10, ly), Offset(-r - 4, ly - 10 + lg + i * 5), Enemy._leg);
-          c.drawLine(Offset(10, ly), Offset(r + 4, ly - 10 - lg + i * 5), Enemy._leg);
-          Enemy._leg.strokeWidth = 2.2;
-        }
-        drawOval(c, 0, 8, r * 0.7, r * 0.75, k(body));
-        // Eiersack mit grünem Schimmer
-        drawOval(c, 0, 14, r * 0.35, r * 0.3, const Color(0xFF9CFF5A).withAlpha((70 + 60 * pulse).round()));
-        drawOval(c, 0, -r * 0.45, r * 0.42, r * 0.35, k(body2));
-        for (var i = 0; i < 6; i++) {
-          Enemy._glowEye(c, -9.0 + (i % 3) * 9, -r * 0.5 + (i ~/ 3) * 6, 2, Enemy._eye);
-        }
+        BossArt.spiderMother(c, look, r);
       default:
     }
   }
@@ -217,11 +163,11 @@ extension _Gatekeepers on Enemy {
   void _gateGlows(void Function(double, double, double, Color) f, GlowBatch front, double pulse) {
     switch (type) {
       case EnemyType.strawKing:
-        f(0, -30, 40, Enemy._ember.withAlpha((90 + 70 * max(pulse, warn)).round()));
+        f(0, -32, 30, Enemy._ember.withAlpha((60 + 50 * max(pulse, warn)).round()));
       case EnemyType.bell:
         f(0, 0, r * 1.6, const Color(0xFFFFC94A).withAlpha((40 + 60 * max(pulse * 0.5, warn)).round()));
       case EnemyType.spiderMother:
-        f(0, -r * 0.45, 30, Enemy._eye.withAlpha((80 + 60 * pulse).round()));
+        f(16, -12, 18, Enemy._eye.withAlpha((70 + 50 * pulse).round()));
       default:
     }
     if (warn > 0) front.add(x, y, r * (1.6 + warn), Color.fromRGBO(255, 240, 220, 0.2 + 0.4 * warn));
