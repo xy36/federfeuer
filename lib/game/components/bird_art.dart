@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../config.dart';
 import 'draw.dart';
 import 'light.dart';
+import 'spirit_bird_art.dart';
 
 /// Haltung eines Vogels in einem Frame.
 class BirdPose {
@@ -16,7 +17,11 @@ class BirdPose {
     this.walk,
     this.holding = false,
     this.sway = 0,
+    this.t = 0,
   });
+
+  /// Zeit in Sekunden (für fließende Lichtbänder und aufsteigende Funken).
+  final double t;
 
   /// Flügelschlag −1 (oben) … 1 (unten).
   final double flap;
@@ -44,6 +49,9 @@ class BirdPose {
 /// Körpermitte im Ursprung, Radius etwa 16.
 class BirdArt {
   BirdArt._();
+
+  /// Stil „leuchtender Geist“ (siehe [SpiritBirdArt]); false = bisherige Comic-Zeichnung.
+  static bool spirit = true;
 
 
   static final _wing = Paint()..blendMode = BlendMode.plus;
@@ -82,6 +90,10 @@ class BirdArt {
       };
 
   static void draw(Canvas c, CharacterDef ch, Paint body, BirdPose pose) {
+    if (spirit) {
+      SpiritBirdArt.draw(c, ch, pose);
+      return;
+    }
     if (ch.look == BirdLook.ostrich) {
       _ostrich(c, ch, body, pose);
       return;

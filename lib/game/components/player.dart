@@ -254,6 +254,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
       walk: grounded && vel.x.abs() > 20 && slideT <= 0 ? x * 0.12 : null,
       holding: (game.run?.weapons.isNotEmpty ?? false) && !grounded,
       sway: clampD(vel.x * face / 300, -1, 1),
+      t: game.clock,
     ));
     if (webbed) _drawWeb(c);
     c.restore();
