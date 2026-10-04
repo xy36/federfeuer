@@ -12,7 +12,7 @@ Federfeuer ist ein 2D-Arena-Shooter im Stil von Brotato, bei dem der Spieler fli
 | Perspektive | 2D-Seitenansicht mit leichter Schrägsicht (Bodenschatten, Parallax) |
 | Plattform | Flutter + Flame; zuerst Android/iOS im Querformat, Desktop mit Tastatur; Controller auf allen Plattformen |
 | Zielgruppe | Gelegenheitsspieler, die kurze Runs mit Build-Entscheidungen mögen |
-| Held | Zehn spielbare Vögel als leuchtende Geistvögel; zu Beginn nur der „Kampfspatz“ (golden, mit Fliegerbrille), die übrigen über Aufgaben (siehe „Charaktere“) |
+| Held | Zwölf spielbare Vögel als leuchtende Geistvögel; zu Beginn nur der „Kampfspatz“ (golden, mit Fliegerbrille), die übrigen über Aufgaben (siehe „Charaktere“) |
  
 Designpfeiler:
  
@@ -83,9 +83,9 @@ Stil der Spielwelt: leuchtend und geschichtet, angelehnt an die Stimmung von „
 
 Figuren und Effekte:
 
-- **Held:** Lichtkern mit weichem Verlauf in den Farben des Vogels, durchscheinende Lichtflügel, die beim Flügelschlag aufleuchten, Lichtschweif aus den letzten Positionen (Glutkehlchen mit Funken, beim Sturzflug länger und heller), Aura in der Leuchtfarbe des Vogels; er erhellt den Boden unter sich (je höher, desto schwächer). Jede Vogelart hat eigene Merkmale: Fliegerbrille (Kampfspatz), Gabelschwanz (Schwalbe), langer Schnabel (Kolibri, Specht), violette Augen (Rabe), aufrechter Körper (Pinguin), rote Haube (Specht), Federohren und große Augen (Eule), langer Schwanz (Elster), Kamm und Kehllappen (Huhn). Ein aktiver Seifenblasenschild liegt als leuchtende Blase um ihn.
+- **Held:** Detailliert gezeichneter Geistvogel in den Farben des Vogels: Kopf und Körper als eine Silhouette mit weichem Verlauf und Lichtkante, Bauch mit angedeuteten Federschuppen, Flügel aus Deckfedern und fünf Schwungfedern (vorne und hinten), die sich beim Flügelschlag auffächern und aufleuchten, Schwanz aus einzelnen Federn, der beim Lenken mitschwingt, Schnabel aus Ober- und Unterschnabel, Augen mit Pupille und Glanzpunkt, die alle paar Sekunden blinzeln und zum nächsten Gegner schauen, und Beine: am Boden laufen sie mit, in der Luft sind sie eingezogen bzw. halten die Hauptwaffe. Merkmale je Art: Fliegerbrille mit Messingrand (Kampfspatz), orangerote Brust (Glutkehlchen), Gabelschwanz und rostrote Kehle (Schwalbe), langer Schnabel und schillernde Kehle (Kolibri), violette Augen, gebogener Schnabel und struppige Kehle (Rabe), aufrechter Körper, schwarzer Kopf und weißer Augenfleck (Pinguin), rote Haube und Wangenstreif (Specht), Gesichtsscheibe mit großen bernsteinfarbenen Augen und Federohren (Eule), weißer Schulterfleck und langer Stufenschwanz (Elster), Kamm, Kehllappen und Sichelfedern (Huhn), langer S-förmiger Hals, kleiner Kopf mit Wimpernaugen, fluffiger dunkler Körper mit weißen Flügel- und Schwanzfedern und lange rosa Beine mit nach hinten gerichtetem Knie (Strauß), dunkelbrauner Körper mit weißem Kopf und goldenem Nacken, kräftiger gelber Hakenschnabel, goldenes Auge mit strenger Braue, breite Flügel mit weit gespreizten Fingerfedern und weißer Schwanzfächer (Steinadler). Dazu Lichtschweif, Aura und Bodenlicht wie bisher; ein aktiver Seifenblasenschild liegt als leuchtende Blase um ihn.
 - **Gegner:** fast schwarze „Fäulnis“-Kreaturen mit violetter Aura und glühenden Augen; Krähe mit zerfransten Flügeln, Käfer mit glühenden Panzerrissen, Spucker mit grün pulsierendem Giftsack, Brocken mit Glutadern (HP-Leiste als Glutstreifen), Pusteling als stachlige Pollenkugel mit grünem Kern, Vogelscheuche mit Strohhut und Glutaugen, Fledermaus mit schnellen Flügeln, Wetterhahn auf einer Stange mit goldenem Zeigerpfeil, Spinne an einem feinen Faden mit vier roten Augen, Irrlicht als flackernder blasser Lichtkern, Felsadler mit eingeklappten Flügeln im Sturzflug, Lawinenkäfer als Panzer oder rollende Kugel mit Streifen; Torwächter: Strohkönig mit glühendem Kürbisgesicht und Strohkrone, Glocke an einer Kette mit glühenden Rissen und schwingendem Klöppel, Spinnenmutter mit sechs Augen und schimmerndem Eiersack; Geierkönig mit Krone aus magentafarbenen Lichtsplittern und pulsierender Aura. Giftwolken leuchten grün, Netze kleben sichtbar am Vogel. Bei Treffern blitzen die Körper hell auf; beim Tod zerfallen sie in violette Funken.
-- **Waffen & Kugeln:** Waffen schweben als Lichtsplitter in Stufenfarbe und zeigen aufs Ziel, mit Mündungsblitz beim Schuss; die Diskokugel ist eine funkelnde Kugel, der Federwirbel zeigt nur seine kreisenden Federklingen. Eigene Kugeln sind leuchtende Kugeln mit weißem Kern und Schweif (Krit gold); eigene Formen haben Popcorn, Gartenzwerg, Bowlingkugel, Seifenblase, Pusteblumen-Schirmchen und Kiesel. Dazu Geisterkrähen, Regenwolken mit Regenstrichen, ein Peitschenbogen für die Dornenranke, Blitze und Henriettes Eier. Gegnerkugeln haben einen dunklen Kern mit farbigem Leuchten.
+- **Waffen & Kugeln:** Jede Waffe hat ein eigenes Modell: Lichtfeder als Federkiel, Sonnenstrahl als Rohr mit Linse, Diskokugel mit drehenden Facetten, Glutkern als glühende Kohlenkanone, Funkenfächer mit fünf Speichen, Popcornmaschine als gestreifter Wagen mit Kurbel, Böenschwarm als Windrad, Federwirbel als Handfächer, Pusteblume, Dornenranke als dornige Peitsche, Krähenruf als Knochenhorn, Paktlaterne mit Flamme, Wasserpistole, Seifenblasen-Ring, Regenwolke am Stab, Kieselschleuder, Gartenzwerg-Mörser, Bowlingkugel in einer Rinne. Schussmomente sind animiert (Rückstoß, Mündungslicht, Kurbel, Gummi spannt sich, Windrad dreht schneller, Zipfelmütze fliegt mit); ein Edelstein am Griff und ein Schein zeigen die Stufenfarbe. Die erste Waffe hält der Vogel in den Krallen unter dem Bauch (schwingt mit dem Flügelschlag), die übrigen schweben im Kreis um ihn; Rundum- und Henkelwaffen (Diskokugel, Popcornmaschine, Laterne, Regenwolke, Fächer) drehen nicht mit, alle anderen zielen. Der Federwirbel zeigt zusätzlich seine kreisenden Federklingen. Eigene Kugeln sind leuchtende Kugeln mit weißem Kern und Schweif (Krit gold); eigene Formen haben Popcorn, Gartenzwerg, Bowlingkugel, Seifenblase, Pusteblumen-Schirmchen und Kiesel. Dazu Geisterkrähen, Regenwolken mit Regenstrichen, ein Peitschenbogen für die Dornenranke, Blitze und Henriettes Eier. Gegnerkugeln haben einen dunklen Kern mit farbigem Leuchten.
 - **Status an Gegnern:** Brand (orange), Kleben (weiß), Verlangsamung (blau) und Fluch (violett über dem Kopf) leuchten am Gegner; eingefangene Gegner stecken in einer Blase, betäubte haben kreisende Sterne.
 - **Drops:** Material als leuchtender Kristall (Farbe und Größe nach Wert: mint, blau, violett, gold), Herz als leuchtendes Herz, Geschenk der Elster als blaues Päckchen; alle pulsieren.
 
@@ -168,7 +168,7 @@ Schaden über Zeit zeigt kleine orange Zahlen und löst keine weiteren Effekte a
 | III | Lila | × 2,7 | × 0,8 | × 3,3 |
 | IV | Rot | × 4,2 | × 0,7 | × 5,5 |
  
-Endwerte: Schaden × (1 + Schaden %) × Klassenbonus des Vogels (× 1,25) × schwere Waffen (Stein-Set) × Welt-/Wetter-Faktor (Professor Uhu, Gießkanne) × Spiegelscherbe (× 0,7 für Schüsse, Würfe und Diskokugel); Abklingzeit ÷ (1 + Angriffstempo %) mit Untergrenze Faktor 0,3; Reichweite + Reichweiten-Bonus (Federwirbel: + Bonus ÷ 6 auf den Kreisradius). Jeder Treffer würfelt einzeln auf einen kritischen Treffer (doppelter Schaden, gelbe Zahl).
+Endwerte (kritische Treffer ×2, beim Adler ×2,5): Schaden × (1 + Schaden %) × Klassenbonus des Vogels (× 1,25) × schwere Waffen (Stein-Set) × Welt-/Wetter-Faktor (Professor Uhu, Gießkanne) × Spiegelscherbe (× 0,7 für Schüsse, Würfe und Diskokugel); Abklingzeit ÷ (1 + Angriffstempo %) mit Untergrenze Faktor 0,3; Reichweite + Reichweiten-Bonus (Federwirbel: + Bonus ÷ 6 auf den Kreisradius). Jeder Treffer würfelt einzeln auf einen kritischen Treffer (doppelter Schaden, gelbe Zahl).
  
 ## Gegner
  
@@ -444,6 +444,8 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | Trommelwirbel | Hacki | Gegner im Umkreis 200 sind 1,6 s betäubt und nehmen Schadensbasis × 0,5 | 9 s |
 | Klauen | Glitzer | zieht Material, Herzen und Geschenke im Bild heran | 14 s |
 | Ei legen | Henriette | Ei rollt in Blickrichtung und explodiert nach 1,6 s oder bei Gegnerkontakt (Radius 75, Schadensbasis × 1,6) | 2,5 s |
+| Straußentritt | Rudi Rennfeder | Tritt nach vorn (Halbkreis, Reichweite 80): Schadensbasis × 1,8, Rückstoß 60, betäubt 0,5 s | 4 s |
+| Königsschrei | Aurelius | alle Gegner im Bild 4 s verflucht (Stufe II: 6 s), sie weichen 0,8 s zurück | 10 s |
 
 **Evolutionen:**
 
@@ -473,10 +475,14 @@ Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wett
 | Bauchrutscher + Seifenblasenschild | Schlittenfahrt | 1,2 s Rutschen mit Blase (unverwundbar); berührte Gegner nehmen Schadensbasis × 0,8 und werden 2 s eingefangen | 8 s |
 | Trommelwirbel + Lichtblitz | Stroboskop | drei Lichtblitze im Abstand von 0,45 s: Gegner im Bild 0,8 s betäubt, Schadensbasis × 0,4 | 12 s |
 | Klauen + Taschenuhr | Langfinger | zieht Material, Herzen und Geschenke im Bild heran, Gegner 4 s in Zeitlupe | 18 s |
+| Straußentritt + Sturzflug | Sprintstoß | Sturzflug (0,32 s, 820); Gegner auf dem Weg nehmen Schadensbasis × 1,4, Rückstoß 50, betäubt 0,6 s | 6 s |
+| Straußentritt + Hupe | Staubwolke | Straußentritt, dazu Staubwirbel im Umkreis 210: betäubt 1,2 s, Schadensbasis × 0,8, Gegner fliehen 3 s | 10 s |
+| Königsschrei + Lichtblitz | Sonnenadler | Königsschrei, dazu alle Gegner im Bild 1,5 s geblendet und je ein Lichtstrahl (Schadensbasis × 1,2) | 14 s |
+| Königsschrei + Gewitterwolke | Donnervogel | ein Blitz in jeden Gegner im Bild: Schadensbasis × 1,6, betäubt 0,5 s | 16 s |
 
 ## Charaktere
 
-Zehn spielbare Vögel. Jeder hat eine Stärke, einen Nachteil und vor allem ein eigenes **Flugverhalten**. Der gewählte Vogel wird gespeichert; gesperrte Vögel zeigen ihre Aufgabe.
+Zwölf spielbare Vögel. Jeder hat eine Stärke, einen Nachteil und vor allem ein eigenes **Flugverhalten**. Der gewählte Vogel wird gespeichert; gesperrte Vögel zeigen ihre Aufgabe.
 
 | Vogel | Rolle | Stärke | Nachteil | Fliegt … | Start |
 | --- | --- | --- | --- | --- | --- |
@@ -490,6 +496,8 @@ Zehn spielbare Vögel. Jeder hat eine Stärke, einen Nachteil und vor allem ein 
 | Professor Uhu (Eule) | Licht/Böse | +25 % Erfahrung; in Wald, Gebirge, Gipfel +20 % Schaden | in Feldern und Dorf −10 % Schaden | lautlos, sinkt sehr langsam | Lichtfeder / Sonnenstrahl / Krähenruf + Lichtblitz |
 | Glitzer (Elster) | Wirtschaft | Shop −15 %; 1 % je Kill ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item) | nur 4 Waffenslots | normal | Wasserpistole / Diskokugel / Kieselschleuder + Klauen |
 | Henriette (Huhn) | Glut/Stein | +40 % Max-HP, +2 Rüstung, Eier als Bomben | keine Startwaffe, fliegt nur kurze Hüpfer | flattert in Hüpfern, viel Bodenzeit | Ei legen; Waffen nur aus dem Shop |
+| Rudi Rennfeder (Strauß) | Boden/Stein | schnellster Läufer (am Boden × 2), +60 % Max-HP, +2 Rüstung; Material fällt auf jeder Stufe schnell zu Boden (70/s) | kann nicht fliegen – nur hohe Sprünge, sinkt schnell | rennt und springt | Kieselschleuder / Bowlingkugel / Federwirbel + Straußentritt |
+| Seine Hoheit Aurelius (Steinadler) | Licht/Stein | +20 % Schaden, kritische Treffer ×2,5 statt ×2, Adleraugen +80 Reichweite | groß (leichter zu treffen), träge in Kurven | majestätischer Gleiter, sinkt sehr langsam | Sonnenstrahl / Glutkern / Kieselschleuder + Königsschrei |
 
 **Startwaffe:** Jeder Vogel außer Henriette hat drei Startwaffen zur Auswahl (Spalte „Start“, die erste ist voreingestellt). Gewählt wird unter „Run vorbereiten“; die Wahl wird je Vogel gespeichert.
 
@@ -509,6 +517,8 @@ Max-HP: Start 20, dann Änderungen des Vogels, dann × Max-HP-Faktor (gerundet).
 | Professor Uhu | 1 | 1 | 1 | 0,35 | 1 | 17 | 1,1 | – |
 | Glitzer | 1 | 1 | 1 | 1 | 1 | 16 | 1 | – |
 | Henriette | 1 | 1 | 1 | 1 | 1,1 | 17 | 1,1 | Schub nur 0,55 s am Stück, lädt am Boden in knapp 0,5 s wieder auf |
+| Rudi Rennfeder | 1 | 1 | 1,25 | 2,6 | 2 | 18 | 1,2 | Schub nur 0,4 s am Stück (ein hoher Sprung, etwa ein Drittel der Bildhöhe), lädt am Boden wieder auf; immer sichtbare lange Beine |
+| Aurelius | 1,1 | 0,7 | 1,1 | 0,4 | 1 | 20 | 1,25 | – |
 
 **Freischalten:** Der Kampfspatz ist von Anfang an verfügbar, die übrigen über Aufgaben. Geprüft wird am Ende jedes Runs; Zähler über alle Runs werden gespeichert. Neu freigeschaltete Vögel erscheinen im Game-Over-Fenster. Die Aufgaben dienen später zugleich als Erfolge (Steam).
 
@@ -523,6 +533,8 @@ Max-HP: Start 20, dann Änderungen des Vogels, dann × Max-HP-Faktor (gerundet).
 | Professor Uhu | In einem Run Level 15 erreichen |
 | Glitzer | 3000 Material sammeln (über alle Runs) |
 | Henriette | Mit dem Kampfspatz auf Falke (oder höher) gewinnen |
+| Rudi Rennfeder | Mit Frack Welle 10 erreichen |
+| Aurelius | Auf Stufe Adler (oder höher) gewinnen – mit einem beliebigen Vogel |
 
 ## UI & HUD
  
@@ -537,7 +549,7 @@ Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays ü
 - **Run vorbereiten (Spielen):** Links die Schwierigkeit als Leiste mit fünf Stufen (gesperrte mit Schloss; darunter Faktoren und Rekord der gewählten Stufe) und eine Kurzerklärung. Rechts „Vogel wählen“: zehn Kacheln mit Vogel-Vorschau (gesperrte als dunkle Silhouette mit Schloss; antippen zeigt die Aufgabe mit Fortschritt), darunter der gewählte Vogel mit Flügelschlag-Vorschau, Name, Art und Rolle, Stärke, Nachteil und Flugverhalten, darunter „Startwaffe“ mit den drei wählbaren Waffen des Vogels (gewählte golden mit ✓, Info-Panel mit den Werten inklusive Klassenbonus des Vogels; Henriette: „keine Startwaffe“), dann Startaktion und ggf. Waffenslots sowie der Knopf „Starten“.
 - **Einstellungen:** Vollbild/Fenster (PC), Bildschirmwackeln an/aus, FPS-Anzeige an/aus (beides gespeichert), die Steuerung als umschaltbare Übersicht Tastatur/Controller mit Neubelegung (siehe „Steuerung & Bewegung“) und auf Touch-Geräten die Touch-Knöpfe.
 - **Rekorde:** Bestleistung je Schwierigkeitsstufe (geschafft, erreichte Welle, gesperrt), Statistik-Kacheln (Runs, Siege, besiegte Gegner, höchstes Level, verbrannte Gegner, gesammeltes Material) und die Liste der Vögel mit „freigeschaltet“ bzw. Aufgabe und Fortschritt.
-- **Kompendium:** Sammlung aller Inhalte mit Reitern Vögel, Waffen, Items, Aktionen (inkl. Evolutionen), Kombinationen und Gegner; jeder Reiter und die Kopfzeile zeigen „entdeckt / gesamt“. Sichtbar ist nur, was schon einmal gesehen wurde: Waffen und Items, sobald sie im Shop lagen oder besessen wurden; Aktionen ebenso bzw. als Startaktion oder Evolution; Gegner, sobald einer erschienen ist (der Reiter zeigt auch Torwächter und die fünf Elite-Modifikatoren, letztere sobald ein solcher Elitegegner aufgetaucht ist); Kombinationen, sobald eine ihrer Zutaten besessen wurde (dann zeigt der Shop das Rezept ohnehin) – selbst verschmolzene tragen „✓ verschmolzen“ und einen goldenen Rand. Der Reiter Kombinationen zeigt ein **Sternbild** auf eigenem Nachthimmel (dunkelblauer Verlauf, zwei Nebelschleier, rund 110 funkelnde Hintergrundsterne): die 11 Aktionen als Sterne mit atmendem Lichthof auf einer feinen Umlaufbahn (Ellipse über die volle Breite; jede Vogel-Aktion sitzt zwischen ihren beiden Rezeptpartnern), jedes Rezept als leicht gebogene Lichtbahn zwischen den Zutaten und die Evolution als etwas kleinere Kugel wie die Aktionen, nur mit goldenem Rand und dezentem Schein, dazwischen (etwas zur Mitte gerückt; anschließend stoßen sich die Evolutionen untereinander und von den Aktions-Sternen ab, damit nichts überlappt). Unentdeckt: gestrichelt, „?“ ohne Beschriftung; gesehen: schwach leuchtende Bahn; selbst verschmolzen: gedämpft goldene Bahn mit Lichtpartikeln, die zur Evolution wandern. Oben links „x / 24 verschmolzen“. Ein angewählter Stern hebt alle seine Verbindungen hervor (hell, mit Partikeln) und zeigt das Info-Panel. Unbekanntes erscheint als „?“ / „???“ mit kurzem Hinweis, wo es zu finden ist. Vögel sind immer gelistet, gesperrte als dunkle Silhouette mit Aufgabe und Fortschritt. Jede Kachel ist ansteuerbar und zeigt das Info-Panel wie im Shop (Waffen in Stufe I mit Grundwerten, Gegner mit Werten aus Welle 1 auf Küken). Gespeichert über alle Runs; „Alles freischalten“ (Debug) zeigt alles.
+- **Kompendium:** Sammlung aller Inhalte mit Reitern Vögel, Waffen, Items, Aktionen (inkl. Evolutionen), Kombinationen und Gegner; jeder Reiter und die Kopfzeile zeigen „entdeckt / gesamt“. Sichtbar ist nur, was schon einmal gesehen wurde: Waffen und Items, sobald sie im Shop lagen oder besessen wurden; Aktionen ebenso bzw. als Startaktion oder Evolution; Gegner, sobald einer erschienen ist (der Reiter zeigt auch Torwächter und die fünf Elite-Modifikatoren, letztere sobald ein solcher Elitegegner aufgetaucht ist); Kombinationen, sobald eine ihrer Zutaten besessen wurde (dann zeigt der Shop das Rezept ohnehin) – selbst verschmolzene tragen „✓ verschmolzen“ und einen goldenen Rand. Der Reiter Kombinationen zeigt ein **Sternbild** auf eigenem Nachthimmel (dunkelblauer Verlauf, zwei Nebelschleier, rund 110 funkelnde Hintergrundsterne): die 13 Vogel- und Shop-Aktionen als Sterne mit atmendem Lichthof auf einer feinen Umlaufbahn (Ellipse über die volle Breite; jede Vogel-Aktion sitzt zwischen ihren beiden Rezeptpartnern), jedes Rezept als leicht gebogene Lichtbahn zwischen den Zutaten und die Evolution als etwas kleinere Kugel wie die Aktionen, nur mit goldenem Rand und dezentem Schein, dazwischen (etwas zur Mitte gerückt; anschließend stoßen sich die Evolutionen untereinander und von den Aktions-Sternen ab, damit nichts überlappt). Unentdeckt: gestrichelt, „?“ ohne Beschriftung; gesehen: schwach leuchtende Bahn; selbst verschmolzen: gedämpft goldene Bahn mit Lichtpartikeln, die zur Evolution wandern. Oben links „x / 28 verschmolzen“. Ein angewählter Stern hebt alle seine Verbindungen hervor (hell, mit Partikeln) und zeigt das Info-Panel. Unbekanntes erscheint als „?“ / „???“ mit kurzem Hinweis, wo es zu finden ist. Vögel sind immer gelistet, gesperrte als dunkle Silhouette mit Aufgabe und Fortschritt. Jede Kachel ist ansteuerbar und zeigt das Info-Panel wie im Shop (Waffen in Stufe I mit Grundwerten, Gegner mit Werten aus Welle 1 auf Küken). Gespeichert über alle Runs; „Alles freischalten“ (Debug) zeigt alles.
 - **Credits:** Engine, Schriften mit Lizenzhinweis (SIL OFL 1.1), Bibliotheken, Version.
 - **Debug (nur Debug-Builds):** Alles freischalten (Stufen und Vögel), Unverwundbar, Welle wählen (direkt oder mit Shop davor), Performance-Test, Render-Analyse.
 - **Level-up:** 4 Karten mit großem Wert (z. B. „+4 %“); die ganze Karte ist wählbar. Seltene Karten haben ein lila Kopfband und das Badge „SELTEN“.
@@ -565,8 +577,10 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `game/federfeuer_game.dart` | `FlameGame`: Phasen, Wellen, Spawns, Kamera, Kampf, Tastatur |
 | `game/config.dart` | Alle Daten: Waffenklassen und Set-Boni, Waffen, Stufen, Aktionen, Items mit Seltenheit, Charaktere mit Freischaltaufgaben, Level-ups, Gegner, Farben, Welten (`biomeDefs`), Wetter (`WeatherConfig`) |
 | `game/run_state.dart` | Zustand eines Runs: Vogel, Werte inkl. Set-Boni, Waffenwerte (`WeaponStats`), Inventar, Aktion, Shop- und Level-Logik |
-| `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Sturzflug/Bauchrutscher, Zeichnung aller Vogelarten (`Player.drawBird`, auch für Menü-Vorschauen) |
-| `components/weapon_mount.dart` | Waffe im Ring um den Spieler, Zielsuche, Verhalten je Waffenart (Schuss, Wurf, Kreis, Hieb, Begleiter, Wolke, Rollen, rundum) |
+| `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Sturzflug/Bauchrutscher, Blinzeln und Blick, Aura und Schweif |
+| `components/bird_art.dart` | Detaillierte Zeichnung aller Vogelarten mit Haltung (`BirdPose`: Flügelschlag, Blick, Blinzeln, Laufen, Halten), auch für Menü-Vorschauen |
+| `components/weapon_art.dart` | Modelle aller 18 Waffen und die Krallen der gehaltenen Waffe |
+| `components/weapon_mount.dart` | Waffe in den Krallen bzw. im Ring um den Spieler, Zielsuche, Verhalten je Waffenart (Schuss, Wurf, Kreis, Hieb, Begleiter, Wolke, Rollen, rundum) |
 | `components/weapon_fx.dart` | Geisterkrähen, Regenwolke, Peitschenbogen, Henriettes Ei (auch Gewitterei), Blitz (Mixin `CombatEffect`) |
 | `components/enemy.dart` | KI und Zeichnung der Grundgegner, Statuseffekte, Elitegegner; Teil-Dateien `enemy_world.dart` (Welt-Gegner, Giftwolke, Sprengsatz), `enemy_gate.dart` (Torwächter), `enemy_boss.dart` (Phasen des Geierkönigs, Federregen) |
 | `components/projectiles.dart` | Spielerkugeln (Durchschlag, Explosion, Bogenwurf, Zünder, Rollen, Treffereffekte) und Gegnerkugeln |
