@@ -12,6 +12,7 @@ import 'effects.dart';
 import 'light.dart';
 import 'pickups.dart';
 import 'projectiles.dart';
+import 'boss_art.dart';
 import 'rot_art.dart';
 import 'transient.dart';
 
@@ -408,37 +409,12 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         _glowEye(c, 7, -6, 3.2, _ember);
         _glowEye(c, 15, -6, 2.8, _ember);
       case EnemyType.boss:
-        final fl = sin(t * 6);
-        RotArt.rotWing(c, const Offset(-4, -14), fl, 82, k(const Color(0xFF120818)), far: true);
-        c.drawOval(Rect.fromCenter(center: Offset.zero, width: 104, height: 76),
-            hit ? fillOf(k(_body)) : RotArt.cachedFill('boss', 60, center: const Offset(10, -8)));
-        RotArt.veins(
-            c,
-            Path()
-              ..moveTo(-40, 4)
-              ..lineTo(-22, -6)
-              ..lineTo(-10, 6)
-              ..lineTo(6, -4)
-              ..lineTo(18, 8)
-              ..moveTo(-10, 6)
-              ..lineTo(-6, 22),
-            pulse,
-            color: _crown,
-            width: 1.8);
-        RotArt.rotWing(c, const Offset(0, -6), fl, 76, k(const Color(0xFF1C0E28)), far: false);
-        drawOval(c, 30, -18, 16, 13, k(const Color(0xFF2E1B3C)));
-        drawTri(c, 40, -16, 64, -6, 40, -4, k(const Color(0xFF3A2440)));
-        // Krone aus Lichtsplittern
-        for (var i = 0; i < 3; i++) {
-          final cx = 13.0 + i * 10, hgt = i == 1 ? 18.0 : 14.0;
-          drawTri(c, cx - 4, -32, cx, -32 - hgt, cx + 4, -32, _crown.withAlpha(230));
-        }
-        _glowEye(c, 34, -20, 4, _crown);
+        BossArt.vultureKing(c, _bossLook(hit, pulse));
     }
     c.restore();
 
     // Fäulnis-Stil: kränklich violette Gegenlichtkante oben
-    if (type != EnemyType.wisp && type != EnemyType.rift && type != EnemyType.beetleEgg && type != EnemyType.crow) {
+    if (!boss && type != EnemyType.wisp && type != EnemyType.rift && type != EnemyType.beetleEgg && type != EnemyType.crow) {
       _rotRim
         ..strokeWidth = boss ? 2 : 1.1
         ..color = Color.fromRGBO(180, 76, 255, hit ? 0 : 0.45);
@@ -478,6 +454,9 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       drawRect(c, -20, -r - 10, 40 * clampD(hp / maxHp, 0, 1), 4, _ember);
     }
   }
+
+  BossLook _bossLook(bool hit, double pulse) =>
+      BossLook(t: t, pulse: pulse, warn: warn, hit: hit, phase: bossPhase, hp: hp / maxHp, state: state);
 
   /// Glühendes Schlitzauge (Fäulnis-Stil).
   static void _slitEye(Canvas c, double x, double y, double r, Color col) {
@@ -560,11 +539,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         eye(15, -6, 2.8, _ember);
         if (hp < maxHp) front.add(x - 20 + 40 * clampD(hp / maxHp, 0, 1), y - r - 8, 10, _ember.withAlpha(120));
       case EnemyType.boss:
-        for (var i = 0; i < 3; i++) {
-          final hgt = i == 1 ? 18.0 : 14.0;
-          f(13.0 + i * 10, -32 - hgt * 0.6, 16, _crown.withAlpha((90 + 60 * pulse).round()));
-        }
-        eye(34, -20, 4, _crown);
+        f(48, -64, 26, _crown.withAlpha((80 + 60 * pulse).round()));
+        f(47, -40, 9, _crown.withAlpha(220));
         if (warn > 0) front.add(x, y, r * (1.5 + warn), Color.fromRGBO(255, 230, 250, 0.2 + 0.5 * warn));
     }
   }

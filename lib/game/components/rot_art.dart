@@ -109,7 +109,7 @@ class RotArt {
   static void rotWing(Canvas c, Offset at, double fl, double len, Color col, {required bool far}) {
     c.save();
     c.translate(at.dx, at.dy);
-    c.rotate(-0.25 - (1 - fl) * 0.55 + (far ? -0.25 : 0));
+    c.rotate(-0.1 + (1 - fl) * 0.55 + (far ? 0.25 : 0));
     final p = Path()
       ..moveTo(3, 0)
       ..quadraticBezierTo(-len * 0.4, -len * 0.32, -len, -len * 0.18) // Vorderkante
