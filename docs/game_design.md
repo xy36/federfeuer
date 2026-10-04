@@ -578,7 +578,7 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `game/config.dart` | Alle Daten: Waffenklassen und Set-Boni, Waffen, Stufen, Aktionen, Items mit Seltenheit, Charaktere mit Freischaltaufgaben, Level-ups, Gegner, Farben, Welten (`biomeDefs`), Wetter (`WeatherConfig`) |
 | `game/run_state.dart` | Zustand eines Runs: Vogel, Werte inkl. Set-Boni, Waffenwerte (`WeaponStats`), Inventar, Aktion, Shop- und Level-Logik |
 | `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Sturzflug/Bauchrutscher, Blinzeln und Blick, Aura und Schweif |
-| `components/bird_art.dart` | Haltung der Vögel (`BirdPose`: Flügelschlag, Blick, Blinzeln, Laufen, Halten, Zeit) und Einstieg fürs Zeichnen, auch für Menü-Vorschauen; enthält noch den früheren Comic-Stil |
+| `components/bird_art.dart` | Haltung der Vögel (`BirdPose`: Flügelschlag, Blick, Blinzeln, Laufen, Halten, Zeit) und Einstieg fürs Zeichnen, auch für Menü-Vorschauen |
 | `components/spirit_bird_art.dart` | Vögel im Stil „leuchtender Geist“: Maße je Art, Silhouette, Lichtflügel, Schwanzformen, Augen, Leuchtakzente, Funken |
 | `components/weapon_art.dart` | Modelle aller 18 Waffen und die Krallen der gehaltenen Waffe |
 | `components/weapon_mount.dart` | Waffe in den Krallen bzw. im Ring um den Spieler, Zielsuche, Verhalten je Waffenart (Schuss, Wurf, Kreis, Hieb, Begleiter, Wolke, Rollen, rundum) |
