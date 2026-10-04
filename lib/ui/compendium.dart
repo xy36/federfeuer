@@ -121,7 +121,6 @@ class _CompendiumViewState extends State<CompendiumView> {
         ),
       );
 
-  Widget _emoji(String e) => Text(e, style: const TextStyle(fontSize: 28));
   Widget get _unknown => Text('?', style: displayStyle(28, Ui.muted));
 
   Widget _bird(CharacterDef c) {
@@ -138,7 +137,7 @@ class _CompendiumViewState extends State<CompendiumView> {
   Widget _weapon(String id) {
     final d = weaponDefs[id]!, known = p.hasSeen(_key('w', id));
     return _tile(
-      icon: known ? _emoji(d.icon) : _unknown,
+      icon: known ? Glyph(WeaponGlyph(id), size: 46) : _unknown,
       name: d.name,
       color: d.cls.color,
       known: known,
@@ -149,7 +148,7 @@ class _CompendiumViewState extends State<CompendiumView> {
   Widget _item(ItemDef it) {
     final known = p.hasSeen(_key('i', it.id));
     return _tile(
-      icon: known ? _emoji(it.icon) : _unknown,
+      icon: known ? Glyph(ItemGlyph(it.id), size: 40) : _unknown,
       name: it.name,
       color: it.rarity.color,
       known: known,
@@ -163,7 +162,7 @@ class _CompendiumViewState extends State<CompendiumView> {
         ? 'Evolution – entsteht durch Verschmelzen zweier Aktionen.'
         : (itemDefs.any((it) => it.action == a) ? 'Taucht im Aktions-Feld des Shops auf.' : 'Startfähigkeit eines Vogels.');
     return _tile(
-      icon: known ? _emoji(a.icon) : _unknown,
+      icon: known ? Glyph(ActionGlyph(a), size: 40) : _unknown,
       name: a.label,
       color: a.evolved ? const Color(0xFFFFC94A) : Palette.sun,
       known: known,
@@ -185,7 +184,7 @@ class _CompendiumViewState extends State<CompendiumView> {
   Widget _enemy(EnemyType t) {
     final known = p.hasSeen(_key('e', t.name));
     return _tile(
-      icon: known ? _emoji(t.icon) : _unknown,
+      icon: known ? Glyph(EnemyGlyph(t), size: 46) : _unknown,
       name: t.label,
       color: const Color(0xFFC77DFF),
       known: known,

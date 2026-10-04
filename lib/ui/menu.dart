@@ -127,7 +127,7 @@ class _TitlePage extends StatelessWidget {
               valueListenable: controllerActive,
               builder: (context, pad, _) => pad
                   ? const ControllerHints([(GamepadButton.a, 'Bestätigen'), (null, 'Wählen')], center: false)
-                  : Text(isTouchPlatform ? 'Tippen zum Wählen' : '↑↓ wählen  ·  Enter bestätigen  ·  Esc zurück',
+                  : GlyphText(isTouchPlatform ? 'Tippen zum Wählen' : '↑↓ wählen  ·  Enter bestätigen  ·  Esc zurück',
                       style: bodyText(11, color: const Color(0x809FB0D0))),
             ),
           ),
@@ -291,7 +291,7 @@ Widget _keyHint(String key, String what) => Padding(
             borderRadius: BorderRadius.circular(6),
             border: Border.all(color: Ui.edge, width: 1.4),
           ),
-          child: Text(key, style: bodyText(11.5, color: Ui.cardText, weight: 900)),
+          child: GlyphText(key, style: bodyText(11.5, color: Ui.cardText, weight: 900)),
         ),
         const SizedBox(width: 6),
         Text(what, style: bodyText(12.5, color: Ui.muted)),
@@ -391,7 +391,7 @@ class _PlayPageState extends State<_PlayPage> {
           depth: 4,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 7),
           child: Column(children: [
-            Text(unlocked ? '${d.level}' : '🔒', style: numberStyle(16, Ui.cardText)),
+            GlyphText(unlocked ? '${d.level}' : '🔒', style: numberStyle(16, Ui.cardText)),
             FittedBox(fit: BoxFit.scaleDown, child: Text(d.name, maxLines: 1, style: displayStyle(13, Ui.cardText))),
           ]),
         ),
@@ -430,7 +430,7 @@ class _PlayPageState extends State<_PlayPage> {
         padding: const EdgeInsets.all(2),
         child: Stack(alignment: Alignment.center, children: [
           BirdPreview(character: c, size: 50, locked: !unlocked),
-          if (!unlocked) const Text('🔒', style: TextStyle(fontSize: 14)),
+          if (!unlocked) const GlyphText('🔒', style: TextStyle(fontSize: 14)),
         ]),
       ),
     );
@@ -477,7 +477,7 @@ class _PlayPageState extends State<_PlayPage> {
           ]),
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
-          if (c.startAction != null) Pill(c.startAction!.label, icon: c.startAction!.icon, color: const Color(0x33FFD23F)),
+          if (c.startAction != null) Pill(c.startAction!.label, glyph: ActionGlyph(c.startAction!), color: const Color(0x33FFD23F)),
           if (c.maxWeapons != 6) Pill('${c.maxWeapons} Waffenslots', icon: '🎒'),
         ]),
         if (lock != null && !p.hasCharacter(lock.id)) ...[
@@ -512,7 +512,7 @@ class _PlayPageState extends State<_PlayPage> {
           depth: 2,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(d.icon, style: const TextStyle(fontSize: 16)),
+            Glyph(WeaponGlyph(id), size: 26),
             const SizedBox(width: 6),
             Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text(d.name, style: bodyText(12.5, color: selected ? Palette.sun : Ui.text, weight: 900)),
@@ -520,7 +520,7 @@ class _PlayPageState extends State<_PlayPage> {
             ]),
             if (selected) ...[
               const SizedBox(width: 6),
-              Text('✓', style: bodyText(13, color: Palette.sun, weight: 900)),
+              GlyphText('✓', style: bodyText(13, color: Palette.sun, weight: 900)),
             ],
           ]),
         ),
@@ -530,7 +530,7 @@ class _PlayPageState extends State<_PlayPage> {
 
   Widget _unlockHint(CharacterDef c) {
     final prog = game.progress.unlockProgress(c.unlock);
-    return Text(
+    return GlyphText(
       '🔒 ${c.name}: ${c.unlock.text}${prog == null ? '' : ' (${prog.$1} / ${prog.$2})'}',
       style: bodyText(12.5, color: Ui.muted),
     );
@@ -694,7 +694,7 @@ class _RecordsPage extends StatelessWidget {
         boxShadow: [if (best > kMaxWave) BoxShadow(color: Palette.sun.withAlpha(50), blurRadius: 16)],
       ),
       child: Column(children: [
-        Text(unlocked ? d.name : '🔒 ${d.name}', style: displayStyle(14, Color.lerp(col, Colors.white, 0.4)!)),
+        GlyphText(unlocked ? d.name : '🔒 ${d.name}', style: displayStyle(14, Color.lerp(col, Colors.white, 0.4)!)),
         const SizedBox(height: 4),
         Text(text, style: numberStyle(16, unlocked ? Ui.text : Ui.muted)),
       ]),

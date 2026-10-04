@@ -70,7 +70,7 @@ class _FusionAnimationState extends State<FusionAnimation> with SingleTickerProv
     final orbit = s * 7;
     final dist = 170 * (1 - approach);
 
-    Widget orb(String icon, double size, Color color) => Container(
+    Widget orb(ActionId a, double size, Color color) => Container(
           width: size,
           height: size,
           alignment: Alignment.center,
@@ -80,7 +80,7 @@ class _FusionAnimationState extends State<FusionAnimation> with SingleTickerProv
             border: Border.all(color: color, width: 2.5),
             boxShadow: [BoxShadow(color: color.withAlpha(150), blurRadius: size * 0.6, spreadRadius: 2)],
           ),
-          child: Text(icon, style: TextStyle(fontSize: size * 0.48)),
+          child: Glyph(ActionGlyph(a), size: size * 0.75),
         );
 
     return ColoredBox(
@@ -91,7 +91,7 @@ class _FusionAnimationState extends State<FusionAnimation> with SingleTickerProv
           for (final (i, a) in [(0, widget.a), (1, widget.b)])
             Transform.translate(
               offset: Offset(cos(orbit + i * pi) * dist, sin(orbit + i * pi) * dist * 0.55),
-              child: Opacity(opacity: (1 - flash).clamp(0, 1), child: orb(a.icon, 64, const Color(0xFFBFE3FF))),
+              child: Opacity(opacity: (1 - flash).clamp(0, 1), child: orb(a, 64, const Color(0xFFBFE3FF))),
             ),
         // Lichtstrahlen und Funken nach dem Blitz
         if (s > 0.95)
@@ -128,7 +128,7 @@ class _FusionAnimationState extends State<FusionAnimation> with SingleTickerProv
                   ),
                 ),
               ),
-              orb(widget.result.icon, 104, _gold),
+              orb(widget.result, 104, _gold),
             ]),
           ),
         // Blitz

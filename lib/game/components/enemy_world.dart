@@ -183,81 +183,28 @@ extension _WorldEnemies on Enemy {
   // ---------------- Darstellung ----------------
 
   void _worldRender(Canvas c, Color Function(Color) k, double pulse) {
-    const body = Enemy._body, body2 = Enemy._body2;
+    const body = Enemy._body;
     switch (type) {
       case EnemyType.puffball:
-        final swell = 1 + 0.06 * sin(t * 3);
-        for (var i = 0; i < 10; i++) {
-          final a = i / 10 * pi * 2 + t * 0.4;
-          drawTri(c, cos(a) * r * 0.8 * swell, sin(a) * r * 0.8 * swell, cos(a + 0.18) * r * 0.8 * swell,
-              sin(a + 0.18) * r * 0.8 * swell, cos(a + 0.09) * r * 1.35 * swell, sin(a + 0.09) * r * 1.35 * swell, k(body2));
-        }
-        drawCircle(c, 0, 0, r * swell, k(body));
-        drawCircle(c, -3, 3, r * 0.45, const Color(0xFFC6FF6A).withAlpha((120 + 80 * pulse).round()));
-        Enemy._glowEye(c, 4, -3, 2.2, const Color(0xFFC6FF6A));
+        EnemyArt.puffball(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.scarecrow:
-        drawRect(c, -2, -4, 4, r + 6, k(const Color(0xFF2A1B12)));
-        drawRect(c, -r, -6, r * 2, 3.5, k(const Color(0xFF2A1B12)));
-        for (final sx in [-r, r - 4]) {
-          drawTri(c, sx, -6, sx + 4, -6, sx + 2, 6, k(const Color(0xFF6A5222)));
-        }
-        drawOval(c, 0, -14, 8, 8, k(const Color(0xFF3A2A1A)));
-        drawTri(c, -11, -19, 11, -19, 0, -32, k(body));
-        drawRect(c, -13, -20, 26, 2.5, k(body));
-        Enemy._glowEye(c, -3, -14, 2, Enemy._ember);
-        Enemy._glowEye(c, 3, -14, 2, Enemy._ember);
+        EnemyArt.scarecrow(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.bat:
-        final fl = sin(t * 22);
-        drawTri(c, -2, -1, -18, -8 - fl * 8, -8, 4, k(body2));
-        drawTri(c, 2, -1, 18, -8 - fl * 8, 8, 4, k(body2));
-        drawOval(c, 0, 0, 7, 6, k(body));
-        drawTri(c, -5, -4, -3, -11, -1, -4, k(body));
-        drawTri(c, 1, -4, 3, -11, 5, -4, k(body));
-        Enemy._glowEye(c, -2.5, -1, 1.6, Enemy._eye);
-        Enemy._glowEye(c, 2.5, -1, 1.6, Enemy._eye);
+        EnemyArt.bat(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.weathercock:
-        // Stange, darauf ein Hahn, der sich mit [aim] dreht (Breite folgt dem Kosinus)
-        drawRect(c, -1.5, 0, 3, r + 4, k(const Color(0xFF2A1B12)));
-        c.save();
-        c.scale(cos(aim).abs() < 0.25 ? 0.25 * cos(aim).sign : cos(aim), 1);
-        drawOval(c, 0, -6, 11, 8, k(body));
-        drawTri(c, -9, -8, -18, -20, -6, -2, k(body2));
-        drawCircle(c, 8, -13, 5, k(body));
-        drawTri(c, 12, -14, 18, -12, 12, -10, k(const Color(0xFF6A5222)));
-        drawCircle(c, 7, -19, 2.5, k(const Color(0xFFB0302A)));
-        Enemy._glowEye(c, 9, -14, 1.6, const Color(0xFFFFC94A));
-        c.restore();
+        EnemyArt.weathercock(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
         // Zeigerpfeil in Schussrichtung
         final ax = cos(aim) * 22, ay = sin(aim) * 22 - 6;
         drawTri(c, ax, ay, ax - cos(aim + 0.5) * 7, ay - sin(aim + 0.5) * 7, ax - cos(aim - 0.5) * 7,
             ay - sin(aim - 0.5) * 7, const Color(0xFFFFC94A).withAlpha((150 + 100 * warn).round()));
       case EnemyType.spider:
-        for (var i = 0; i < 4; i++) {
-          final lg = sin(t * 6 + i) * 2;
-          final ly = -6.0 + i * 4;
-          Enemy._leg.color = k(body2);
-          c.drawLine(Offset(-4, ly), Offset(-17, ly - 4 + lg + i * 2), Enemy._leg);
-          c.drawLine(Offset(4, ly), Offset(17, ly - 4 - lg + i * 2), Enemy._leg);
-        }
-        drawOval(c, 0, 2, 11, 12, k(body));
-        drawOval(c, 0, -9, 7, 6, k(body2));
-        for (final (ex, ey) in [(-3.0, -10.0), (3.0, -10.0), (-1.5, -7.5), (1.5, -7.5)]) {
-          Enemy._glowEye(c, ex, ey, 1.3, Enemy._eye);
-        }
+        EnemyArt.spider(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.wisp:
         final fl = 0.85 + 0.15 * sin(t * 13);
         drawCircle(c, 0, 0, r * 0.55 * fl, Color.lerp(const Color(0xFFBFF0FF), Colors.white, 0.5 + 0.5 * warn)!);
         drawTri(c, -5, 2, 5, 2, 0, 14 + sin(t * 9) * 3, const Color(0xAABFF0FF));
       case EnemyType.eagle:
-        final fl = state == 2 ? 0.0 : sin(t * 8);
-        final tuck = state == 2 ? 0.4 : 1.0;
-        drawTri(c, -6, -4, -38 * tuck, -22 - fl * 14, 10, -4, k(body2));
-        drawTri(c, -14, -4, -40 * tuck, -6 - fl * 10, -2, -2, k(body2));
-        drawOval(c, 0, 0, 20, 12, k(body));
-        drawTri(c, -18, -2, -34, 6, -16, 6, k(body2));
-        drawOval(c, 15, -6, 8, 7, k(const Color(0xFF2E1B3C)));
-        drawTri(c, 21, -8, 30, -3, 21, -2, k(const Color(0xFFB08A3A)));
-        Enemy._glowEye(c, 17, -8, 2.2, state == 1 ? Colors.white : Enemy._eye);
+        EnemyArt.eagle(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.avalanche:
         if (state == 2 || state == 1) {
           // Eingerollt: Kugel mit drehenden Streifen
@@ -269,16 +216,7 @@ extension _WorldEnemies on Enemy {
             c.drawArc(Rect.fromCircle(center: Offset.zero, radius: r * 0.65), a, 1.4, false, Enemy._crack);
           }
         } else {
-          for (var i = -1; i <= 1; i++) {
-            final lg = sin(t * 12 + i) * 3;
-            Enemy._leg.color = k(body2);
-            c.drawLine(Offset(i * 8.0, 6), Offset(i * 8 + lg, r), Enemy._leg);
-          }
-          c.drawArc(Rect.fromCircle(center: const Offset(0, 6), radius: r), pi, pi, true, fillOf(k(body)));
-          Enemy._crack.color = const Color(0xFFBFE3FF).withAlpha((90 + 80 * pulse).round());
-          c.drawArc(Rect.fromCircle(center: const Offset(0, 6), radius: r * 0.6), pi + 0.3, pi - 0.6, false, Enemy._crack);
-          drawCircle(c, r - 1, 2, 5, k(body2));
-          Enemy._glowEye(c, r + 1, 1, 1.8, const Color(0xFFBFE3FF));
+          EnemyArt.avalancheWalk(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
         }
       default:
     }

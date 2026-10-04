@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:gamepads/gamepads.dart';
 
 import '../game/gamepad_input.dart' show controllerActive;
+import '../game/components/glyph_art.dart';
+
+export '../game/components/glyph_art.dart'
+    show Glyph, GlyphRef, WeaponGlyph, ItemGlyph, ActionGlyph, StatGlyph, EnemyGlyph, BirdGlyph, UiGlyph, UiIcon, GlyphText, iconWidget;
 import '../game/input_bindings.dart' show padLabel;
 
 import '../game/config.dart';
@@ -353,12 +357,16 @@ class GameButton extends StatelessWidget {
     required this.onPressed,
     this.color = Palette.sun,
     this.icon,
+    this.glyph,
     this.size = 18,
   });
   final String label;
   final VoidCallback? onPressed;
   final Color color;
   final String? icon;
+
+  /// Lichtsymbol statt [icon].
+  final GlyphRef? glyph;
   final double size;
 
   @override
@@ -374,9 +382,11 @@ class GameButton extends StatelessWidget {
           radius: size * 1.4,
           padding: EdgeInsets.symmetric(horizontal: size * 1.0, vertical: size * 0.5),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (icon != null)
-              Padding(padding: const EdgeInsets.only(right: 8), child: Text(icon!, style: TextStyle(fontSize: size, color: textColor))),
-            Text(label, style: displayStyle(size * 0.9, textColor).copyWith(shadows: glowShadows(color, s.highlighted ? 1 : 0.5))),
+            if (glyph != null)
+              Padding(padding: const EdgeInsets.only(right: 8), child: Glyph(glyph!, size: size * 1.4))
+            else if (icon != null)
+              Padding(padding: const EdgeInsets.only(right: 8), child: iconWidget(icon!, size, color: textColor)),
+            GlyphText(label, style: displayStyle(size * 0.9, textColor).copyWith(shadows: glowShadows(color, s.highlighted ? 1 : 0.5))),
           ]),
         ),
       ),
@@ -391,6 +401,7 @@ class ChoiceCard extends StatelessWidget {
     super.key,
     required this.accent,
     required this.icon,
+    this.glyph,
     required this.title,
     required this.body,
     required this.footer,
@@ -403,6 +414,9 @@ class ChoiceCard extends StatelessWidget {
 
   final Color accent;
   final String icon, title;
+
+  /// Lichtsymbol statt [icon].
+  final GlyphRef? glyph;
   final String? badge;
   final Color badgeColor;
   final Widget body, footer;
@@ -435,17 +449,20 @@ class ChoiceCard extends StatelessWidget {
                     ),
                   ),
                   child: Row(children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0x66050814),
-                        boxShadow: [BoxShadow(color: accent.withAlpha(140), blurRadius: 12)],
+                    if (glyph != null)
+                      Glyph(glyph!, size: glyph is WeaponGlyph ? 28 : 36)
+                    else
+                      Container(
+                        width: 32,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0x66050814),
+                          boxShadow: [BoxShadow(color: accent.withAlpha(140), blurRadius: 12)],
+                        ),
+                        child: Text(icon, style: const TextStyle(fontSize: 18)),
                       ),
-                      child: Text(icon, style: const TextStyle(fontSize: 18)),
-                    ),
                     const Spacer(),
                     if (badge != null) Pill(badge!, color: badgeColor, textColor: Colors.white, size: 10.5),
                   ]),
@@ -542,11 +559,15 @@ class PriceTag extends StatelessWidget {
 
 /// Kleines abgerundetes Etikett.
 class Pill extends StatelessWidget {
-  const Pill(this.text, {super.key, this.color = Ui.slot, this.textColor = Ui.text, this.size = 12, this.icon});
+  const Pill(this.text,
+      {super.key, this.color = Ui.slot, this.textColor = Ui.text, this.size = 12, this.icon, this.glyph});
   final String text;
   final Color color, textColor;
   final double size;
   final String? icon;
+
+  /// Lichtsymbol statt [icon].
+  final GlyphRef? glyph;
 
   @override
   Widget build(BuildContext context) {
@@ -558,8 +579,11 @@ class Pill extends StatelessWidget {
         border: Border.all(color: Ui.panelLine, width: 1),
       ),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
-        if (icon != null) Padding(padding: const EdgeInsets.only(right: 5), child: Text(icon!, style: TextStyle(fontSize: size))),
-        Text(text, style: bodyText(size, color: textColor, weight: 850)),
+        if (glyph != null)
+          Padding(padding: const EdgeInsets.only(right: 5), child: Glyph(glyph!, size: size * 1.5))
+        else if (icon != null)
+          Padding(padding: const EdgeInsets.only(right: 5), child: iconWidget(icon!, size, color: textColor)),
+        GlyphText(text, style: bodyText(size, color: textColor, weight: 850)),
       ]),
     );
   }
@@ -743,6 +767,6 @@ class DpadGlyph extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Ui.edge, width: 1.2),
         ),
-        child: Text('✚', style: bodyText(13, color: Ui.cardText, weight: 900)),
+        child: const Glyph(UiGlyph(UiIcon.plus, color: Ui.cardText), size: 14),
       );
 }

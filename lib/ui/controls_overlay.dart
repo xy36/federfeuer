@@ -61,7 +61,8 @@ class ControlsOverlay extends StatelessWidget {
             right: 130 + i * 76.0,
             bottom: 24,
             child: HoldButton(
-              label: game.run!.actions[i].id.icon,
+              label: game.run!.actions[i].id.label,
+            glyph: ActionGlyph(game.run!.actions[i].id),
               size: 64,
               fontSize: 24,
               onChanged: (v) {
@@ -75,8 +76,12 @@ class ControlsOverlay extends StatelessWidget {
 
 /// Button, der gedrückt gehalten wird (Multitouch-fähig über Listener).
 class HoldButton extends StatefulWidget {
-  const HoldButton({super.key, required this.label, required this.onChanged, this.size = 74, this.fontSize = 26});
+  const HoldButton(
+      {super.key, required this.label, required this.onChanged, this.size = 74, this.fontSize = 26, this.glyph});
   final String label;
+
+  /// Lichtsymbol statt Beschriftung (Aktionsknöpfe).
+  final GlyphRef? glyph;
   final ValueChanged<bool> onChanged;
   final double size, fontSize;
 
@@ -115,7 +120,9 @@ class _HoldButtonState extends State<HoldButton> {
           border: Border.all(color: _down ? const Color(0xE6FFE6A0) : const Color(0x66CFE3FF), width: 1.6),
           boxShadow: [BoxShadow(color: _down ? const Color(0x80FFD27A) : const Color(0x229FD8FF), blurRadius: _down ? 26 : 12)],
         ),
-        child: Text(widget.label,
+        child: widget.glyph != null
+            ? Glyph(widget.glyph!, size: widget.size * 0.6)
+            : GlyphText(widget.label,
             style: displayStyle(widget.fontSize * 0.85, const Color(0xFFF2F6FF))
                 .copyWith(shadows: _down ? glowShadows(const Color(0xFFFFD27A)) : null)),
       ),

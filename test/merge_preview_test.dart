@@ -37,14 +37,14 @@ void main() {
     await t.pump(const Duration(milliseconds: 50));
     final mouse = await t.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: Offset.zero);
-    await mouse.moveTo(t.getCenter(find.textContaining('Verschmelzen →')));
+    await mouse.moveTo(t.getCenter(find.textContaining('Verschmelzen ')));
     await t.pump(const Duration(milliseconds: 150));
     expect(find.byType(InfoCard), findsOneWidget);
     expect(find.textContaining('Aktionsplatz 2 wird frei'), findsOneWidget);
     await mouse.moveTo(t.getCenter(find.text('verschmelzen').first));
     await t.pump(const Duration(milliseconds: 150));
     expect(find.byType(InfoCard), findsOneWidget);
-    expect(find.textContaining('Verschmelzen: Stufe I + I → II'), findsOneWidget);
+    expect(find.textContaining('Verschmelzen: Stufe I + I '), findsOneWidget);
     await mouse.removePointer();
     game.overlays.remove('shop');
     game.toMenu();

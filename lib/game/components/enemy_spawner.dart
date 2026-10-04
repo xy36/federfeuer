@@ -111,70 +111,19 @@ extension _Spawners on Enemy {
   // ---------------- Darstellung ----------------
 
   void _spawnerRender(Canvas c, Color Function(Color) k, double pulse) {
-    const body = Enemy._body, body2 = Enemy._body2;
-    final shake = warn > 0 ? sin(t * 40) * 2 * warn : 0.0;
     switch (type) {
       case EnemyType.crowNest:
-        drawRect(c, -2.5, 0, 5, r + 4, k(const Color(0xFF2A1B12)));
-        c.save();
-        c.translate(shake, 0);
-        c.drawArc(Rect.fromCenter(center: const Offset(0, -2), width: r * 2.2, height: r * 1.4), 0, pi, true,
-            fillOf(k(const Color(0xFF3A2A1A))));
-        for (var i = 0; i < 6; i++) {
-          final a = i / 6 * pi;
-          Enemy._leg.color = k(const Color(0xFF6A5222));
-          c.drawLine(Offset(cos(a) * r * 1.1, -2 + sin(a) * 6), Offset(-cos(a) * r * 0.7, 2 + sin(a) * 9), Enemy._leg);
-        }
-        // Glühende Augen im Nest
-        Enemy._glowEye(c, -6, -6, 2, Enemy._eye);
-        Enemy._glowEye(c, 5, -7, 2, Enemy._eye);
-        c.restore();
+        EnemyArt.crowNest(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.waspNest:
-        c.save();
-        c.translate(shake, 0);
-        drawOval(c, 0, 0, r * 0.85, r * 1.1, k(const Color(0xFF3A2E22)));
-        for (var i = -2; i <= 2; i++) {
-          drawRect(c, -r * 0.8 + (i.abs() * 2), i * 6.0 - 1, r * 1.6 - i.abs() * 4, 2, k(const Color(0xFF5A4630)));
-        }
-        drawCircle(c, 0, r * 0.55, 4, const Color(0xFF05020A));
-        c.restore();
+        EnemyArt.waspNest(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.wasp:
-        final fl = sin(t * 30);
-        drawOval(c, -2, -5 - fl * 2, 5, 3, const Color(0x99DFF8FF));
-        drawOval(c, 0, 0, 7, 4.5, k(const Color(0xFF3A2E10)));
-        drawRect(c, -3, -4, 2, 8, k(const Color(0xFFFFC94A)));
-        drawRect(c, 1, -4, 2, 8, k(const Color(0xFFFFC94A)));
-        Enemy._glowEye(c, 5, -1, 1.4, Enemy._eye);
+        EnemyArt.wasp(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.sporeShroom:
-        drawRect(c, -6, -4, 12, r + 4, k(const Color(0xFF2A2440)));
-        c.save();
-        c.scale(1 + 0.08 * warn, 1 + 0.08 * warn);
-        c.drawArc(Rect.fromCenter(center: const Offset(0, -2), width: r * 2.4, height: r * 1.8), pi, pi, true, fillOf(k(body)));
-        for (final (sx, sy) in [(-10.0, -12.0), (3.0, -16.0), (12.0, -8.0), (-2.0, -7.0)]) {
-          drawCircle(c, sx, sy, 2.6, const Color(0xFF9CFF5A).withAlpha((140 + 100 * max(pulse, warn)).round()));
-        }
-        c.restore();
+        EnemyArt.sporeShroom(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.spore:
-        drawCircle(c, 0, 0, r * 0.75, k(body2));
-        drawCircle(c, -1, -1, r * 0.4, const Color(0xFF9CFF5A).withAlpha((160 + 60 * pulse).round()));
+        EnemyArt.spore(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.beetleQueen:
-        for (var i = -1; i <= 1; i++) {
-          final lg = sin(t * 8 + i) * 3;
-          Enemy._leg
-            ..color = k(body2)
-            ..strokeWidth = 3;
-          c.drawLine(Offset(i * 11.0, 8), Offset(i * 11 + lg, r), Enemy._leg);
-          Enemy._leg.strokeWidth = 2.2;
-        }
-        c.drawArc(Rect.fromCircle(center: const Offset(0, 8), radius: r), pi, pi, true, fillOf(k(body)));
-        // Eiersack hinten, Zackenkrone vorn
-        drawOval(c, -r * 0.55, 0, r * 0.45, r * 0.35, const Color(0xFFBFE3FF).withAlpha((60 + 80 * max(pulse, warn)).round()));
-        for (var i = 0; i < 3; i++) {
-          final cx = r * 0.35 + i * 6;
-          drawTri(c, cx - 3, -r * 0.55, cx, -r * 0.55 - 9 - (i == 1 ? 4 : 0), cx + 3, -r * 0.55, const Color(0xFFBFE3FF));
-        }
-        drawCircle(c, r - 2, 2, 7, k(body2));
-        Enemy._glowEye(c, r + 1, 0, 2.2, const Color(0xFFBFE3FF));
+        EnemyArt.beetleQueen(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.beetleEgg:
         final wob = sin(t * (6 + 20 * warn)) * 0.15 * (0.3 + warn);
         c.save();

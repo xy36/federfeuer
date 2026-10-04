@@ -8,6 +8,7 @@ import '../federfeuer_game.dart';
 import '../input_bindings.dart';
 import '../perf.dart';
 import 'draw.dart';
+import 'glyph_art.dart';
 import 'enemy.dart';
 import 'light.dart';
 import '../../ui/widgets.dart' show isTouchPlatform;
@@ -194,7 +195,10 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
           c.drawArc(Rect.fromCircle(center: Offset(ax, ay), radius: ar - 3), -pi / 2,
               2 * pi * (1 - g.actionCds[i] / act.cooldown), false, _line);
         }
-        OutlineText.draw(c, act.id.icon, Offset(ax, ay + 1), size: (17 * pop).roundToDouble(), display: false, glow: false);
+        c.save();
+        c.translate(ax, ay);
+        GlyphArt.draw(c, ActionGlyph(act.id), ar * 1.5 * pop, t: g.clock);
+        c.restore();
         if (f > 0) {
           OutlineText.draw(c, 'BEREIT!', Offset(ax, ay - ar - 12 - 6 * (1 - f)),
               // Deckkraft in Zehnteln, damit der Text-Cache nicht für jeden Frame neu rendert

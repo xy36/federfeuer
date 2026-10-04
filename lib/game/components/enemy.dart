@@ -13,6 +13,7 @@ import 'light.dart';
 import 'pickups.dart';
 import 'projectiles.dart';
 import 'boss_art.dart';
+import 'enemy_art.dart';
 import 'rot_art.dart';
 import 'transient.dart';
 
@@ -289,7 +290,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
   // ---------------- Darstellung: dunkle Fäulnis-Kreaturen ----------------
 
-  static const _body = RotArt.ink, _body2 = Color(0xFF1C0E28);
+  static const _body = RotArt.ink;
   static const _aura = Color(0xFFB44CFF), _eye = Color(0xFFFF4D6D), _ember = Color(0xFFFF8A3D);
   static const _toxic = Color(0xFF9CFF5A), _crown = Color(0xFFFF5AE0);
 
@@ -301,9 +302,6 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   static final _bubble = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
-  static final _leg = Paint()
-    ..strokeWidth = 2.2
-    ..strokeCap = StrokeCap.round;
   static final _crack = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 1.6
@@ -353,61 +351,11 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         RotArt.crow(c, t, sin(t * 16), pulse, hit: hit);
         _slitEye(c, 6, -5, 2.6, _eye);
       case EnemyType.beetle:
-        for (var i = -1; i <= 1; i++) {
-          final lg = sin(t * 14 + i) * 3;
-          _leg.color = k(_body2);
-          c.drawLine(Offset(i * 7.0, 4), Offset(i * 7 + lg, 15), _leg);
-        }
-        c.drawArc(Rect.fromCircle(center: const Offset(0, 4), radius: 16), pi, pi, true, fillOf(k(_body)));
-        // Glühende Risse im Panzer
-        _crack.color = _ember.withAlpha((150 + 90 * pulse).round());
-        c.drawPath(
-            Path()
-              ..moveTo(-12, 1)
-              ..lineTo(-6, -6)
-              ..lineTo(-1, -2)
-              ..lineTo(5, -9)
-              ..moveTo(-1, -2)
-              ..lineTo(3, 2),
-            _crack);
-        drawCircle(c, 15, 0, 6, k(_body2));
-        _glowEye(c, 17, -1.5, 2, _ember);
+        EnemyArt.beetle(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.spitter:
-        final wb = sin(t * 5) * 1.5;
-        drawOval(c, 0, 0, 15 + wb, 13 - wb, k(_body));
-        for (var i = -1; i <= 1; i++) {
-          drawTri(c, i * 8 - 3.0, 10, i * 8 + 3.0, 10, i * 8.0, 19 + sin(t * 6 + i) * 3, k(_body2));
-        }
-        // Pulsierender Giftsack
-        drawOval(c, -3, 3, 6, 5, _toxic.withAlpha((170 + 60 * pulse).round()));
-        drawOval(c, 7, 3, 4.5, 3.5, k(const Color(0xFF05020A)));
-        _glowEye(c, 4, -5, 2.6, _toxic);
+        EnemyArt.spitter(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.rock:
-        final path = Path();
-        for (var i = 0; i < 8; i++) {
-          final a = i / 8 * pi * 2, rr = r * (i.isOdd ? 0.86 : 1);
-          if (i == 0) {
-            path.moveTo(rr, 0);
-          } else {
-            path.lineTo(cos(a) * rr, sin(a) * rr);
-          }
-        }
-        path.close();
-        c.drawPath(path, fillOf(k(_body)));
-        // Glutadern
-        _crack.color = _ember.withAlpha((140 + 100 * pulse).round());
-        c.drawPath(
-            Path()
-              ..moveTo(-r * 0.7, r * 0.2)
-              ..lineTo(-r * 0.25, -r * 0.1)
-              ..lineTo(0, r * 0.35)
-              ..lineTo(r * 0.3, r * 0.1)
-              ..moveTo(-r * 0.25, -r * 0.1)
-              ..lineTo(-r * 0.1, -r * 0.55),
-            _crack);
-        drawRect(c, 3, -12, 16, 3, k(_body2));
-        _glowEye(c, 7, -6, 3.2, _ember);
-        _glowEye(c, 15, -6, 2.8, _ember);
+        EnemyArt.rock(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.boss:
         BossArt.vultureKing(c, _bossLook(hit, pulse));
     }
@@ -468,9 +416,6 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     c.drawPath(p, fillOf(Color.lerp(col, Colors.white, 0.35)!));
   }
 
-  static void _glowEye(Canvas c, double x, double y, double r, Color col) {
-    _slitEye(c, x, y, r, col);
-  }
 
 
   /// Leuchtpunkte dieses Gegners in Weltkoordinaten: [back] hinter dem Körper (Aura),

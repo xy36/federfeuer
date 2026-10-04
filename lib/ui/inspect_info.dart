@@ -7,17 +7,17 @@ import 'widgets.dart';
 
 /// Inhalte der Info-Panels im Shop: Waffen, Items, Aktionen, Set-Boni, Werte.
 
-Widget _head(String icon, String title, String sub, Color color) => Row(children: [
+Widget _head(Object icon, String title, String sub, Color color) => Row(children: [
       Container(
-        width: 34,
-        height: 34,
+        width: 38,
+        height: 38,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: color.withAlpha(40),
-          border: Border.all(color: color.withAlpha(160), width: 1.4),
+          color: color.withAlpha(30),
+          border: Border.all(color: color.withAlpha(140), width: 1.2),
         ),
-        child: Text(icon, style: const TextStyle(fontSize: 17)),
+        child: icon is GlyphRef ? Glyph(icon, size: 30) : iconWidget('$icon', 17, color: color),
       ),
       const SizedBox(width: 10),
       Expanded(
@@ -32,7 +32,7 @@ Widget _line(String label, String value, {Color color = Ui.text}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(children: [
         Expanded(child: Text(label, style: bodyText(12, color: Ui.muted))),
-        Text(value, style: bodyText(12.5, color: color, weight: 900)),
+        GlyphText(value, style: bodyText(12.5, color: color, weight: 900)),
       ]),
     );
 
@@ -43,7 +43,7 @@ Widget _section(String t) => Padding(
 
 Widget _text(String t, {Color color = Ui.text}) => Padding(
       padding: const EdgeInsets.only(top: 2),
-      child: Text(t, style: bodyText(12.5, color: color)),
+      child: GlyphText(t, style: bodyText(12.5, color: color)),
     );
 
 const _good = Color(0xFF8CF5B0), _bad = Color(0xFFFF8A9A);
@@ -81,7 +81,7 @@ Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? pri
     if (d.heavy) 'langsam und schwer: profitiert vom Stein-Set',
   ];
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    _head(d.icon, d.name, 'Stufe ${t.label} · ${d.cls.label} · $kind', t.color),
+    _head(WeaponGlyph(id, tier: tier), d.name, 'Stufe ${t.label} · ${d.cls.label} · $kind', t.color),
     _text(d.desc),
     _section('Werte'),
     _line('Schaden', '${fmtNum(s.dmg)}${d.count > 1 ? ' ×${d.count}' : ''}'),
@@ -115,7 +115,7 @@ Widget itemInfo(RunState r, String id, {int? price}) {
   final it = itemById[id]!, owned = r.items[id] ?? 0;
   final act = it.action;
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    _head(it.icon, it.name, act != null ? 'Aktions-Item · ${it.rarity.label}' : it.rarity.label, it.rarity.color),
+    _head(ItemGlyph(it.id), it.name, act != null ? 'Aktions-Item · ${it.rarity.label}' : it.rarity.label, it.rarity.color),
     if (it.desc.isNotEmpty) _text(it.desc),
     if (it.mods.isNotEmpty) ...[
       _section('Werte'),
@@ -161,7 +161,7 @@ Widget actionInfo(RunState r, OwnedAction a, int slot) => Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _head(a.id.icon, a.label, 'Aktionsplatz ${slot + 1}', a.id.evolved ? const Color(0xFFFFC94A) : Palette.sun),
+        _head(ActionGlyph(a.id), a.label, 'Aktionsplatz ${slot + 1}', a.id.evolved ? const Color(0xFFFFC94A) : Palette.sun),
         ...actionDetails(r, a),
       ],
     );
@@ -209,7 +209,7 @@ Widget characterInfo(Progress p, CharacterDef c) {
   final has = p.hasCharacter(c.id);
   final prog = p.unlockProgress(c.unlock);
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    _head(c.icon, c.name, '${c.species} · ${c.role}', c.glow),
+    _head(BirdGlyph(c), c.name, '${c.species} · ${c.role}', c.glow),
     _section('Stärke'),
     _text(c.strength, color: _good),
     _section('Nachteil'),
@@ -231,7 +231,7 @@ Widget characterInfo(Progress p, CharacterDef c) {
 Widget enemyInfo(EnemyType t) {
   final d = enemyDefs[t]!;
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    _head(t.icon, t.label, d.flying ? 'fliegt' : 'am Boden', const Color(0xFFC77DFF)),
+    _head(EnemyGlyph(t), t.label, d.flying ? 'fliegt' : 'am Boden', const Color(0xFFC77DFF)),
     _text(t.desc),
     _section('Grundwerte (Welle 1, Stufe Küken)'),
     _line('Lebenspunkte', fmtNum(d.hp)),
@@ -251,7 +251,7 @@ Widget recipeInfo(RunState r, ActionRecipe rec, {required bool evolved}) => Colu
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        _head(rec.result.icon, rec.result.label, '${rec.a.label} + ${rec.b.label}', const Color(0xFFFFC94A)),
+        _head(ActionGlyph(rec.result), rec.result.label, '${rec.a.label} + ${rec.b.label}', const Color(0xFFFFC94A)),
         ...actionDetails(r, OwnedAction(rec.result)),
         _section('Status'),
         _text(evolved ? 'Schon selbst verschmolzen ✓' : 'Noch nie verschmolzen', color: evolved ? _good : Ui.muted),
@@ -262,7 +262,7 @@ Widget recipeInfo(RunState r, ActionRecipe rec, {required bool evolved}) => Colu
 Widget evolutionPreview(RunState r, ActionRecipe rec) {
   final lost = r.actions.where((a) => a.level > 0).map((a) => a.id.label).toList();
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    _head(rec.result.icon, rec.result.label, 'Evolution aus ${rec.a.label} + ${rec.b.label}', const Color(0xFFFFC94A)),
+    _head(ActionGlyph(rec.result), rec.result.label, 'Evolution aus ${rec.a.label} + ${rec.b.label}', const Color(0xFFFFC94A)),
     ...actionDetails(r, OwnedAction(rec.result)),
     _section('Beim Verschmelzen'),
     _text('• ${rec.a.label} und ${rec.b.label} werden zu ${rec.result.label} (Aktionsplatz 1).'),
@@ -281,12 +281,12 @@ Widget weaponMergePreview(RunState r, OwnedWeapon w) {
         child: Row(children: [
           Expanded(child: Text(label, style: bodyText(12, color: Ui.muted))),
           Text(from, style: bodyText(12.5, color: Ui.muted, weight: 900)),
-          Text('  →  ', style: bodyText(12, color: Ui.muted)),
+          GlyphText('  →  ', style: bodyText(12, color: Ui.muted)),
           Text(to, style: bodyText(12.5, color: _good, weight: 900)),
         ]),
       );
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    _head(d.icon, d.name, 'Verschmelzen: Stufe ${ta.label} + ${ta.label} → ${tb.label}', tb.color),
+    _head(WeaponGlyph(w.id, tier: w.tier + 1), d.name, 'Verschmelzen: Stufe ${ta.label} + ${ta.label} → ${tb.label}', tb.color),
     _section('Werte'),
     cmp('Schaden', fmtNum(a.dmg), fmtNum(b.dmg)),
     cmp(d.kind == WeaponKind.orbit ? 'Treffer je Gegner alle' : 'Abklingzeit', '${a.cooldown.toStringAsFixed(2)} s',

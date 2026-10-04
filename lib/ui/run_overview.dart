@@ -34,7 +34,7 @@ class RunOverview extends StatelessWidget {
                 radius: 999,
                 info: (_) => itemInfo(r, e.key),
                 child: Pill(e.value > 1 ? '${itemById[e.key]!.name} ×${e.value}' : itemById[e.key]!.name,
-                    icon: itemById[e.key]!.icon, color: itemById[e.key]!.rarity.color.withAlpha(40)),
+                    glyph: ItemGlyph(e.key), color: itemById[e.key]!.rarity.color.withAlpha(40)),
               ),
           ]),
           sectionTitle('Aktionen ${r.actions.length}/$kActionSlots'),
@@ -46,7 +46,7 @@ class RunOverview extends StatelessWidget {
                 radius: 999,
                 info: (_) => actionInfo(r, r.actions[k], k),
                 child: Pill('${r.actions[k].label} · ${fmtNum(r.actions[k].cooldown)} s',
-                    icon: r.actions[k].id.icon,
+                    glyph: ActionGlyph(r.actions[k].id),
                     color: r.actions[k].id.evolved ? const Color(0x55FFC94A) : const Color(0x33FFD23F)),
               ),
           ]),
@@ -105,7 +105,7 @@ class RunOverview extends StatelessWidget {
         child: Row(children: [
           Container(width: 7, color: t.color),
           const SizedBox(width: 7),
-          Text(w.def.icon, style: const TextStyle(fontSize: 18)),
+          Glyph(WeaponGlyph(w.id, tier: w.tier), size: 26),
           const SizedBox(width: 6),
           Expanded(
             child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
