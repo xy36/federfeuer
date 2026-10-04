@@ -1017,4 +1017,172 @@ class _Obj {
         at(c, 0, 0, 1, () => feather(c, const Color(0xFFF4F8FF)), rot: 0.9);
     }
   }
+
+  // ---------------- Bedien-Symbole ----------------
+
+  /// Feine Lichtlinie in der Textfarbe.
+  static void stroke(Canvas c, Path p, Color col, {double w = 2}) {
+    _add
+      ..strokeWidth = w * 2.2
+      ..color = col.withValues(alpha: 0.28);
+    c.drawPath(p, _add);
+    _line
+      ..strokeWidth = w
+      ..color = Color.lerp(col, Colors.white, 0.3)!;
+    c.drawPath(p, _line);
+  }
+
+  static void _arrow(Canvas c, Color col, double rot) => at(c, 0, 0, 1, rot: rot, () {
+        stroke(c, Path()..moveTo(-8, 0)..lineTo(7, 0), col, w: 2.2);
+        stroke(c, seg([(1.5, -5.5), (7.5, 0), (1.5, 5.5)]), col, w: 2.2);
+      });
+
+  static void _tri(Canvas c, Color col, double rot) => at(c, 0, 0, 1, rot: rot, () {
+        glow(c, 1, 0, 11, col, 0.25);
+        part(c, Path()..moveTo(-5, -7.5)..quadraticBezierTo(-6, -8.5, -4, -7.4)..lineTo(7.5, -1)..quadraticBezierTo(9, 0, 7.5, 1)..lineTo(-4, 7.4)..quadraticBezierTo(-6, 8.5, -5, 7.5)..close(),
+            col, rim: 0.6, light: 0.6, dark: 0.25);
+      });
+
+  static void ui(Canvas c, UiIcon i, Color col, double t) {
+    switch (i) {
+      case UiIcon.play:
+        _tri(c, col, 0);
+      case UiIcon.left:
+        _tri(c, col, pi);
+      case UiIcon.up:
+        _tri(c, col, -pi / 2);
+      case UiIcon.down:
+        _tri(c, col, pi / 2);
+      case UiIcon.arrowRight:
+        _arrow(c, col, 0);
+      case UiIcon.arrowLeft:
+        _arrow(c, col, pi);
+      case UiIcon.arrowUp:
+        _arrow(c, col, -pi / 2);
+      case UiIcon.arrowDown:
+        _arrow(c, col, pi / 2);
+      case UiIcon.arrowDownRight:
+        _arrow(c, col, pi / 4);
+      case UiIcon.fall:
+        glow(c, 0, 0, 11, const Color(0xFF8FD8FF), 0.3);
+        part(c, poly([(-3, -9), (3, -9), (3, 0), (8, 0), (0, 9.5), (-8, 0), (-3, 0)]), const Color(0xFF8FD8FF), rim: 0.6, light: 0.6);
+      case UiIcon.upgrade:
+        stroke(c, Path()..moveTo(-7, 8)..quadraticBezierTo(-7, -3, 5, -3), col, w: 2.2);
+        stroke(c, seg([(0, -8), (5.5, -3), (0, 2)]), col, w: 2.2);
+      case UiIcon.restart || UiIcon.reset:
+        final s = i == UiIcon.reset ? -1.0 : 1.0;
+        at(c, 0, 0, 1, () {
+          c.scale(s, 1);
+          stroke(c, Path()..addArc(Rect.fromCircle(center: Offset.zero, radius: 7), -pi / 2 + 0.5, pi * 1.6), col, w: 2.2);
+          stroke(c, seg([(-1.5, -10.5), (1.8, -7), (-1.5, -3.5)]), col, w: 2.2);
+        });
+      case UiIcon.star:
+        glow(c, 0, 0, 12, const Color(0xFFFFC83A), 0.4);
+        part(c, GlyphArt._star(10.5, 4.4, 5), const Color(0xFFFFC83A), rim: 0.6, light: 0.6);
+      case UiIcon.sparkle:
+        glow(c, 0, 0, 11, col, 0.35);
+        spark(c, 0, 0, 10, Color.lerp(col, Colors.white, 0.3)!);
+      case UiIcon.heart:
+        glow(c, 0, 0, 12, const Color(0xFFFF4A5A), 0.4);
+        at(c, 0, 1, 1.3, () => part(c, GlyphArt._heart(1), const Color(0xFFFF4A5A), rim: 0.6));
+        shine(c, -4, -3, 1.4, 1.8, a: 0.6);
+      case UiIcon.crystal:
+        glow(c, 0, 0, 11, const Color(0xFF7CF29C), 0.4);
+        crystal(c, 0, 0, 1.35, const Color(0xFF7CF29C));
+      case UiIcon.check:
+        stroke(c, seg([(-8, 0), (-2.5, 6), (8, -6.5)]), col, w: 2.6);
+      case UiIcon.plus:
+        stroke(c, Path()..moveTo(0, -7.5)..lineTo(0, 7.5)..moveTo(-7.5, 0)..lineTo(7.5, 0), col, w: 2.6);
+      case UiIcon.lock || UiIcon.unlock:
+        glow(c, 0, 2, 11, const Color(0xFFFFC23A), 0.3);
+        final shackle = i == UiIcon.lock
+            ? (Path()..moveTo(-4.5, 0)..lineTo(-4.5, -4)..arcToPoint(const Offset(4.5, -4), radius: const Radius.circular(4.5))..lineTo(4.5, 0))
+            : (Path()..moveTo(-4.5, 0)..lineTo(-4.5, -6)..arcToPoint(const Offset(4.5, -6), radius: const Radius.circular(4.5))..lineTo(4.5, -4));
+        band(c, shackle, const Color(0xFFC8D0DC), 2.4);
+        part(c, rrect(-7.5, -1, 7.5, 9.5, 2), const Color(0xFFFFC23A));
+        dot(c, 0, 3.5, 1.5, const Color(0xFF5A3A10));
+        part(c, rrect(-0.6, 3.5, 0.6, 6.5, 0.3), const Color(0xFF5A3A10), rim: 0);
+      case UiIcon.flag:
+        band(c, Path()..moveTo(-7, -10)..lineTo(-7, 10), const Color(0xFFC8CCD8), 1.8);
+        final flag = Path()..moveTo(-7, -9)..quadraticBezierTo(0, -11, 9, -8)..lineTo(9, 0)..quadraticBezierTo(0, -3, -7, -1)..close();
+        part(c, flag, const Color(0xFFF4F4F8), rim: 0.6, dark: 0.2);
+        c.save();
+        c.clipPath(flag);
+        for (var x = 0; x < 4; x++) {
+          for (var y = 0; y < 3; y++) {
+            if ((x + y).isOdd) c.drawRect(Rect.fromLTWH(-7 + x * 4, -11 + y * 4, 4, 4), _fill..color = const Color(0xFF1E2234));
+          }
+        }
+        c.restore();
+      case UiIcon.map:
+        glow(c, 0, 0, 11, const Color(0xFFE8D8A8), 0.25);
+        part(c, poly([(-10, -7), (-4, -9), (-4, 8), (-10, 10)]), const Color(0xFFE8D8A8), rim: 0.5, dark: 0.25);
+        part(c, poly([(-4, -9), (3, -7), (3, 10), (-4, 8)]), const Color(0xFFCFC090), rim: 0.5, dark: 0.25);
+        part(c, poly([(3, -7), (10, -9), (10, 8), (3, 10)]), const Color(0xFFE8D8A8), rim: 0.5, dark: 0.25);
+        line(c, Path()..moveTo(-8, 6)..quadraticBezierTo(-4, -2, 1, 2)..quadraticBezierTo(4, 4, 6, -3), const Color(0xFFE8504A), 0.9);
+        line(c, Path()..moveTo(5, -6)..lineTo(8, -3)..moveTo(8, -6)..lineTo(5, -3), const Color(0xFFE8504A), 1.1);
+      case UiIcon.dice:
+        glow(c, 0, 0, 11, Colors.white, 0.25);
+        at(c, 0, 0, 1, rot: 0.2, () {
+          part(c, rrect(-8.5, -8.5, 8.5, 8.5, 2.5), const Color(0xFFF4F2F8), dark: 0.3);
+          for (final (x, y) in [(-4.0, -4.0), (4.0, -4.0), (0.0, 0.0), (-4.0, 4.0), (4.0, 4.0)]) {
+            dot(c, x, y, 1.5, const Color(0xFFD8404A));
+          }
+        });
+      case UiIcon.trophy:
+        glow(c, 0, -2, 12, const Color(0xFFFFC23A), 0.4);
+        for (final sx in [-1.0, 1.0]) {
+          band(c, Path()..moveTo(sx * 6, -7)..quadraticBezierTo(sx * 11, -7, sx * 10, -3)..quadraticBezierTo(sx * 9, 0, sx * 5, 0), const Color(0xFFE0A830), 1.6);
+        }
+        part(c, Path()..moveTo(-7, -9)..lineTo(7, -9)..lineTo(6, -2)..quadraticBezierTo(4, 3, 0, 3)..quadraticBezierTo(-4, 3, -6, -2)..close(), const Color(0xFFFFC23A));
+        part(c, rrect(-1.4, 3, 1.4, 7, 0), const Color(0xFFE0A830), rim: 0);
+        part(c, rrect(-6, 7, 6, 10, 1), const Color(0xFFB07A2A), rim: 0.5);
+        shine(c, -3.5, -5.5, 1, 2.2, a: 0.6);
+      case UiIcon.hand:
+        glow(c, 0, 0, 11, const Color(0xFFF0C8A0), 0.25);
+        glove(c, const Color(0xFFF0C8A0));
+      case UiIcon.backpack:
+        glow(c, 0, 0, 11, const Color(0xFFC08A50), 0.3);
+        band(c, Path()..moveTo(-3.5, -7)..quadraticBezierTo(0, -11, 3.5, -7), const Color(0xFF8A5A30), 1.6);
+        part(c, rrect(-7.5, -7, 7.5, 10, 3), const Color(0xFFC08A50));
+        part(c, Path()..moveTo(-7.5, -3)..quadraticBezierTo(0, -9.5, 7.5, -3)..lineTo(7.5, -1)..lineTo(-7.5, -1)..close(), const Color(0xFFA06A38), rim: 0.5);
+        part(c, rrect(-4.5, 3, 4.5, 8.5, 1.5), const Color(0xFFA06A38), rim: 0.5);
+        dot(c, 0, -1.5, 1, const Color(0xFFFFD86A));
+      case UiIcon.cart:
+        stroke(c, seg([(-10, -8), (-7, -8), (-4, 4), (7, 4), (9, -4), (-6, -4)]), col, w: 2);
+        for (final x in [-3.0, 6.0]) {
+          stroke(c, circle(x, 7.5, 1.6), col, w: 1.6);
+        }
+      case UiIcon.stopwatch:
+        at(c, 0, 0, 1.05, () => clock(c, t));
+      case UiIcon.microscope:
+        stroke(c, Path()..moveTo(-8, 9)..lineTo(8, 9)..moveTo(-2, 9)..quadraticBezierTo(6, 6, 4, -1), col, w: 2);
+        stroke(c, Path()..moveTo(-4, -9)..lineTo(2, 1), col, w: 3.4);
+        stroke(c, Path()..moveTo(-6, 4)..lineTo(4, 4), col, w: 1.6);
+      case UiIcon.keyboard:
+        stroke(c, rrect(-10, -6, 10, 7, 2), col, w: 1.6);
+        for (var y = 0; y < 2; y++) {
+          for (var x = 0; x < 5; x++) {
+            dot(c, -6.4 + x * 3.2, -2.5 + y * 3.2, 0.9, Color.lerp(col, Colors.white, 0.3)!);
+          }
+        }
+        stroke(c, Path()..moveTo(-4, 4)..lineTo(4, 4), col, w: 1.2);
+      case UiIcon.gamepad:
+        glow(c, 0, 0, 12, const Color(0xFF8A9AD8), 0.3);
+        part(c, Path()..moveTo(-6, -6)..lineTo(6, -6)..cubicTo(11, -6, 12, 8, 9, 8)..cubicTo(6.5, 8, 5, 3, 3, 3)..lineTo(-3, 3)..cubicTo(-5, 3, -6.5, 8, -9, 8)..cubicTo(-12, 8, -11, -6, -6, -6)..close(),
+            const Color(0xFF5A6488));
+        line(c, Path()..moveTo(-6, -1.5)..lineTo(-6, 2.5)..moveTo(-8, 0.5)..lineTo(-4, 0.5), const Color(0xFFE6ECF8), 1.3);
+        dot(c, 5, -1.5, 1.1, const Color(0xFF7CF29C));
+        dot(c, 7.2, 0.6, 1.1, const Color(0xFFFF6A6A));
+        dot(c, 2.8, 0.6, 1.1, const Color(0xFF6AC8FF));
+      case UiIcon.fullscreen:
+        for (final (sx, sy) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]) {
+          stroke(c, seg([(sx * 8, sy * 3), (sx * 8, sy * 8), (sx * 3, sy * 8)]), col, w: 2);
+        }
+      case UiIcon.exitFullscreen:
+        for (final (sx, sy) in [(-1.0, -1.0), (1.0, -1.0), (-1.0, 1.0), (1.0, 1.0)]) {
+          stroke(c, seg([(sx * 8, sy * 3), (sx * 3, sy * 3), (sx * 3, sy * 8)]), col, w: 2);
+        }
+    }
+  }
 }

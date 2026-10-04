@@ -122,7 +122,7 @@ class _HoldButtonState extends State<HoldButton> {
         ),
         child: widget.glyph != null
             ? Glyph(widget.glyph!, size: widget.size * 0.6)
-            : Text(widget.label,
+            : GlyphText(widget.label,
             style: displayStyle(widget.fontSize * 0.85, const Color(0xFFF2F6FF))
                 .copyWith(shadows: _down ? glowShadows(const Color(0xFFFFD27A)) : null)),
       ),

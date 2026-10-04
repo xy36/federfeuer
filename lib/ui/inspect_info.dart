@@ -17,7 +17,7 @@ Widget _head(Object icon, String title, String sub, Color color) => Row(children
           color: color.withAlpha(30),
           border: Border.all(color: color.withAlpha(140), width: 1.2),
         ),
-        child: icon is GlyphRef ? Glyph(icon, size: 30) : Text('$icon', style: const TextStyle(fontSize: 17)),
+        child: icon is GlyphRef ? Glyph(icon, size: 30) : iconWidget('$icon', 17, color: color),
       ),
       const SizedBox(width: 10),
       Expanded(
@@ -32,7 +32,7 @@ Widget _line(String label, String value, {Color color = Ui.text}) => Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(children: [
         Expanded(child: Text(label, style: bodyText(12, color: Ui.muted))),
-        Text(value, style: bodyText(12.5, color: color, weight: 900)),
+        GlyphText(value, style: bodyText(12.5, color: color, weight: 900)),
       ]),
     );
 
@@ -43,7 +43,7 @@ Widget _section(String t) => Padding(
 
 Widget _text(String t, {Color color = Ui.text}) => Padding(
       padding: const EdgeInsets.only(top: 2),
-      child: Text(t, style: bodyText(12.5, color: color)),
+      child: GlyphText(t, style: bodyText(12.5, color: color)),
     );
 
 const _good = Color(0xFF8CF5B0), _bad = Color(0xFFFF8A9A);
@@ -281,7 +281,7 @@ Widget weaponMergePreview(RunState r, OwnedWeapon w) {
         child: Row(children: [
           Expanded(child: Text(label, style: bodyText(12, color: Ui.muted))),
           Text(from, style: bodyText(12.5, color: Ui.muted, weight: 900)),
-          Text('  →  ', style: bodyText(12, color: Ui.muted)),
+          GlyphText('  →  ', style: bodyText(12, color: Ui.muted)),
           Text(to, style: bodyText(12.5, color: _good, weight: 900)),
         ]),
       );

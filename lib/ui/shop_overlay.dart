@@ -100,7 +100,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
               valueListenable: controllerActive,
               builder: (context, pad, _) => pad || isTouchPlatform
                   ? const SizedBox.shrink()
-                  : Text('R würfeln · L zurückhalten · Bild ↑↓ Bereich',
+                  : GlyphText('R würfeln · L zurückhalten · Bild ↑↓ Bereich',
                       maxLines: 1, overflow: TextOverflow.ellipsis, style: bodyText(11.5, color: Ui.muted)),
             ),
           ),
@@ -239,7 +239,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
         radius: 10,
         depth: 2,
         child: Center(
-          child: Text(
+          child: GlyphText(
             locked ? '🔒 Zurückgehalten' : '🔓 Zurückhalten',
             style: bodyText(11.5, color: locked ? Palette.sun : Ui.muted, weight: 900),
           ),
@@ -339,7 +339,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
           if (hints.isNotEmpty) ...[
             const Spacer(),
             for (final (text, col) in hints)
-              Text(
+              GlyphText(
                 text,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -350,7 +350,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
         ],
       ),
       footer: CardFooter(
-        picking ? const Text('Platz wählen ↘') : PriceTag(o.price),
+        picking ? const GlyphText('Platz wählen ↘') : PriceTag(o.price),
         color: poor ? const Color(0xFF6C7590) : Palette.sun,
       ),
       onPressed: poor ? null : () => _buy(i),
@@ -442,7 +442,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
         Text(evo.result.desc, style: bodyText(11.5, color: Ui.muted)),
       ] else if (recipes.isNotEmpty && pending == null) ...[
         const SizedBox(height: 6),
-        for (final t in recipes) Text('⤴ $t', style: bodyText(11.5, color: Ui.muted)),
+        for (final t in recipes) GlyphText('⤴ $t', style: bodyText(11.5, color: Ui.muted)),
       ],
     ];
   }
@@ -486,7 +486,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('✓', style: displayStyle(34, Palette.mint)),
+          GlyphText('✓', style: displayStyle(34, Palette.mint)),
           Text('Gekauft', style: displayStyle(16, Ui.muted)),
         ],
       ),
@@ -670,7 +670,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(label, style: numberStyle(12, Ui.cardText)),
+            GlyphText(label, style: numberStyle(12, Ui.cardText)),
             Text(sub, style: bodyText(8.5, color: Ui.cardMuted)),
           ],
         ),

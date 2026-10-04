@@ -224,7 +224,7 @@ class KeyCap extends StatelessWidget {
           border: Border.all(color: Ui.edge, width: 1.2),
           boxShadow: const [BoxShadow(color: Color(0xFF050814), offset: Offset(0, 2))],
         ),
-        child: Text(label, style: bodyText(12, color: Ui.cardText, weight: 900)),
+        child: GlyphText(label, style: bodyText(12, color: Ui.cardText, weight: 900)),
       );
 }
 

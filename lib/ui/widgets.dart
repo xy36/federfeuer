@@ -6,7 +6,7 @@ import '../game/gamepad_input.dart' show controllerActive;
 import '../game/components/glyph_art.dart';
 
 export '../game/components/glyph_art.dart'
-    show Glyph, GlyphRef, WeaponGlyph, ItemGlyph, ActionGlyph, StatGlyph, EnemyGlyph, BirdGlyph;
+    show Glyph, GlyphRef, WeaponGlyph, ItemGlyph, ActionGlyph, StatGlyph, EnemyGlyph, BirdGlyph, UiGlyph, UiIcon, GlyphText, iconWidget;
 import '../game/input_bindings.dart' show padLabel;
 
 import '../game/config.dart';
@@ -385,8 +385,8 @@ class GameButton extends StatelessWidget {
             if (glyph != null)
               Padding(padding: const EdgeInsets.only(right: 8), child: Glyph(glyph!, size: size * 1.4))
             else if (icon != null)
-              Padding(padding: const EdgeInsets.only(right: 8), child: Text(icon!, style: TextStyle(fontSize: size, color: textColor))),
-            Text(label, style: displayStyle(size * 0.9, textColor).copyWith(shadows: glowShadows(color, s.highlighted ? 1 : 0.5))),
+              Padding(padding: const EdgeInsets.only(right: 8), child: iconWidget(icon!, size, color: textColor)),
+            GlyphText(label, style: displayStyle(size * 0.9, textColor).copyWith(shadows: glowShadows(color, s.highlighted ? 1 : 0.5))),
           ]),
         ),
       ),
@@ -582,8 +582,8 @@ class Pill extends StatelessWidget {
         if (glyph != null)
           Padding(padding: const EdgeInsets.only(right: 5), child: Glyph(glyph!, size: size * 1.5))
         else if (icon != null)
-          Padding(padding: const EdgeInsets.only(right: 5), child: Text(icon!, style: TextStyle(fontSize: size))),
-        Text(text, style: bodyText(size, color: textColor, weight: 850)),
+          Padding(padding: const EdgeInsets.only(right: 5), child: iconWidget(icon!, size, color: textColor)),
+        GlyphText(text, style: bodyText(size, color: textColor, weight: 850)),
       ]),
     );
   }
@@ -767,6 +767,6 @@ class DpadGlyph extends StatelessWidget {
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Ui.edge, width: 1.2),
         ),
-        child: Text('✚', style: bodyText(13, color: Ui.cardText, weight: 900)),
+        child: const Glyph(UiGlyph(UiIcon.plus, color: Ui.cardText), size: 14),
       );
 }

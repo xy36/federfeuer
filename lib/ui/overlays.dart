@@ -136,7 +136,7 @@ class GameOverOverlay extends StatelessWidget {
                 border: Border.all(color: Palette.mint.withAlpha(180), width: 1.4),
                 boxShadow: [BoxShadow(color: Palette.mint.withAlpha(70), blurRadius: 20)],
               ),
-              child: Text('🔓 Neue Stufe: ${difficultyDef(unlocked).name}',
+              child: GlyphText('🔓 Neue Stufe: ${difficultyDef(unlocked).name}',
                   style: displayStyle(17, const Color(0xFFCFFFE0)).copyWith(shadows: glowShadows(Palette.mint))),
             ),
           for (final c in game.newCharacters)

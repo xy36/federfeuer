@@ -46,6 +46,94 @@ class BirdGlyph extends GlyphRef {
   final CharacterDef character;
 }
 
+/// Kleine Bedien-Symbole (Knöpfe, Hinweise, Pfeile im Text).
+enum UiIcon {
+  play,
+  left,
+  up,
+  down,
+  arrowRight,
+  arrowLeft,
+  arrowUp,
+  arrowDown,
+  arrowDownRight,
+  fall,
+  upgrade,
+  restart,
+  reset,
+  star,
+  sparkle,
+  heart,
+  crystal,
+  check,
+  plus,
+  lock,
+  unlock,
+  flag,
+  map,
+  dice,
+  trophy,
+  hand,
+  backpack,
+  cart,
+  stopwatch,
+  microscope,
+  keyboard,
+  gamepad,
+  fullscreen,
+  exitFullscreen,
+}
+
+class UiGlyph extends GlyphRef {
+  const UiGlyph(this.icon, {this.color});
+  final UiIcon icon;
+
+  /// Linienfarbe; ohne Angabe hell. Farbige Objekte (Stern, Herz, Schloss …) behalten ihre Farbe.
+  final Color? color;
+}
+
+/// Zeichen in Texten, die als [UiIcon] gezeichnet werden.
+const Map<String, UiIcon> kUiIconChars = {
+  '▶': UiIcon.play,
+  '◀': UiIcon.left,
+  '▲': UiIcon.up,
+  '▼': UiIcon.down,
+  '→': UiIcon.arrowRight,
+  '←': UiIcon.arrowLeft,
+  '↑': UiIcon.arrowUp,
+  '↓': UiIcon.arrowDown,
+  '↘': UiIcon.arrowDownRight,
+  '⬇': UiIcon.fall,
+  '⤴': UiIcon.upgrade,
+  '↻': UiIcon.restart,
+  '↺': UiIcon.reset,
+  '⭐': UiIcon.star,
+  '★': UiIcon.star,
+  '✦': UiIcon.sparkle,
+  '❤': UiIcon.heart,
+  '◆': UiIcon.crystal,
+  '✓': UiIcon.check,
+  '✚': UiIcon.plus,
+  '🔒': UiIcon.lock,
+  '🔓': UiIcon.unlock,
+  '🏁': UiIcon.flag,
+  '🗺': UiIcon.map,
+  '🎲': UiIcon.dice,
+  '🏆': UiIcon.trophy,
+  '✋': UiIcon.hand,
+  '🎒': UiIcon.backpack,
+  '🛒': UiIcon.cart,
+  '⏱': UiIcon.stopwatch,
+  '🔬': UiIcon.microscope,
+  '⌨': UiIcon.keyboard,
+  '🎮': UiIcon.gamepad,
+  '⛶': UiIcon.fullscreen,
+  '🗗': UiIcon.exitFullscreen,
+};
+
+/// [UiIcon] eines Symbol-Strings (Variationszeichen werden ignoriert).
+UiIcon? uiIconOf(String s) => kUiIconChars[s.replaceAll('\u{FE0F}', '')];
+
 /// Lichtsymbole statt Emojis: Waffen als ihre Modelle, Gegner und Vögel als ihre Zeichnungen,
 /// Items, Aktionen und Werte als leuchtende Objekte (`glyph_objects.dart`). Gezeichnet in einem Feld der Größe [size],
 /// Mittelpunkt im Ursprung.
@@ -60,6 +148,7 @@ class GlyphArt {
         StatGlyph() => const Color(0xFF9FE4FF),
         EnemyGlyph() => const Color(0xFFC77DFF),
         BirdGlyph(:final character) => character.glow,
+        UiGlyph(:final color) => color ?? const Color(0xFFF4F0FF),
       };
 
   static Color _rarityGlow(Rarity r) => switch (r) {
@@ -106,6 +195,8 @@ class GlyphArt {
         _scaled(c, size, () => _Obj.action(c, action, t));
       case StatGlyph(:final stat):
         _scaled(c, size, () => _Obj.stat(c, stat, t));
+      case UiGlyph(:final icon, :final color):
+        _scaled(c, size, () => _Obj.ui(c, icon, color ?? const Color(0xFFF4F0FF), t));
     }
   }
 
@@ -170,4 +261,50 @@ class _GlyphPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_GlyphPainter old) => !identical(old.ref, ref);
+}
+
+/// Symbol-String als Widget: bekannte Zeichen als [UiGlyph], sonst als Text.
+Widget iconWidget(String icon, double size, {Color? color}) {
+  final ui = uiIconOf(icon);
+  if (ui != null) return Glyph(UiGlyph(ui, color: color), size: size * 1.25);
+  return Text(icon, style: TextStyle(fontSize: size, color: color));
+}
+
+/// Text, in dem Pfeile und Symbole aus [kUiIconChars] als Lichtsymbole erscheinen.
+class GlyphText extends StatelessWidget {
+  const GlyphText(this.text, {super.key, this.style, this.maxLines, this.overflow, this.textAlign, this.softWrap});
+  final String text;
+  final TextStyle? style;
+  final int? maxLines;
+  final TextOverflow? overflow;
+  final TextAlign? textAlign;
+  final bool? softWrap;
+
+  static final _pattern = RegExp(kUiIconChars.keys.map(RegExp.escape).join('|'));
+
+  @override
+  Widget build(BuildContext context) {
+    final clean = text.replaceAll('\u{FE0F}', '');
+    if (!_pattern.hasMatch(clean)) {
+      return Text(text, style: style, maxLines: maxLines, overflow: overflow, textAlign: textAlign, softWrap: softWrap);
+    }
+    final st = DefaultTextStyle.of(context).style.merge(style);
+    final fs = st.fontSize ?? 14;
+    final spans = <InlineSpan>[];
+    var last = 0;
+    for (final m in _pattern.allMatches(clean)) {
+      if (m.start > last) spans.add(TextSpan(text: clean.substring(last, m.start)));
+      spans.add(WidgetSpan(
+        alignment: PlaceholderAlignment.middle,
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: fs * 0.08),
+          child: Glyph(UiGlyph(kUiIconChars[m.group(0)]!, color: st.color), size: fs * 1.2),
+        ),
+      ));
+      last = m.end;
+    }
+    if (last < clean.length) spans.add(TextSpan(text: clean.substring(last)));
+    return Text.rich(TextSpan(children: spans),
+        style: style, maxLines: maxLines, overflow: overflow, textAlign: textAlign, softWrap: softWrap);
+  }
 }
