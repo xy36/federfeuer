@@ -48,12 +48,39 @@ class WeaponArt {
   /// Waffen, die beim Zielen nicht mitdrehen (rundum, über dem Vogel, an Henkel/Stiel hängend).
   static bool upright(String id) => const {'disco', 'popcorn', 'lantern', 'raincloud', 'feather'}.contains(id);
 
-  static void draw(Canvas c, String id, {required double kick, required double t, required Color tier}) {
-    // Stufen-Schein hinter der Waffe, wächst mit der Stufe über den Grundton
-    Glow.draw(c, 10, 0, 26, tier.withAlpha(70));
+  /// Leuchtstil: Die Waffe wird als Lichtobjekt in [glow] gezeichnet – helle Partien werden
+  /// zu warmem Weiß, dunkle zu durchscheinendem Licht der Klassenfarbe.
+  static ColorFilter _spirit(Color glow) {
+    // Ausgabe = Helligkeit × (Klassenfarbe × 0,95 + Weiß × 0,12); dunkle Partien werden dunkel
+    // und verschwinden beim additiven Zeichnen – übrig bleibt ein Lichtobjekt.
+    const lr = 0.3, lg = 0.59, lb = 0.11;
+    List<double> row(double ch) {
+      final k = ch * 0.95 + 0.12;
+      return [lr * k, lg * k, lb * k, 0, 0];
+    }
+
+    return ColorFilter.matrix([...row(glow.r), ...row(glow.g), ...row(glow.b), 0, 0, 0, 1, 0]);
+  }
+
+  static final _spiritCache = <int, Paint>{};
+
+  static void draw(Canvas c, String id,
+      {required double kick, required double t, required Color tier, Color? glow}) {
+    final col = glow ?? Colors.white;
+    // Schein in Klassenfarbe, Stufenfarbe als Kern
+    Glow.draw(c, 10, 0, 30, col.withValues(alpha: 0.35));
+    Glow.draw(c, 10, 0, 16, tier.withValues(alpha: 0.35));
     final recoil = -kick * 4;
     c.save();
     c.translate(recoil, 0);
+    if (glow != null) {
+      c.saveLayer(const Rect.fromLTRB(-20, -24, 40, 24),
+          _spiritCache.putIfAbsent(
+              glow.toARGB32(),
+              () => Paint()
+                ..colorFilter = _spirit(glow)
+                ..blendMode = BlendMode.plus));
+    }
     switch (id) {
       case 'pistol':
         _quill(c, kick, t);
@@ -94,7 +121,8 @@ class WeaponArt {
       default:
         drawRect(c, 0, -2, 20, 4, Colors.white);
     }
-    // Edelstein in Stufenfarbe am Griff
+    if (glow != null) c.restore();
+    // Edelstein in Stufenfarbe am Griff (bleibt farbig)
     drawCircle(c, 0, 0, 2.6, tier);
     drawCircle(c, -0.6, -0.6, 1, Colors.white.withAlpha(200));
     c.restore();
