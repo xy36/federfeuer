@@ -449,17 +449,20 @@ class ChoiceCard extends StatelessWidget {
                     ),
                   ),
                   child: Row(children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: const Color(0x66050814),
-                        boxShadow: [BoxShadow(color: accent.withAlpha(140), blurRadius: 12)],
+                    if (glyph != null)
+                      Glyph(glyph!, size: glyph is WeaponGlyph ? 28 : 36)
+                    else
+                      Container(
+                        width: 32,
+                        height: 32,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0x66050814),
+                          boxShadow: [BoxShadow(color: accent.withAlpha(140), blurRadius: 12)],
+                        ),
+                        child: Text(icon, style: const TextStyle(fontSize: 18)),
                       ),
-                      child: glyph != null ? Glyph(glyph!, size: 24) : Text(icon, style: const TextStyle(fontSize: 18)),
-                    ),
                     const Spacer(),
                     if (badge != null) Pill(badge!, color: badgeColor, textColor: Colors.white, size: 10.5),
                   ]),
