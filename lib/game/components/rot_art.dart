@@ -96,17 +96,17 @@ class RotArt {
   static void crow(Canvas c, double t, double fl, double pulse, {bool hit = false}) {
     Color k(Color col) => hit ? Color.lerp(col, Colors.white, 0.85)! : col;
     smoke(c, const Offset(-16, 1), t, n: 3, len: 18, seed: 0.3);
-    _rotWing(c, const Offset(-1, -5), fl, 21, k(const Color(0xFF120818)), far: true);
+    rotWing(c, const Offset(-1, -5), fl, 21, k(const Color(0xFF120818)), far: true);
     c.drawPath(_crowBody, hit ? (Paint()..color = k(ink)) : cachedFill('crow', 18, center: const Offset(3, -2)));
     rim(c, _crowBody, const Rect.fromLTRB(-25, -12, 15, -3), alpha: 0.45);
     veins(c, _crowVeins, pulse);
     c.drawPath(_crowBeak, Paint()..color = k(const Color(0xFF221430)));
-    _rotWing(c, const Offset(0, -3), fl, 20, k(const Color(0xFF1C0E28)), far: false);
+    rotWing(c, const Offset(0, -3), fl, 20, k(const Color(0xFF1C0E28)), far: false);
   }
 
   /// Flügel: breite Form vom Schultergelenk nach hinten oben, Hinterkante mit Fetzen und Lücken.
   /// Schlägt zwischen steil oben (fl = −1) und waagerecht/leicht unten (fl = 1).
-  static void _rotWing(Canvas c, Offset at, double fl, double len, Color col, {required bool far}) {
+  static void rotWing(Canvas c, Offset at, double fl, double len, Color col, {required bool far}) {
     c.save();
     c.translate(at.dx, at.dy);
     c.rotate(-0.25 - (1 - fl) * 0.55 + (far ? -0.25 : 0));

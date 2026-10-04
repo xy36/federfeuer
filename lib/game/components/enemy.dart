@@ -288,11 +288,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
   // ---------------- Darstellung: dunkle Fäulnis-Kreaturen ----------------
 
-  static const _body = Color(0xFF120A1E), _body2 = Color(0xFF221433);
+  static const _body = RotArt.ink, _body2 = Color(0xFF1C0E28);
   static const _aura = Color(0xFFB44CFF), _eye = Color(0xFFFF4D6D), _ember = Color(0xFFFF8A3D);
   static const _toxic = Color(0xFF9CFF5A), _crown = Color(0xFFFF5AE0);
 
   static final _eliteRing = Paint()..style = PaintingStyle.stroke;
+  static final _rotRim = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..blendMode = BlendMode.plus;
   static final _bubble = Paint()
     ..style = PaintingStyle.stroke
     ..strokeWidth = 2;
@@ -405,10 +409,23 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         _glowEye(c, 15, -6, 2.8, _ember);
       case EnemyType.boss:
         final fl = sin(t * 6);
-        drawTri(c, -10, -10, -74, -44 - fl * 25, 10, -6, k(_body2));
-        drawTri(c, -30, -16, -80, -18 - fl * 20, -12, -6, k(_body2));
-        drawOval(c, 0, 0, 52, 38, k(_body));
-        drawTri(c, -6, 0, -68, 28 + fl * 18, 14, 4, k(_body2));
+        RotArt.rotWing(c, const Offset(-4, -14), fl, 82, k(const Color(0xFF120818)), far: true);
+        c.drawOval(Rect.fromCenter(center: Offset.zero, width: 104, height: 76),
+            hit ? fillOf(k(_body)) : RotArt.cachedFill('boss', 60, center: const Offset(10, -8)));
+        RotArt.veins(
+            c,
+            Path()
+              ..moveTo(-40, 4)
+              ..lineTo(-22, -6)
+              ..lineTo(-10, 6)
+              ..lineTo(6, -4)
+              ..lineTo(18, 8)
+              ..moveTo(-10, 6)
+              ..lineTo(-6, 22),
+            pulse,
+            color: _crown,
+            width: 1.8);
+        RotArt.rotWing(c, const Offset(0, -6), fl, 76, k(const Color(0xFF1C0E28)), far: false);
         drawOval(c, 30, -18, 16, 13, k(const Color(0xFF2E1B3C)));
         drawTri(c, 40, -16, 64, -6, 40, -4, k(const Color(0xFF3A2440)));
         // Krone aus Lichtsplittern
@@ -419,6 +436,14 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         _glowEye(c, 34, -20, 4, _crown);
     }
     c.restore();
+
+    // Fäulnis-Stil: kränklich violette Gegenlichtkante oben
+    if (type != EnemyType.wisp && type != EnemyType.rift && type != EnemyType.beetleEgg && type != EnemyType.crow) {
+      _rotRim
+        ..strokeWidth = boss ? 2 : 1.1
+        ..color = Color.fromRGBO(180, 76, 255, hit ? 0 : 0.45);
+      c.drawArc(Rect.fromCircle(center: Offset.zero, radius: r * 0.95), pi * 1.15, pi * 0.7, false, _rotRim);
+    }
 
     // Elite: goldener, pulsierender Ring um den Körper
     if (elite != null) {
@@ -465,8 +490,9 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   }
 
   static void _glowEye(Canvas c, double x, double y, double r, Color col) {
-    drawCircle(c, x, y, r, Color.lerp(col, Colors.white, 0.45)!);
+    _slitEye(c, x, y, r, col);
   }
+
 
   /// Leuchtpunkte dieses Gegners in Weltkoordinaten: [back] hinter dem Körper (Aura),
   /// [front] davor (Augen, Risse, Giftsack, Krone, HP-Glut).
@@ -475,7 +501,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     final face = (game.player.x - x) >= 0 ? 1.0 : -1.0;
     final pulse = 0.5 + 0.5 * sin(t * 3);
     void f(double lx, double ly, double rad, Color col) => front.add(x + face * lx, y + ly, rad, col);
-    void eye(double lx, double ly, double rad, Color col) => f(lx, ly, rad * 6, col.withAlpha(170));
+    void eye(double lx, double ly, double rad, Color col) => f(lx, ly, rad * 3, col.withAlpha(200));
 
     // Statuseffekte
     if (burnT > 0) front.add(x, y + r * 0.2, r * 1.7, Color.fromRGBO(255, 130, 40, 0.45 + 0.2 * sin(t * 18)));
@@ -495,6 +521,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
           _aura.withAlpha((type == EnemyType.boss ? 90 + 40 * pulse : 70).round()));
     }
     if (healGlow > 0) front.add(x, y, r * 1.8, Color.fromRGBO(140, 245, 176, healGlow));
+    // Fäulnis-Stil: violetter Schimmer im Inneren des dunklen Körpers
+    if (type != EnemyType.wisp && type != EnemyType.rift) front.add(x, y, r * 0.75, Color.fromRGBO(150, 60, 220, 0.16 + 0.08 * pulse));
     if (el == EliteMod.healer) back.add(x, y, 140, Color.fromRGBO(140, 245, 176, 0.08 + 0.05 * pulse));
     switch (type) {
       case EnemyType.puffball ||
