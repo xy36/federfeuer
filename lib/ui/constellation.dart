@@ -171,7 +171,7 @@ class _ActionConstellationState extends State<ActionConstellation> with SingleTi
           info: (_) => known
               ? actionInfo(widget.reference, OwnedAction(a), 0)
               : unknownInfo(itemDefs.any((it) => it.action == a) ? 'Taucht im Aktions-Feld des Shops auf.' : 'Startfähigkeit eines Vogels.'),
-          child: _orb(known ? a.icon : '?', size, hot ? Palette.sun : (known ? const Color(0xFFBFE3FF) : Ui.muted), known),
+          child: _orb(known ? ActionGlyph(a) : '?', size, hot ? Palette.sun : (known ? const Color(0xFFBFE3FF) : Ui.muted), known),
         ),
         const SizedBox(height: 3),
         Text(known ? a.label : '',
@@ -198,14 +198,14 @@ class _ActionConstellationState extends State<ActionConstellation> with SingleTi
         info: (_) => l.seen
             ? recipeInfo(widget.reference, r, evolved: l.evolved)
             : unknownInfo('Besitze eine passende Aktion, um das Rezept zu sehen.'),
-        child: _orb(l.seen ? r.result.icon : '?', size,
+        child: _orb(l.seen ? ActionGlyph(r.result) : '?', size,
             hot ? Palette.sun : (l.evolved ? gold : (l.seen ? const Color(0xFFE8D9A8) : Ui.muted)), l.seen,
             star: true),
       ),
     );
   }
 
-  Widget _orb(String icon, double size, Color color, bool known, {bool star = false}) => Container(
+  Widget _orb(Object icon, double size, Color color, bool known, {bool star = false}) => Container(
         width: size,
         height: size,
         alignment: Alignment.center,
@@ -215,7 +215,9 @@ class _ActionConstellationState extends State<ActionConstellation> with SingleTi
           border: Border.all(color: color.withAlpha(known ? (star ? 200 : 230) : 110), width: star ? 1.4 : 2),
           boxShadow: [if (known) BoxShadow(color: color.withAlpha(star ? 70 : 110), blurRadius: star ? 10 : 18)],
         ),
-        child: Text(icon, style: TextStyle(fontSize: size * 0.45, color: known ? null : Ui.muted)),
+        child: icon is GlyphRef
+            ? Glyph(icon, size: size * 0.78)
+            : Text('$icon', style: TextStyle(fontSize: size * 0.45, color: known ? null : Ui.muted)),
       );
 }
 

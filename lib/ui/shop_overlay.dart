@@ -265,6 +265,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
             : (pair ? 'STUFE ${t.label} · PAAR' : 'STUFE ${t.label}'),
         badgeColor: mergeNow || pair ? const Color(0xCC1F9D55) : Ui.badge,
         icon: d.icon,
+        glyph: WeaponGlyph(o.id, tier: o.tier),
         title: d.name,
         width: _cardW,
         height: _cardH,
@@ -320,6 +321,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
           ? const Color(0xCC1F9D55)
           : (it.rarity == Rarity.common ? Ui.badge : it.rarity.color.withAlpha(210)),
       icon: it.icon,
+      glyph: ItemGlyph(it.id),
       title: it.name,
       width: _cardW,
       height: _cardH,
@@ -385,7 +387,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
             for (var k = 0; k < r.actions.length; k++)
               GameButton(
                 label: r.actions[k].label,
-                icon: r.actions[k].id.icon,
+                glyph: ActionGlyph(r.actions[k].id),
                 size: 13,
                 color: Ui.card,
                 onPressed: () => _replace(k),
@@ -410,7 +412,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
                 info: (_) => actionInfo(r, r.actions[k], k),
                 child: Pill(
                   '${r.actions[k].label} · ${fmtNum(r.actions[k].cooldown)} s',
-                  icon: r.actions[k].id.icon,
+                  glyph: ActionGlyph(r.actions[k].id),
                   color: r.actions[k].id.evolved ? const Color(0x55FFC94A) : const Color(0x33FFD23F),
                 ),
               ),
@@ -528,7 +530,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
                   info: (_) => itemInfo(r, e.key),
                   child: Pill(
                     e.value > 1 ? '${itemById[e.key]!.name} ×${e.value}' : itemById[e.key]!.name,
-                    icon: itemById[e.key]!.icon,
+                    glyph: ItemGlyph(e.key),
                   ),
                 ),
             ],
@@ -599,9 +601,9 @@ class _ShopOverlayState extends State<ShopOverlay> {
       child: Row(
         children: [
           Container(width: 8, color: t.color),
-          const SizedBox(width: 7),
-          Text(w.def.icon, style: const TextStyle(fontSize: 20)),
-          const SizedBox(width: 6),
+          const SizedBox(width: 4),
+          Glyph(WeaponGlyph(w.id, tier: w.tier), size: 24),
+          const SizedBox(width: 4),
           Expanded(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

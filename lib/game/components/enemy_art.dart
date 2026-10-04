@@ -3,6 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import '../config.dart';
+import 'boss_art.dart';
+import 'light.dart';
 import 'rot_art.dart';
 
 /// Zustand eines Gegners für die Zeichnung.
@@ -732,5 +735,64 @@ class EnemyArt {
           _p(_frost));
     }
     _slit(c, Offset(r + 1, 0), 2.2, _frost);
+  }
+
+  /// Gegner nach Typ zeichnen (für Vorschauen in Kompendium und Info-Panels).
+  static void drawType(Canvas c, EnemyType type, EnemyLook l, double r) {
+    final b = BossLook(t: l.t, pulse: l.pulse);
+    switch (type) {
+      case EnemyType.crow:
+        RotArt.crow(c, l.t, 0.2, l.pulse);
+        _slit(c, const Offset(6, -5), 2.6, _eye);
+      case EnemyType.beetle:
+        beetle(c, l, r);
+      case EnemyType.spitter:
+        spitter(c, l, r);
+      case EnemyType.rock:
+        rock(c, l, r);
+      case EnemyType.puffball:
+        puffball(c, l, r);
+      case EnemyType.scarecrow:
+        scarecrow(c, l, r);
+      case EnemyType.bat:
+        bat(c, l, r);
+      case EnemyType.weathercock:
+        weathercock(c, l, r);
+      case EnemyType.spider:
+        spider(c, l, r);
+      case EnemyType.wisp:
+        Glow.draw(c, 0, 0, r * 3, const Color(0x88BFF0FF));
+        c.drawCircle(Offset.zero, r * 0.55, _p(const Color(0xFFDFF8FF)));
+      case EnemyType.eagle:
+        eagle(c, l, r);
+      case EnemyType.avalanche:
+        avalancheWalk(c, l, r);
+      case EnemyType.crowNest:
+        crowNest(c, l, r);
+      case EnemyType.waspNest:
+        waspNest(c, l, r);
+      case EnemyType.wasp:
+        wasp(c, l, r);
+      case EnemyType.sporeShroom:
+        sporeShroom(c, l, r);
+      case EnemyType.spore:
+        spore(c, l, r);
+      case EnemyType.beetleQueen:
+        beetleQueen(c, l, r);
+      case EnemyType.beetleEgg:
+        c.drawOval(Rect.fromCenter(center: Offset.zero, width: r * 1.6, height: r * 2), _p(const Color(0xFF4A5A70)));
+        Glow.draw(c, 0, 0, r * 2, const Color(0x66BFE3FF));
+      case EnemyType.rift:
+        Glow.draw(c, 0, 0, r * 2.6, const Color(0x88FF4D8C));
+        c.drawOval(Rect.fromCenter(center: Offset.zero, width: r * 1.1, height: r * 2.2), _p(const Color(0xFF0A0412)));
+      case EnemyType.strawKing:
+        BossArt.strawKing(c, b, r);
+      case EnemyType.bell:
+        BossArt.bell(c, b, r);
+      case EnemyType.spiderMother:
+        BossArt.spiderMother(c, b, r);
+      case EnemyType.boss:
+        BossArt.vultureKing(c, b);
+    }
   }
 }

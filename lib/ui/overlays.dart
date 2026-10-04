@@ -53,6 +53,7 @@ class _LevelUpOverlayState extends State<LevelUpOverlay> {
       accent: rare ? Palette.purple : Ui.card,
       badge: rare ? 'SELTEN' : null,
       icon: c.option.icon,
+      glyph: StatGlyph(c.option.stat),
       title: stat.label,
       width: 176,
       height: 176,

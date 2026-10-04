@@ -477,7 +477,7 @@ class _PlayPageState extends State<_PlayPage> {
           ]),
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
-          if (c.startAction != null) Pill(c.startAction!.label, icon: c.startAction!.icon, color: const Color(0x33FFD23F)),
+          if (c.startAction != null) Pill(c.startAction!.label, glyph: ActionGlyph(c.startAction!), color: const Color(0x33FFD23F)),
           if (c.maxWeapons != 6) Pill('${c.maxWeapons} Waffenslots', icon: '🎒'),
         ]),
         if (lock != null && !p.hasCharacter(lock.id)) ...[
@@ -512,7 +512,7 @@ class _PlayPageState extends State<_PlayPage> {
           depth: 2,
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            Text(d.icon, style: const TextStyle(fontSize: 16)),
+            Glyph(WeaponGlyph(id), size: 26),
             const SizedBox(width: 6),
             Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text(d.name, style: bodyText(12.5, color: selected ? Palette.sun : Ui.text, weight: 900)),
