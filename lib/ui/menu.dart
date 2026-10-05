@@ -15,7 +15,6 @@ import 'compendium.dart';
 import 'controls_editor.dart';
 import 'inspect.dart';
 import 'inspect_info.dart';
-import 'overlays.dart' show FullScreenButton;
 import 'widgets.dart';
 
 /// Version im Titelbildschirm (bei Releases mit `pubspec.yaml` abgleichen).
@@ -55,6 +54,8 @@ class _MenuOverlayState extends State<MenuOverlay> {
   }
 
   void _back() {
+    // Offene Auswahlliste schließt zuerst (Esc bzw. Controller-B).
+    if (GameDropdown.closeOpen()) return;
     if (page != MenuPage.title) _go(MenuPage.title);
   }
 
@@ -250,6 +251,28 @@ class _SubPage extends StatelessWidget {
 }
 
 /// Zeile mit Beschriftung und An/Aus-Knopf.
+/// Einstellungszeile: Name und Hinweis links, Bedienelement rechts.
+class _SettingRow extends StatelessWidget {
+  const _SettingRow({required this.label, required this.hint, required this.child});
+  final String label, hint;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(label, style: displayStyle(16)),
+              Text(hint, style: mutedStyle),
+            ]),
+          ),
+          const SizedBox(width: 12),
+          child,
+        ]),
+      );
+}
+
 class _ToggleRow extends StatelessWidget {
   const _ToggleRow({required this.label, required this.hint, required this.value, required this.onChanged});
   final String label, hint;
@@ -577,15 +600,51 @@ class _SettingsPageState extends State<_SettingsPage> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         sectionTitle('Bild'),
         if (isDesktop)
-          Row(children: [
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Anzeige', style: displayStyle(16)),
-                Text('Vollbild oder Fenster – auch mit F11 bzw. Alt+Enter', style: mutedStyle),
-              ]),
+          ValueListenableBuilder<bool>(
+            valueListenable: DesktopWindow.fullScreen,
+            builder: (context, full, _) => _SettingRow(
+              label: 'Anzeige',
+              hint: 'Vollbild oder Fenster – auch mit F11 bzw. Alt+Enter',
+              child: GameDropdown<bool>(
+                value: full,
+                items: const [true, false],
+                labelOf: (v) => v ? 'Vollbild' : 'Fenster',
+                onChanged: DesktopWindow.setFullScreen,
+              ),
             ),
-            const SizedBox(width: 110, child: Center(child: FullScreenButton())),
-          ]),
+          ),
+        if (isDesktop)
+          ListenableBuilder(
+            listenable: Listenable.merge([DesktopWindow.fullScreen, DesktopWindow.windowSize]),
+            builder: (context, _) => _SettingRow(
+              label: 'Auflösung',
+              hint: 'Volle Auflösung im Vollbild, kleinere im Fenster',
+              child: GameDropdown<Size>(
+                value: DesktopWindow.fullScreen.value ? DesktopWindow.nativeSize : DesktopWindow.currentSize,
+                items: [...DesktopWindow.availableSizes(), DesktopWindow.nativeSize],
+                labelOf: (v) => '${v.width.round()} × ${v.height.round()}'
+                    '${v == DesktopWindow.nativeSize ? ' (Vollbild)' : ''}',
+                onChanged: (v) =>
+                    v == DesktopWindow.nativeSize ? DesktopWindow.setFullScreen(true) : DesktopWindow.setWindowSize(v),
+              ),
+            ),
+          ),
+        ValueListenableBuilder<double>(
+          valueListenable: uiScaleSetting,
+          builder: (context, scale, _) => _SettingRow(
+            label: 'Skalierung',
+            hint: 'Größe von Menüs und Spielanzeigen',
+            child: GameDropdown<double>(
+              value: scale,
+              items: kUiScaleOptions,
+              labelOf: (v) => '${(v * 100).round()} %${v == 1 ? ' (Standard)' : ''}',
+              onChanged: (v) {
+                uiScaleSetting.value = v;
+                s.save();
+              },
+            ),
+          ),
+        ),
         _ToggleRow(
           label: 'Bildschirmwackeln',
           hint: 'Kamera wackelt bei Treffern und Explosionen',

@@ -1,6 +1,8 @@
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart' show ValueNotifier;
+
 /// Virtuelle Höhe der Spielwelt. Die Breite ergibt sich aus dem Seitenverhältnis.
 const double kVH = 540;
 const double kGround = 468;
@@ -111,9 +113,18 @@ int rerollBaseCost(int wave) => (2 + kRerollLin * wave + kRerollQuad * wave * wa
 /// Bezugsgröße der Menüs und des HUD (logische Pixel).
 const double kUiRefW = 1280, kUiRefH = 720, kUiMaxScale = 2.2;
 
+/// Wählbare UI-Skalierung (Einstellungen → Skalierung); 1 = Standard.
+/// Größer geht nicht: Der Standard füllt den Bildschirm bereits aus.
+const List<double> kUiScaleOptions = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+
+/// Gewählte UI-Skalierung (gespeichert in den Einstellungen).
+final uiScaleSetting = ValueNotifier<double>(1.0);
+
 /// Menüs und HUD wachsen auf großen Bildschirmen mit (z. B. PC im Vollbild);
-/// auf kleineren Bildschirmen bleibt alles in Originalgröße.
-double uiScaleFor(double w, double h) => clampD(min(w / kUiRefW, h / kUiRefH), 1, kUiMaxScale);
+/// auf kleineren Bildschirmen bleibt alles in Originalgröße. Die Einstellung
+/// Skalierung verkleinert das Ergebnis.
+double uiScaleFor(double w, double h) =>
+    clampD(min(w / kUiRefW, h / kUiRefH), 1, kUiMaxScale) * uiScaleSetting.value;
 
 /// Dauer einer Timer-Welle in Sekunden.
 double waveDuration(int wave) => 20.0 + (wave - 1) * 4;

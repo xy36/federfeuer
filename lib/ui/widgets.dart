@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gamepads/gamepads.dart';
 
 import '../game/gamepad_input.dart' show controllerActive;
@@ -86,20 +87,24 @@ class UiScale extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(builder: (context, box) {
-        final k = uiScaleFor(box.maxWidth, box.maxHeight);
-        if (k <= 1) return child;
-        // Feste Größe nötig: Flame gibt Overlays lockere Vorgaben, sonst bliebe die
-        // FittedBox in Bezugsgröße und das Menü säße klein oben links.
-        return SizedBox(
-          width: box.maxWidth,
-          height: box.maxHeight,
-          child: FittedBox(
-            fit: BoxFit.fill,
-            child: SizedBox(width: box.maxWidth / k, height: box.maxHeight / k, child: child),
-          ),
-        );
-      });
+  Widget build(BuildContext context) => ValueListenableBuilder<double>(
+        valueListenable: uiScaleSetting,
+        builder: (context, _, _) => LayoutBuilder(builder: (context, box) {
+          final k = uiScaleFor(box.maxWidth, box.maxHeight);
+          // Immer dieselbe Struktur (auch bei k = 1), sonst ginge beim Umschalten,
+          // z. B. durch eine andere Fenstergröße, der Zustand des Menüs verloren.
+          // Feste Größe nötig: Flame gibt Overlays lockere Vorgaben, sonst bliebe die
+          // FittedBox in Bezugsgröße und das Menü säße klein oben links.
+          return SizedBox(
+            width: box.maxWidth,
+            height: box.maxHeight,
+            child: FittedBox(
+              fit: BoxFit.fill,
+              child: SizedBox(width: box.maxWidth / k, height: box.maxHeight / k, child: child),
+            ),
+          );
+        }),
+      );
 }
 
 // ---------------- Panel ----------------
@@ -257,8 +262,9 @@ class PressState {
 /// Tipp-, Maus-, Tastatur- und Controller-bedienbare Fläche.
 /// Enter/Leertaste bzw. Controller-A lösen [onPressed] über [ActivateIntent] aus.
 class Pressable extends StatefulWidget {
-  const Pressable({super.key, required this.onPressed, required this.builder});
+  const Pressable({super.key, required this.onPressed, required this.builder, this.focusNode});
   final VoidCallback? onPressed;
+  final FocusNode? focusNode;
   final Widget Function(BuildContext context, PressState state) builder;
 
   @override
@@ -273,6 +279,7 @@ class _PressableState extends State<Pressable> {
     final onPressed = widget.onPressed;
     final enabled = onPressed != null;
     return FocusableActionDetector(
+      focusNode: widget.focusNode,
       enabled: enabled,
       mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onFocusChange: (v) => setState(() => _focused = v),
@@ -389,6 +396,174 @@ class GameButton extends StatelessWidget {
             GlyphText(label, style: displayStyle(size * 0.9, textColor).copyWith(shadows: glowShadows(color, s.highlighted ? 1 : 0.5))),
           ]),
         ),
+      ),
+    );
+  }
+}
+
+/// Auswahlliste im Glas-Stil: Knopf mit aktuellem Wert, darunter klappt die Liste auf.
+/// Bedienbar mit Maus, Tastatur und Controller; Esc bzw. Controller-B schließt nur die Liste.
+class GameDropdown<T> extends StatefulWidget {
+  const GameDropdown({
+    super.key,
+    required this.value,
+    required this.items,
+    required this.labelOf,
+    required this.onChanged,
+    this.width = 220,
+  });
+  final T value;
+  final List<T> items;
+  final String Function(T) labelOf;
+  final ValueChanged<T> onChanged;
+  final double width;
+
+  /// Schließt eine offene Liste; true, wenn eine offen war (für Controller-B).
+  static bool closeOpen() {
+    final open = _GameDropdownState._open;
+    if (open == null) return false;
+    open._close();
+    return true;
+  }
+
+  @override
+  State<GameDropdown<T>> createState() => _GameDropdownState<T>();
+}
+
+class _GameDropdownState<T> extends State<GameDropdown<T>> {
+  static _GameDropdownState<dynamic>? _open;
+
+  final _portal = OverlayPortalController();
+  final _link = LayerLink();
+  final _buttonFocus = FocusNode();
+  final _tapGroup = Object();
+  List<FocusNode> _itemFocus = [];
+
+  @override
+  void dispose() {
+    if (identical(_open, this)) _open = null;
+    _buttonFocus.dispose();
+    for (final f in _itemFocus) {
+      f.dispose();
+    }
+    super.dispose();
+  }
+
+  void _toggle() => _portal.isShowing ? _close() : _show();
+
+  void _show() {
+    GameDropdown.closeOpen();
+    for (final f in _itemFocus) {
+      f.dispose();
+    }
+    _itemFocus = [for (final _ in widget.items) FocusNode()];
+    _open = this;
+    setState(_portal.show);
+    final i = widget.items.indexOf(widget.value);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _portal.isShowing) _itemFocus[i < 0 ? 0 : i].requestFocus();
+    });
+  }
+
+  void _close({bool refocus = true}) {
+    if (identical(_open, this)) _open = null;
+    if (!_portal.isShowing) return;
+    setState(_portal.hide);
+    if (refocus) _buttonFocus.requestFocus();
+  }
+
+  void _select(T item) {
+    _close();
+    if (item != widget.value) widget.onChanged(item);
+  }
+
+  @override
+  Widget build(BuildContext context) => TapRegion(
+        groupId: _tapGroup,
+        child: CompositedTransformTarget(
+          link: _link,
+          child: OverlayPortal(
+            controller: _portal,
+            overlayChildBuilder: _menu,
+            child: SizedBox(
+              width: widget.width,
+              child: Pressable(
+                focusNode: _buttonFocus,
+                onPressed: _toggle,
+                builder: (context, s) => Padding(
+                  padding: const EdgeInsets.only(top: 4, bottom: 8),
+                  child: Sticker(
+                    state: s,
+                    radius: 14,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                    child: Row(children: [
+                      Expanded(
+                        child: Text(widget.labelOf(widget.value),
+                            style: numberStyle(13.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                      Glyph(UiGlyph(_portal.isShowing ? UiIcon.up : UiIcon.down, color: Ui.muted), size: 14),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _menu(BuildContext context) => Align(
+        alignment: Alignment.topLeft,
+        child: CompositedTransformFollower(
+          link: _link,
+          targetAnchor: Alignment.bottomLeft,
+          offset: const Offset(0, -4),
+          showWhenUnlinked: false,
+          child: TapRegion(
+            groupId: _tapGroup,
+            onTapOutside: (_) => _close(refocus: false),
+            child: CallbackShortcuts(
+              bindings: {const SingleActivator(LogicalKeyboardKey.escape): _close},
+              // Eigener Bereich: Pfeiltasten bleiben in der Liste.
+              child: FocusScope(
+                child: Container(
+                  width: widget.width,
+                  constraints: const BoxConstraints(maxHeight: 300),
+                  decoration: BoxDecoration(
+                    color: Ui.glass,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Ui.edge, width: 1.4),
+                    boxShadow: const [BoxShadow(color: Color(0xAA000000), blurRadius: 18)],
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: SingleChildScrollView(
+                    child: Column(mainAxisSize: MainAxisSize.min, children: [
+                      for (var i = 0; i < widget.items.length; i++) _option(i),
+                    ]),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+  Widget _option(int i) {
+    final item = widget.items[i];
+    final selected = item == widget.value;
+    return Pressable(
+      focusNode: _itemFocus[i],
+      onPressed: () => _select(item),
+      builder: (context, s) => AnimatedContainer(
+        duration: const Duration(milliseconds: 100),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration: BoxDecoration(
+          color: s.highlighted ? Ui.card.withAlpha(46) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: s.focused ? Colors.white : Colors.transparent, width: 1.4),
+        ),
+        child: Text(widget.labelOf(item),
+            style: numberStyle(13.5, selected ? Palette.sun : (s.highlighted ? Ui.text : Ui.muted))),
       ),
     );
   }
