@@ -93,9 +93,9 @@ class RotArt {
 
   /// Fäulniskrähe: Körper mit zerfranstem Schwanz, breite Flügel mit zerfetzter Hinterkante,
   /// glühende Adern, Rauchschwaden. [fl] Flügelschlag −1 (oben) … 1 (unten).
-  static void crow(Canvas c, double t, double fl, double pulse, {bool hit = false}) {
+  static void crow(Canvas c, double t, double fl, double pulse, {bool hit = false, bool withSmoke = true}) {
     Color k(Color col) => hit ? Color.lerp(col, Colors.white, 0.85)! : col;
-    smoke(c, const Offset(-16, 1), t, n: 3, len: 18, seed: 0.3);
+    if (withSmoke) crowSmoke(c, t);
     rotWing(c, const Offset(-1, -5), fl, 21, k(const Color(0xFF120818)), far: true);
     c.drawPath(_crowBody, hit ? (Paint()..color = k(ink)) : cachedFill('crow', 18, center: const Offset(3, -2)));
     rim(c, _crowBody, const Rect.fromLTRB(-25, -12, 15, -3), alpha: 0.45);
@@ -103,6 +103,9 @@ class RotArt {
     c.drawPath(_crowBeak, Paint()..color = k(const Color(0xFF221430)));
     rotWing(c, const Offset(0, -3), fl, 20, k(const Color(0xFF1C0E28)), far: false);
   }
+
+  /// Rauchfahne der Krähe (wird bei den Gegner-Sprites live darübergezeichnet).
+  static void crowSmoke(Canvas c, double t) => smoke(c, const Offset(-16, 1), t, n: 3, len: 18, seed: 0.3);
 
   /// Flügel: breite Form vom Schultergelenk nach hinten oben, Hinterkante mit Fetzen und Lücken.
   /// Schlägt zwischen steil oben (fl = −1) und waagerecht/leicht unten (fl = 1).

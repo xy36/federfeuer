@@ -60,6 +60,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   late final Player player;
   late final Weather weather = Weather(random: rng);
   late final WeatherLayer _weatherLayer = WeatherLayer(weather, priority: 50);
+  final _bodyPass = EnemyBodyPass();
   late final RainPuddles _puddles = RainPuddles(
     weather,
     arenaWidth: kArenaW,
@@ -248,6 +249,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       Ground(),
       _puddles,
       EnemyGlowPass(front: false),
+      // Vor allen Gegnern einfügen: gleiche Priorität (5), die Gegner zeichnen darüber.
+      _bodyPass,
       EnemyGlowPass(front: true),
       player,
       Foreground(),
@@ -314,6 +317,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void startWave() {
     final r = run!;
+    _bodyPass.prewarm([for (final (t, _) in spawnPool(r.wave)) t]);
     phase = Phase.play;
     _setOverlays(['controls']);
     _clearArena();
@@ -676,7 +680,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (_spawnT <= 0) {
       _spawnBatch();
       _spawnT =
-          max(0.9, 2.4 - r.wave * 0.15) /
+          spawnInterval(r.wave) /
           r.difficultyDef.spawn *
           rnd(0.7, 1.3) *
           (r.wave == kMaxWave ? 1.7 : 1);
@@ -708,12 +712,15 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void _spawnBatch() {
     final r = run!;
-    if (enemies.length > 110) return;
+    if (enemies.length >= kMaxAliveEnemies) return;
     final w = r.wave;
     final pool = spawnPool(w);
     final total = pool.fold(0.0, (a, b) => a + b.$2);
 
-    var n = 1 + (w / 2.5).floor() + (rng.nextDouble() < 0.4 ? 1 : 0) + (w <= kEarlySpawnWaves ? kEarlySpawnBonus : 0);
+    var n = 1 +
+        (w / kGroupWaveStep).floor() +
+        (rng.nextDouble() < kGroupExtraChance ? 1 : 0) +
+        (w <= kEarlySpawnWaves ? kEarlySpawnBonus : 0);
     final cx = isBossWave(w) ? _bossWaveSpawnX() : _spawnXNearPlayer();
     while (n-- > 0) {
       var roll = rng.nextDouble() * total;
@@ -1021,7 +1028,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
     // Goldgier: 15 % doppelte Drops
     final times = (r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1) * (e.elite != null ? kEliteDrops : 1);
-    dropMaterial(e.position, enemyDefs[e.type]!.drop * times);
+    dropMaterial(e.position, (enemyDefs[e.type]!.drop * e.toughness).round() * times);
     if (rng.nextDouble() < 0.04) {
       world.add(Drop(e.position.clone(), material: false, rng: rng, fallSpeed: fall));
     }

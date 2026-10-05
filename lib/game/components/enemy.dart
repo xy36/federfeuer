@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui' as ui;
 
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
@@ -20,6 +21,7 @@ import 'transient.dart';
 part 'enemy_boss.dart';
 part 'enemy_gate.dart';
 part 'enemy_spawner.dart';
+part 'enemy_sprites.dart';
 part 'enemy_world.dart';
 
 class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
@@ -33,9 +35,13 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     r = d.radius * sizeK;
     // Schwierigkeitsstufe wirkt auch auf den Boss.
     final hpMul = elite != null ? kEliteHp : (mini ? kSplitHp : 1);
-    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38)) * diff.hp * hpMul;
+    // Weniger, aber zähere Gegner (nicht Boss, Torwächter und Spawner-Kinder)
+    final regular = !boss && !child && !_gatekeeperType(type);
+    toughness = regular ? enemyToughness(wave) : 1;
+    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38)) * diff.hp * hpMul * toughness;
     hp = maxHp;
-    dmg = ((boss ? d.dmg : d.dmg * (1 + (wave - 1) * 0.15)) * diff.dmg).roundToDouble();
+    dmg = ((boss ? d.dmg : d.dmg * (1 + (wave - 1) * 0.15)) * diff.dmg * (regular ? enemyDmgBonus(wave) : 1))
+        .roundToDouble();
     spd = (boss ? d.speed : d.speed * (1 + wave * 0.02)) * (elite == EliteMod.swift ? 1.25 : 1);
     fly = d.flying;
     t = rng.nextDouble() * 10;
@@ -58,6 +64,11 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   /// Treffer durch den Spieler (Wespennest schwärmt aus).
   void onHit() => _spawnerOnHit();
   late final double r, maxHp, dmg, spd, sizeK;
+
+  /// HP- und Material-Faktor (siehe [enemyToughness]); 1 für Boss, Torwächter, Kinder.
+  late final double toughness;
+  static bool _gatekeeperType(EnemyType t) =>
+      t == EnemyType.strawKing || t == EnemyType.bell || t == EnemyType.spiderMother;
   double _healT = 0;
   late final bool fly;
   late double hp;
@@ -308,11 +319,33 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     ..strokeCap = StrokeCap.round
     ..blendMode = BlendMode.plus;
 
+  /// Blickrichtung: 1 = nach rechts (zum Spieler), −1 = nach links.
+  double get face => (game.player.x - x) >= 0 ? 1.0 : -1.0;
+
+  /// Vorgerenderter Körper (siehe [EnemyBodyPass]); null = live zeichnen.
+  /// Der eingerollte Lawinenkäfer dreht sich frei und bleibt live.
+  EnemySpriteDef? get spriteDef =>
+      type == EnemyType.avalanche && (state == 1 || state == 2) ? null : enemySpriteDefs[type];
+
+  /// Zelle im Atlas: Variante, Pulsstufe, Phase der Hauptbewegung.
+  int spriteCell(EnemySpriteDef def) {
+    final variant = def.variantOf?.call(this) ?? 0;
+    final pulse = 0.5 + 0.5 * sin(t * 3);
+    final level = min(def.pulseLevels - 1, (pulse * def.pulseLevels).floor());
+    final frame = def.omega > 0 ? ((t * def.omega / (2 * pi)) % 1 * def.frames).floor() % def.frames : 0;
+    return (variant * def.pulseLevels + level) * def.frames + frame;
+  }
+
+  /// Wackeln der Nester vor dem Ausschwärmen (lokale Einheiten, in Blickrichtung).
+  double get spriteShake =>
+      (type == EnemyType.crowNest || type == EnemyType.waspNest) && warn > 0 ? sin(t * 40) * 2 * warn : 0;
+
   @override
   void render(Canvas c) {
     if (perfSkip.contains(RenderPart.enemyBodies)) return;
-    drawShadow(c, y, r);
-    final face = (game.player.x - x) >= 0 ? 1.0 : -1.0;
+    final sprited = spriteDef != null;
+    if (!sprited) drawShadow(c, y, r);
+    final face = this.face;
     final hit = flash > 0;
     // Treffer: Körper blitzt hell auf
     Color k(Color col) => hit ? Color.lerp(col, Colors.white, 0.85)! : col;
@@ -325,6 +358,10 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     _spawnerRenderUnflipped(c);
     c.save();
     c.scale(face * sizeK, sizeK);
+    // Vorgerenderter Körper: hier nur, was live bleibt.
+    if (sprited) {
+      _spriteExtras(c);
+    } else {
     switch (type) {
       case EnemyType.puffball ||
             EnemyType.scarecrow ||
@@ -358,6 +395,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         EnemyArt.rock(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.boss:
         BossArt.vultureKing(c, _bossLook(hit, pulse));
+    }
     }
     c.restore();
 
@@ -400,6 +438,20 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     if (type == EnemyType.rock && hp < maxHp && el == null) {
       drawRect(c, -20, -r - 10, 40, 4, const Color(0xCC120A1E));
       drawRect(c, -20, -r - 10, 40 * clampD(hp / maxHp, 0, 1), 4, _ember);
+    }
+  }
+
+  /// Teile vorgerenderter Gegner, die live gezeichnet werden (gespiegelter Raum).
+  void _spriteExtras(Canvas c) {
+    switch (type) {
+      case EnemyType.crow:
+        RotArt.crowSmoke(c, t);
+      case EnemyType.weathercock:
+        // Zeigerpfeil in Schussrichtung
+        final ax = cos(aim) * 22, ay = sin(aim) * 22 - 6;
+        drawTri(c, ax, ay, ax - cos(aim + 0.5) * 7, ay - sin(aim + 0.5) * 7, ax - cos(aim - 0.5) * 7,
+            ay - sin(aim - 0.5) * 7, const Color(0xFFFFC94A).withAlpha((150 + 100 * warn).round()));
+      default:
     }
   }
 

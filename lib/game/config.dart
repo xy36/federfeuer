@@ -96,6 +96,27 @@ const int kStartMoney = 15;
 /// Frühe Wellen (bis [kEarlySpawnWaves]): je Gegnergruppe [kEarlySpawnBonus] Gegner mehr.
 const int kEarlySpawnWaves = 3, kEarlySpawnBonus = 1;
 
+// Weniger, aber zähere Gegner: Spawn-Takt und Gruppengröße wachsen langsamer, dafür
+// steigen HP und Material je Gegner mit der Zähigkeit – Einkommen und XP bleiben ähnlich.
+
+/// Spawn-Intervall (s) vor Zufall und Schwierigkeit: max(Min; Basis − Schritt · Welle).
+const double kSpawnIntervalBase = 3.0, kSpawnIntervalStep = 0.1, kSpawnIntervalMin = 1.6;
+double spawnInterval(int wave) => max(kSpawnIntervalMin, kSpawnIntervalBase - kSpawnIntervalStep * wave);
+
+/// Gruppengröße: 1 + ⌊Welle / [kGroupWaveStep]⌋, mit [kGroupExtraChance] einer mehr.
+const double kGroupWaveStep = 5, kGroupExtraChance = 0.4;
+
+/// Höchstens so viele lebende Gegner, darüber keine neuen Spawns.
+const int kMaxAliveEnemies = 40;
+
+/// Zähigkeit regulärer Gegner (nicht Boss, Torwächter, Spawner-Kinder): HP und Material × k(w).
+const double kToughnessPerWave = 0.25;
+double enemyToughness(int wave) => 1 + kToughnessPerWave * (wave - 1);
+
+/// Zusätzlicher Schaden regulärer Gegner je Welle (wenige Gegner sollen trotzdem wehtun).
+const double kEnemyDmgPerWave = 0.04;
+double enemyDmgBonus(int wave) => 1 + kEnemyDmgPerWave * (wave - 1);
+
 /// Shop: Chance, dass ein Angebot eine Waffe ist – früh hoch, später mehr Items.
 const double kWeaponOfferStart = 0.8, kWeaponOfferStep = 0.04, kWeaponOfferMin = 0.55;
 double weaponOfferChance(int wave) => max(kWeaponOfferMin, kWeaponOfferStart - kWeaponOfferStep * (wave - 1));
@@ -1072,7 +1093,9 @@ enum EliteMod {
 const int kEliteStartWave = 5;
 const double kEliteHp = 2.5, kEliteScale = 1.18, kEliteGiftChance = 0.25;
 const int kEliteDrops = 3;
-double eliteChance(int wave) => wave < kEliteStartWave ? 0 : min(0.15, 0.04 + 0.01 * (wave - kEliteStartWave));
+const double kEliteChanceMax = 0.25, kEliteChanceBase = 0.06, kEliteChanceStep = 0.015;
+double eliteChance(int wave) =>
+    wave < kEliteStartWave ? 0 : min(kEliteChanceMax, kEliteChanceBase + kEliteChanceStep * (wave - kEliteStartWave));
 
 /// Kopien eines teilenden Elitegegners: HP-Anteil und Größe.
 const double kSplitHp = 0.35, kSplitScale = 0.7;

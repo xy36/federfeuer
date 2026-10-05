@@ -110,7 +110,7 @@ class EnemyArt {
     _line
       ..strokeWidth = 1
       ..color = _k(l, const Color(0xFF2A1A36));
-    final wave = sin(t * 6) * 1.5;
+    final wave = sin(t * 7) * 1.5;
     c.drawPath(
         Path()
           ..moveTo(17, -3)
@@ -128,7 +128,7 @@ class EnemyArt {
 
   /// Schwebender Schleimbeutel mit durchscheinendem Giftsack, Tentakeln und Spuckmaul.
   static void spitter(Canvas c, EnemyLook l, double r) {
-    final t = l.t, wb = sin(t * 5);
+    final t = l.t, wb = sin(t * 6);
     // Tentakel
     for (var i = 0; i < 4; i++) {
       final x = -9.0 + i * 6;
@@ -152,7 +152,7 @@ class EnemyArt {
           ..shader = ui.Gradient.radial(sac.center, 7,
               [_toxic.withValues(alpha: 0.75 + 0.2 * l.pulse), const Color(0xFF3A6A1A).withValues(alpha: 0.4)]));
     for (var i = 0; i < 3; i++) {
-      final ph = (t * 0.8 + i / 3) % 1;
+      final ph = (t * 6 / (2 * pi) + i / 3) % 1;
       c.drawCircle(Offset(-5 + i * 2.5, 7 - ph * 8), 0.9, _p(Colors.white.withValues(alpha: 0.7 * (1 - ph))));
     }
     RotArt.rim(c, Path()..addOval(body), Rect.fromLTRB(body.left, body.top - 2, body.right, body.top + 7));
@@ -162,7 +162,7 @@ class EnemyArt {
     }
     // Spuckmaul mit Gifttropfen
     c.drawOval(Rect.fromCenter(center: const Offset(11, 3), width: 6, height: 4.5 + 2 * l.warn), _p(const Color(0xFF05020A)));
-    final ph = (t * 1.2) % 1;
+    final ph = (t * 6 / (2 * pi)) % 1;
     c.drawCircle(Offset(12, 6 + ph * 6), 1.2, _p(_toxic.withValues(alpha: 1 - ph)));
     _slit(c, const Offset(4, -5), 2.6, _toxic);
   }
@@ -248,7 +248,7 @@ class EnemyArt {
   static void puffball(Canvas c, EnemyLook l, double r) {
     final t = l.t, swell = 1 + 0.06 * sin(t * 3) + 0.15 * l.warn;
     for (var i = 0; i < 14; i++) {
-      final a = i / 14 * pi * 2 + t * 0.3;
+      final a = i / 14 * pi * 2 + t * 6 / 14;
       final len = r * (1.25 + (i.isEven ? 0.25 : 0)) * swell;
       final base = r * 0.85 * swell;
       final n = Offset(-sin(a), cos(a)) * 2;

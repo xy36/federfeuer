@@ -123,10 +123,19 @@ void main() {
     expect(game.progress.hasSeen('x:volatile'), isTrue);
   });
 
+  test('Weniger, aber zähere Gegner: Zähigkeit und Spawn-Takt je Welle', () {
+    expect(enemyToughness(1), 1);
+    expect(enemyToughness(5), closeTo(2, 1e-9));
+    expect(enemyDmgBonus(1), 1);
+    expect(spawnInterval(1), closeTo(2.9, 1e-9));
+    expect(spawnInterval(30), kSpawnIntervalMin);
+  });
+
   test('Elite-Chance steigt ab Welle 5 und bleibt gedeckelt', () {
     expect(eliteChance(4), 0);
     expect(eliteChance(5), greaterThan(0));
-    expect(eliteChance(14), lessThanOrEqualTo(0.15));
+    expect(eliteChance(14), lessThanOrEqualTo(kEliteChanceMax));
+    expect(eliteChance(60), kEliteChanceMax);
   });
 
   testWidgets('Torwächter erscheint vor dem Ziel, versperrt es und gibt es nach dem Sieg frei', (t) async {
