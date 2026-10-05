@@ -199,6 +199,8 @@ Skalierung pro Welle w (gilt nicht für den Boss):
 - HP × (1 + 0,38 · (w − 1))
 - Schaden × (1 + 0,15 · (w − 1)), gerundet
 - Tempo × (1 + 0,02 · w)
+
+**Wenige, aber zähe Gegner:** Statt immer mehr Gegner gleichzeitig werden reguläre Gegner mit jeder Welle zäher. Zähigkeit k(w) = 1 + 0,25 · (w − 1): HP × k(w) und Material × k(w) (gerundet, fällt als wenige wertvolle Kristalle), Schaden zusätzlich × (1 + 0,04 · (w − 1)). Ausgenommen sind Boss, Torwächter und Spawner-Kinder. Da XP aus eingesammeltem Material entsteht, bleiben Einkommen und Level-Tempo trotz weniger Gegner ähnlich.
  
 Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln (Boss, Torwächter und stationäre Gegner bleiben stehen). Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
 
@@ -218,7 +220,7 @@ Gewichtung: Krähennest 1,5 in den Feldern / sonst 0,6, Wespennest 1,5 im Dorf /
 
 ### Elitegegner
 
-Ab Welle 5 kann ein regulär erscheinender Gegner (nicht Boss oder Torwächter) als Elite kommen: Chance min(15 %, 4 % + 1 % · (w − 5)). Elitegegner haben × 2,5 HP, sind 18 % größer, tragen einen pulsierenden Goldring, einen goldenen Schein, eine schmale HP-Leiste und das Zeichen ihres Modifikators über dem Kopf (als Form gezeichnet). Sie lassen × 3 Material fallen und mit 25 % Chance ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item).
+Ab Welle 5 kann ein regulär erscheinender Gegner (nicht Boss oder Torwächter) als Elite kommen: Chance min(25 %, 6 % + 1,5 % · (w − 5)). Elitegegner haben × 2,5 HP, sind 18 % größer, tragen einen pulsierenden Goldring, einen goldenen Schein, eine schmale HP-Leiste und das Zeichen ihres Modifikators über dem Kopf (als Form gezeichnet). Sie lassen × 3 Material fallen und mit 25 % Chance ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item).
 
 | Modifikator | Zeichen | Wirkung |
 | --- | --- | --- |
@@ -254,11 +256,11 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
  
 - **Dauer:** 20 s + 4 s pro Welle ohne Obergrenze (Welle 1 = 20 s, Welle 9 = 52 s, Welle 14 = 72 s).
 - **Ende:** Erreicht der Spieler das Ziel, ist die Welle sofort bestanden und er bekommt ⌊Restzeit / 2⌋ Material als Zeitbonus. Läuft vorher der Timer ab, ist die Welle ebenfalls bestanden, aber ohne Bonus.
-- **Steigende Schwierigkeit:** Gegnerwerte (siehe Skalierung), Gruppengröße und der Anteil von Spuckern und Brocken wachsen mit jeder Welle weiter. Das Spawn-Intervall erreicht ab Welle 10 seine Untergrenze von 0,9 s.
-- **Spawn-Intervall:** max(0,9; 2,4 − 0,15 · w) s, zufällig ±30 %; in der Bosswelle × 1,7.
-- **Gruppengröße:** 1 + ⌊w / 2,5⌋, mit 40 % Chance einer mehr; in den Wellen 1–3 je Gruppe 1 Gegner zusätzlich (sonst reicht das Material nach Welle 1 für keinen Kauf). Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
+- **Steigende Schwierigkeit:** Gegnerwerte (siehe Skalierung und Zähigkeit), Gruppengröße und der Anteil von Spuckern und Brocken wachsen mit jeder Welle weiter. Das Spawn-Intervall erreicht ab Welle 14 seine Untergrenze von 1,6 s.
+- **Spawn-Intervall:** max(1,6; 3,0 − 0,1 · w) s, zufällig ±30 %; in der Bosswelle × 1,7.
+- **Gruppengröße:** 1 + ⌊w / 5⌋, mit 40 % Chance einer mehr; in den Wellen 1–3 je Gruppe 1 Gegner zusätzlich (sonst reicht das Material nach Welle 1 für keinen Kauf). Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
 - **Warnung:** Ein pulsierender Fäulnis-Riss (dunkler Kern, violett-rotes Leuchten, der sich bis zum Erscheinen schließt) markiert jeden Spawn 0,9 s vorher (Boss: 2 s, größer).
-- **Obergrenze:** keine neuen Spawns bei mehr als 110 lebenden Gegnern.
+- **Obergrenze:** keine neuen Spawns ab 40 lebenden Gegnern.
 - **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle, nie Boss oder Torwächter).
 - **Gewichtung:** siehe „Gegner“; dazu ab Welle 5 Elitegegner und in Welle 4, 8, 12 ein Torwächter am Ziel.
  
@@ -570,6 +572,8 @@ Stil: leuchtendes Glas passend zur Spielwelt – ruhig und edel statt Arcade-Sti
 ## Technische Umsetzung (Flutter + Flame)
  
 Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutter-Widgets als Overlays des `GameWidget`. Kollisionen werden manuell per Kreisabstand geprüft statt über `HasCollisionDetection` – bei vielen Kugeln schneller und deterministisch.
+
+Gebaut wird mit Flutter 3.47.6 (lokal und in GitHub Actions). Unter Windows rendert das Spiel mit Skia statt Impeller (`windows/runner/main.cpp`): Mit Impeller (OpenGL ES) dauerte ein Bild in der Render-Analyse etwa doppelt so lange.
  
 | Datei | Verantwortung |
 | --- | --- |
@@ -588,7 +592,7 @@ Die Spielwelt läuft komplett in Flame, alle Menüs und Touch-Buttons sind Flutt
 | `components/weapon_art.dart` | Modelle aller 18 Waffen und die Krallen der gehaltenen Waffe |
 | `components/weapon_mount.dart` | Waffe in den Krallen bzw. im Ring um den Spieler, Zielsuche, Verhalten je Waffenart (Schuss, Wurf, Kreis, Hieb, Begleiter, Wolke, Rollen, rundum) |
 | `components/weapon_fx.dart` | Geisterkrähen, Regenwolke, Peitschenbogen, Henriettes Ei (auch Gewitterei), Blitz (Mixin `CombatEffect`) |
-| `components/enemy.dart` | KI und Zeichnung der Grundgegner, Statuseffekte, Elitegegner; Teil-Dateien `enemy_world.dart` (Welt-Gegner, Giftwolke, Sprengsatz), `enemy_gate.dart` (Torwächter), `enemy_boss.dart` (Phasen des Geierkönigs, Federregen) |
+| `components/enemy.dart` | KI und Zeichnung der Grundgegner, Statuseffekte, Elitegegner; Teil-Dateien `enemy_world.dart` (Welt-Gegner, Giftwolke, Sprengsatz), `enemy_gate.dart` (Torwächter), `enemy_boss.dart` (Phasen des Geierkönigs, Federregen), `enemy_sprites.dart` (vorgerenderte Gegner: je Typ ein Atlas mit den Phasen der Hauptbewegung, Pulsstufen und Varianten in Bildschirmauflösung; alle Körper werden gebündelt per drawAtlas gezeichnet, Treffer-Blitz über die Atlas-Farbe; live bleiben Rauch, Fäden, Zeiger, Statusanzeigen sowie Boss, Torwächter, Irrlicht, Riss und Ei) |
 | `components/projectiles.dart` | Spielerkugeln (Durchschlag, Explosion, Bogenwurf, Zünder, Rollen, Treffereffekte) und Gegnerkugeln |
 | `components/pickups.dart` | Material-, Herz- und Geschenk-Drops und Spawn-Warnungen |
 | `components/effects.dart` | Partikel, Explosionsring, schwebende Zahlen |
@@ -645,6 +649,8 @@ Phase 2 – Inhalte:
 - [x] Waffen: sechs Klassen mit Set-Boni, 18 Waffen inkl. Nahkampf, Brand, Verlangsamen, Betäuben
 - [x] Gegner pro Welt, Elitegegner, Torwächter am Ende der Welten, Geierkönig mit drei Phasen
 - [ ] Balancing der neuen Gegner nach Spieltests
+- [x] Weniger, aber zähere Gegner (Spawn-Takt, Gruppengröße, Obergrenze 40, Zähigkeit für HP und Material)
+- [ ] Gegner mit neuen Angriffen in späteren Wellen, Angriffsmuster, die die Flugsteuerung fordern (Strahlen, Bodenwellen, Decke), Trupps mit Anführer
 - [x] Items: Seltenheitsstufen, Flug-Items (Schub, Gleiten), Spezial-Items
 - [x] Zwei Aktionstasten mit aktiven Fähigkeiten aus Items und Charakteren, Stufe II und Evolutionen
 - [x] Tastenbelegung frei einstellbar (Tastatur und Controller)
