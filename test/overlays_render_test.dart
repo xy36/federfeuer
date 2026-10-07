@@ -81,6 +81,16 @@ void main() {
       game.overlays.add('shop');
       await frames();
 
+      // Verschmelzen gleicher Waffen: Auswahl einer Eigenschaft (1 aus 3)
+      final pair = game.run!.weapons.indexWhere((w) => w.id == 'pistol' && game.run!.mergePartner(game.run!.weapons.indexOf(w)) >= 0);
+      expect(game.run!.merge(pair), isTrue);
+      game.overlays.remove('shop');
+      await frames(1);
+      game.overlays.add('shop');
+      await frames();
+      expect(find.text('EIGENSCHAFT WÄHLEN'), findsOneWidget);
+      game.run!.chooseTrait(0);
+
       game.nextWave();
       await frames();
       game.togglePause();

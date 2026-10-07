@@ -7,6 +7,20 @@ class OwnedWeapon {
   final String id;
   int tier;
   WeaponDef get def => weaponDefs[id]!;
+
+  /// Gaben verschmolzener Spenderwaffen (deren IDs) und gewählte Eigenschaften.
+  final gifts = <String>[];
+  final traits = <WeaponTrait>[];
+
+  /// Eigene Klasse plus die Klassen der Spender (Set-Boni, Reaktionen).
+  List<WeaponClass> get classes => {def.cls, for (final g in gifts) weaponDefs[g]!.cls}.toList();
+}
+
+/// Ausstehende Wahl einer Eigenschaft nach dem Verschmelzen gleicher Waffen.
+class TraitChoice {
+  TraitChoice(this.weapon, this.options);
+  final OwnedWeapon weapon;
+  final List<WeaponTrait> options;
 }
 
 /// Aktion in einem der beiden Aktionsplätze; [level] 0 = Stufe I, 1 = Stufe II.
@@ -65,9 +79,32 @@ class WeaponStats {
     this.stickTime = 0,
     this.stickDps = 0,
     this.lifesteal = 0,
+    this.classes = const [],
+    this.count = 1,
+    this.pierce = 0,
+    this.spread = 0,
+    this.radius = 0,
+    this.critBonus = 0,
+    this.stunChance = 0,
+    this.stunTime = 0,
+    this.trapChance = 0,
+    this.trapTime = 0,
+    this.blastChance = 0,
+    this.blastRadius = 0,
+    this.blastMul = 0,
   });
   final double dmg, cooldown, range, explosion;
   final double burnTime, burnDps, slow, slowTime, stun, trap, curse, knock, stickTime, stickDps, lifesteal;
+
+  /// Klassen der Treffer (eigene plus Gaben), für Reaktionen.
+  final List<WeaponClass> classes;
+
+  /// Projektile/Klingen/Begleiter, Durchschlag, Streuung bzw. Hiebbogen, Wolkenbreite.
+  final int count, pierce;
+  final double spread, radius;
+
+  /// Aus Gaben: Krit-Bonus, Chancen auf Betäuben/Einfangen, kleine Explosionen.
+  final double critBonus, stunChance, stunTime, trapChance, trapTime, blastChance, blastRadius, blastMul;
 }
 
 /// Alles, was zu einem Durchlauf gehört (Charakter, Werte, Inventar, Fortschritt).
@@ -164,7 +201,7 @@ class RunState {
 
   // ---------------- Werte ----------------
 
-  int classCount(WeaponClass c) => weapons.where((w) => w.def.cls == c).length;
+  int classCount(WeaponClass c) => weapons.where((w) => w.classes.contains(c)).length;
   int setLevelOf(WeaponClass c) => setLevel(classCount(c));
   bool has(ItemEffect e) => items.keys.any((id) => itemById[id]!.effect == e);
 
@@ -184,6 +221,12 @@ class RunState {
   }
 
   double get maxHp => stats[Stat.maxHp]!;
+
+  /// Abklingzeit einer Aktion mit Aktionstempo (wie beim Angriffstempo höchstens × 1/0,3).
+  double actionCooldown(OwnedAction a) => a.cooldown / max(0.3, 1 + stat(Stat.actionSpeed) / 100);
+
+  /// Faktor für Herz- und Geschenk-Chancen aus Glück.
+  double get luckDropMul => 1 + kLuckDrops * max(0.0, stat(Stat.luck));
   int get xpNeeded => (level + 3) * (level + 3);
 
   /// Zusatzschaden auf verfluchte Gegner.
@@ -234,9 +277,19 @@ class RunState {
     });
   }
 
-  WeaponStats weaponStats(String id, int tier, {bool raining = false}) {
+  /// Werte einer eigenen Waffe inklusive Gaben und Eigenschaften.
+  WeaponStats statsOf(OwnedWeapon w, {bool raining = false}) =>
+      weaponStats(w.id, w.tier, raining: raining, gifts: w.gifts, traits: w.traits);
+
+  WeaponStats weaponStats(String id, int tier,
+      {bool raining = false, List<String> gifts = const [], List<WeaponTrait> traits = const []}) {
     final d = weaponDefs[id]!, t = tiers[tier];
-    var mul = 1 + stat(Stat.dmg) / 100;
+    final gs = [for (final g in gifts) weaponGifts[g]!];
+    int n(WeaponTrait x) => traits.where((y) => y == x).length;
+    double sum(double Function(WeaponGift) f) => gs.fold(0.0, (a, g) => a + f(g));
+    double prod(double Function(WeaponGift) f) => gs.fold(1.0, (a, g) => a * f(g));
+    double most(double Function(WeaponGift) f) => gs.fold(0.0, (a, g) => max(a, f(g)));
+    var mul = (1 + stat(Stat.dmg) / 100) * prod((g) => g.dmgMul) * (1 + kTraitDmg * n(WeaponTrait.sharp));
     if (character.classBonus == d.cls) mul *= 1.25;
     if (d.heavy) mul *= 1 + kSetHeavy[setLevelOf(WeaponClass.stone)];
     if (has(ItemEffect.mirror) && _projectile(d.kind)) mul *= 0.7;
@@ -245,22 +298,38 @@ class RunState {
     final ember = 1 + kSetEmber[setLevelOf(WeaponClass.ember)];
     final water = 1 + kSetSlow[setLevelOf(WeaponClass.water)];
     final burnFactor = character.burnBonus ? 1.25 : 1.0;
+    final atk = (1 + stat(Stat.atk) / 100) * prod((g) => g.atkMul) * (1 + kTraitAtk * n(WeaponTrait.quick));
+    final rangeAdd = stat(Stat.range) + sum((g) => g.rangeAdd) + kTraitRange * n(WeaponTrait.reach);
+    final stick = max(d.stick, sum((g) => g.stick));
     return WeaponStats(
       dmg: dmg,
-      cooldown: d.cooldown * t.cooldown / max(0.3, 1 + stat(Stat.atk) / 100),
-      range: d.range + (d.kind == WeaponKind.orbit ? stat(Stat.range) / 6 : stat(Stat.range)),
-      explosion: d.explosion * ember,
-      burnTime: d.burn * (character.burnBonus ? 1.5 : 1),
+      cooldown: d.cooldown * t.cooldown / max(0.3, atk),
+      range: d.range + (d.kind == WeaponKind.orbit ? rangeAdd / 6 : rangeAdd),
+      explosion: d.explosion * ember * (1 + kTraitBlast * n(WeaponTrait.blast)),
+      burnTime: max(d.burn, sum((g) => g.burnTime)) * (character.burnBonus ? 1.5 : 1),
       burnDps: d.dmg * t.dmg * kBurnDpsFactor * ember * burnFactor * (1 + stat(Stat.dmg) / 100),
-      slow: min(0.85, d.slow * water),
-      slowTime: d.slowTime * water,
+      slow: min(0.85, max(d.slow, most((g) => g.slow)) * water),
+      slowTime: max(d.slowTime, most((g) => g.slowTime)) * water,
       stun: d.stun,
       trap: d.trap * (0.85 + 0.15 * water),
-      curse: d.curse,
-      knock: d.knock,
-      stickTime: d.stick,
-      stickDps: d.stick > 0 ? dmg : 0,
-      lifesteal: d.lifesteal,
+      curse: max(d.curse, sum((g) => g.curse)),
+      knock: d.knock + sum((g) => g.knockAdd),
+      stickTime: stick,
+      stickDps: stick > 0 ? dmg : 0,
+      lifesteal: d.lifesteal + sum((g) => g.lifesteal),
+      classes: {d.cls, for (final g in gifts) weaponDefs[g]!.cls}.toList(),
+      count: d.count + n(WeaponTrait.multi) * (d.kind == WeaponKind.disco ? 2 : 1),
+      pierce: d.pierce + kTraitPierce * n(WeaponTrait.pierce),
+      spread: d.spread + kTraitArc * n(WeaponTrait.arc),
+      radius: d.radius * (1 + kTraitWide * n(WeaponTrait.wide)),
+      critBonus: sum((g) => g.critBonus) + kTraitCrit * n(WeaponTrait.keen),
+      stunChance: sum((g) => g.stunChance),
+      stunTime: most((g) => g.stunTime),
+      trapChance: sum((g) => g.trapChance),
+      trapTime: most((g) => g.trapTime),
+      blastChance: min(1.0, sum((g) => g.blastChance)),
+      blastRadius: most((g) => g.blastRadius),
+      blastMul: most((g) => g.blastMul),
     );
   }
 
@@ -293,7 +362,43 @@ class RunState {
       return;
     }
     final i = weapons.indexWhere((w) => w.id == id && w.tier == tier);
-    if (i >= 0 && tier < 3) weapons[i].tier++;
+    if (i >= 0 && tier < 3) _tierUp(weapons[i]);
+  }
+
+  /// Ausstehende Wahl einer Eigenschaft (nach dem Verschmelzen gleicher Waffen).
+  TraitChoice? traitChoice;
+
+  /// Stufe hoch und 1 aus 3 passenden Eigenschaften zur Wahl stellen.
+  void _tierUp(OwnedWeapon w) {
+    w.tier++;
+    final pool = WeaponTrait.values.where((t) => t.appliesTo(w.def)).toList()..shuffle(_rng);
+    if (pool.isNotEmpty) traitChoice = TraitChoice(w, pool.take(3).toList());
+  }
+
+  /// Gewählte Eigenschaft übernehmen.
+  void chooseTrait(int k) {
+    final c = traitChoice;
+    if (c == null) return;
+    c.weapon.traits.add(c.options[k]);
+    traitChoice = null;
+  }
+
+  /// Kann Slot [donor] seine Gabe an Slot [target] abgeben? (Verschiedene Waffen,
+  /// freier Gaben-Platz, Gabe noch nicht vorhanden.)
+  bool canGift(int donor, int target) {
+    if (donor == target || donor >= weapons.length || target >= weapons.length) return false;
+    final d = weapons[donor], t = weapons[target];
+    return d.id != t.id && !t.gifts.contains(d.id) && t.gifts.length < maxGifts(t.tier);
+  }
+
+  bool hasGiftTarget(int donor) => [for (var t = 0; t < weapons.length; t++) t].any((t) => canGift(donor, t));
+
+  /// Verschmilzt Slot [donor] in Slot [target]: Das Ziel erbt die Gabe, der Spender wird frei.
+  bool giveGift(int donor, int target) {
+    if (!canGift(donor, target)) return false;
+    weapons[target].gifts.add(weapons[donor].id);
+    weapons.removeAt(donor);
+    return true;
   }
 
   /// Index einer zweiten, gleichen Waffe gleicher Stufe für Slot [i], sonst -1.
@@ -310,9 +415,13 @@ class RunState {
   bool merge(int i) {
     final j = mergePartner(i);
     if (j < 0) return false;
-    final w = weapons[i];
-    w.tier++;
-    weapons.removeAt(j);
+    final w = weapons[i], p = weapons[j];
+    // Gaben des Partners gehen mit über, soweit Platz ist; seine Eigenschaften verfallen
+    for (final g in p.gifts) {
+      if (!w.gifts.contains(g) && w.gifts.length < maxGifts(w.tier + 1)) w.gifts.add(g);
+    }
+    _tierUp(w);
+    weapons.remove(p);
     return true;
   }
 
@@ -384,11 +493,13 @@ class RunState {
   /// Seltenheit eines Item-Angebots je Welle.
   Rarity rollRarity(Random r) {
     final x = r.nextDouble();
-    final legendary = wave >= 8 ? 0.04 : 0.0;
-    final epic = wave >= 4 ? 0.12 + 0.01 * (wave - 4) : 0.03;
+    final luck = max(0.0, stat(Stat.luck));
+    final legendary = wave >= 8 ? 0.04 + kLuckLegendary * luck : 0.0;
+    final epic = (wave >= 4 ? 0.12 + 0.01 * (wave - 4) : 0.03) + kLuckEpic * luck;
+    final rare = 0.3 + kLuckRare * luck;
     if (x < legendary) return Rarity.legendary;
     if (x < legendary + epic) return Rarity.epic;
-    if (x < legendary + epic + 0.3) return Rarity.rare;
+    if (x < legendary + epic + rare) return Rarity.rare;
     return Rarity.common;
   }
 
@@ -456,7 +567,8 @@ class RunState {
 
   void rollLevelChoices(Random r) {
     final pool = [...levelOptions]..shuffle(r);
-    levelChoices = pool.take(4).map((o) => LevelChoice(o, r.nextDouble() < 0.2)).toList();
+    final rareChance = 0.2 + kLuckLevelRare * max(0.0, stat(Stat.luck));
+    levelChoices = pool.take(4).map((o) => LevelChoice(o, r.nextDouble() < rareChance)).toList();
   }
 
   void chooseLevel(int i) {

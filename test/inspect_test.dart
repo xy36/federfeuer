@@ -45,7 +45,8 @@ void main() {
     await mouse.moveTo(t.getCenter(find.text('Krähenruf')));
     await t.pump(const Duration(milliseconds: 100));
     expect(find.byType(InfoCard), findsOneWidget);
-    await mouse.moveTo(t.getCenter(find.text('Funkenfächer')));
+    // Eigene Waffe im Waffenring (Funkenfächer)
+    await mouse.moveTo(t.getCenter(find.byKey(const ValueKey('weapon-tile-1'))));
     await t.pump(const Duration(milliseconds: 100));
     await mouse.moveTo(t.getCenter(find.text('Rüstung').last));
     await t.pump(const Duration(milliseconds: 100));

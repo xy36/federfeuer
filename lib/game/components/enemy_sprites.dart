@@ -139,6 +139,13 @@ final Map<EnemyType, EnemySpriteDef> enemySpriteDefs = {
     pulseLevels: 3,
     draw: (c, t, p, v, r) => EnemyArt.avalancheWalk(c, _look(t, p), r),
   ),
+  EnemyType.wirrling: EnemySpriteDef(
+    bounds: const Rect.fromLTRB(-18, -20, 18, 22),
+    omega: 4,
+    frames: 12,
+    pulseLevels: 3,
+    draw: (c, t, p, v, r) => EnemyArt.wirrling(c, _look(t, p), r),
+  ),
   // Das Wackeln vor dem Ausschwärmen wird beim Zeichnen als Versatz ergänzt.
   EnemyType.crowNest: EnemySpriteDef(
     bounds: const Rect.fromLTRB(-30, -16, 30, 28),
@@ -270,7 +277,7 @@ class EnemyBodyPass extends Component with HasGameReference<FederfeuerGame> {
 
   /// Pixel pro Welteinheit (Kamera-Zoom × Gerätepixel) – die Auflösung der Atlanten.
   double get _scale =>
-      game.camera.viewfinder.zoom * WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
+      game.zoom * WidgetsBinding.instance.platformDispatcher.views.first.devicePixelRatio;
 
   /// Atlanten der Gegner einer Welle schon zum Wellenstart rendern, statt beim ersten
   /// Auftauchen mitten im Kampf (kurzer Hänger). Spawner-Kinder kommen dazu.

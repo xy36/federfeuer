@@ -68,7 +68,9 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     if (run == null || !game.playing) return;
 
     final c = character;
-    final dir = (game.inRight ? 1 : 0) - (game.inLeft ? 1 : 0);
+    // Verwirrt (Chaos-Wolke): links und rechts vertauscht
+    final flip = game.chaos(ChaosEffect.confused) ? -1 : 1;
+    final dir = ((game.inRight ? 1 : 0) - (game.inLeft ? 1 : 0)) * flip;
     webT = max(0.0, webT - dt);
     final webbed = webT > 0 ? kWebSlow : 1.0;
     var maxSpeed = kPlayerSpeed * max(0.4, 1 + run.stat(Stat.speed) / 100) * c.speedMul * webbed;
@@ -88,8 +90,12 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
     final w = game.weather;
     final rain = w.isRaining && !run.has(ItemEffect.raincoat);
-    final thrustF = (rain ? w.thrustFactor : 1.0) * (webT > 0 ? kWebThrust : 1.0);
-    final glideF = rain ? w.glideFallFactor : 1.0;
+    // Verklebte Flügel (Chaos): halber Schub, schnelleres Sinken
+    final sticky = game.chaos(ChaosEffect.sticky);
+    final thrustF = (rain ? w.thrustFactor : 1.0) * (webT > 0 ? kWebThrust : 1.0) * (sticky ? kStickyThrust : 1.0);
+    final glideF = (rain ? w.glideFallFactor : 1.0) * (sticky ? kStickyFall : 1.0);
+    // Kopfüber (Chaos): Schwerkraft umgekehrt
+    final up = game.chaos(ChaosEffect.upsideDown) ? -1.0 : 1.0;
     // Windfahne: Wind schiebt nur in die eigene Flugrichtung
     final windX = run.has(ItemEffect.windVane) && w.windX.sign != face ? 0.0 : w.windX;
 
@@ -100,7 +106,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     } else {
       if (c.freeFlight) {
         // Kolibri: Stick analog – halber Ausschlag, halbes Tempo
-        final h = game.inHorizontal;
+        final h = game.inHorizontal * flip;
         vel.x += clampD(h * maxSpeed - vel.x, -accel * dt, accel * dt);
         if (h.abs() > 0.1) face = h.sign;
       } else if (dir != 0) {
@@ -113,7 +119,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
       if (c.freeFlight) {
         // Kolibri: keine Schwerkraft, senkrecht wie waagerecht steuern, ohne Eingabe stehen bleiben
-        final target = game.inVertical * kFreeFlightSpeed * (1 + run.stat(Stat.thrust) / 100) * thrustF;
+        final target = game.inVertical * up * kFreeFlightSpeed * (1 + run.stat(Stat.thrust) / 100) * thrustF;
         final step = kFreeFlightAccel * c.accelMul * dt;
         vel.y += clampD(target - vel.y, -step, step);
       } else {
@@ -122,8 +128,9 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
         final glide = 150 * c.glideMul * glideF / (1 + max(0.0, run.stat(Stat.glide)) / 100);
         // Sinkflug (nach unten halten): schnell nach unten statt gleiten
         final dive = game.inDown && !fly;
-        vel.y += ((fly ? -thrust : 0.0) + 650 + (dive ? kDiveAccel : 0)) * dt;
-        vel.y = clampD(vel.y, -340, fly ? 340.0 : (dive ? kDiveSpeed : glide));
+        vel.y += up * ((fly ? -thrust : 0.0) + 650 + (dive ? kDiveAccel : 0)) * dt;
+        final fall = fly ? 340.0 : (dive ? kDiveSpeed : glide);
+        vel.y = up > 0 ? clampD(vel.y, -340, fall) : clampD(vel.y, -fall, 340);
       }
     }
 
@@ -136,6 +143,11 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     if (clinging) vel.y = 0;
     if (position.y < kCeil + r) {
       position.y = kCeil + r;
+      // Gummiflügel: schnell gegen die Decke – abprallen und Schockwelle
+      if (run.has(ItemEffect.rubberWings) && vel.y < -kRubberMinSpeed && game.rubberCd <= 0) {
+        vel.y = -vel.y * 0.8;
+        game.rubberBounce();
+      }
       vel.y = max(0.0, vel.y);
     }
     grounded = false;

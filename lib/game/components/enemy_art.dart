@@ -570,6 +570,50 @@ class EnemyArt {
     _slit(c, Offset(r + 1, 1), 1.8, _frost);
   }
 
+  // ---------------- Wirrling ----------------
+
+  /// Schwebender Sporenquall: violetter Schirm mit Sporenpunkten, wehende Fäden, Spiralaugen.
+  static void wirrling(Canvas c, EnemyLook l, double r) {
+    final t = l.t;
+    // Fäden
+    for (var i = 0; i < 4; i++) {
+      final x = -8.0 + i * 5.3;
+      final p = Path()..moveTo(x, 4);
+      for (var k = 1; k <= 4; k++) {
+        p.lineTo(x + sin(t * 4 + i * 1.3 + k * 0.9) * 2.4, 4 + k * 3.4);
+      }
+      _line
+        ..strokeWidth = 1.6
+        ..color = _k(l, const Color(0xFF2A1440));
+      c.drawPath(p, _line);
+    }
+    // Schirm
+    final cap = Path()
+      ..moveTo(-r, 4)
+      ..cubicTo(-r, -r * 1.2, r, -r * 1.2, r, 4)
+      ..quadraticBezierTo(0, 8, -r, 4)
+      ..close();
+    c.drawPath(cap, _body(l, 'wirrling', r * 1.2, center: Offset(0, -r * 0.4), core: const Color(0xFF4A1A6A)));
+    for (final (x, y) in [(-7.0, -7.0), (4.0, -10.0), (9.0, -3.0)]) {
+      c.drawCircle(Offset(x, y), 1.6, _p(const Color(0xFFC77DFF).withValues(alpha: 0.5 + 0.4 * l.pulse)));
+    }
+    RotArt.rim(c, cap, Rect.fromLTRB(-r - 1, -r * 1.2, r + 1, -r * 0.3), color: const Color(0xFFC77DFF), alpha: 0.5);
+    // Spiralaugen, drehen sich
+    for (final ex in [-4.5, 4.5]) {
+      c.drawCircle(Offset(ex, -1), 3.2, _p(_k(l, const Color(0xFFE6D8F8))));
+      final s = Path();
+      for (var k = 0; k <= 10; k++) {
+        final rr = 0.3 + k * 0.25, a = k * 1.0 + t * 4 * (ex < 0 ? 1 : -1);
+        final pt = Offset(ex + cos(a) * rr, -1 + sin(a) * rr);
+        k == 0 ? s.moveTo(pt.dx, pt.dy) : s.lineTo(pt.dx, pt.dy);
+      }
+      _line
+        ..strokeWidth = 0.8
+        ..color = const Color(0xFF2A1440);
+      c.drawPath(s, _line);
+    }
+  }
+
   // ---------------- Spawner ----------------
 
   /// Krähennest auf einem Pfahl aus verflochtenen Zweigen mit glühenden Augen darin.
@@ -767,6 +811,8 @@ class EnemyArt {
         eagle(c, l, r);
       case EnemyType.avalanche:
         avalancheWalk(c, l, r);
+      case EnemyType.wirrling:
+        wirrling(c, l, r);
       case EnemyType.crowNest:
         crowNest(c, l, r);
       case EnemyType.waspNest:

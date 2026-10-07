@@ -17,13 +17,13 @@ Widget _head(Object icon, String title, String sub, Color color) => Row(children
           color: color.withAlpha(30),
           border: Border.all(color: color.withAlpha(140), width: 1.2),
         ),
-        child: icon is GlyphRef ? Glyph(icon, size: 30) : iconWidget('$icon', 17, color: color),
+        child: icon is Widget ? icon : (icon is GlyphRef ? Glyph(icon, size: 30) : iconWidget('$icon', 17, color: color)),
       ),
       const SizedBox(width: 10),
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(title, style: displayStyle(16, Color.lerp(color, Colors.white, 0.45)!)),
-          Text(sub, style: bodyText(11.5, color: Ui.muted)),
+          classText(sub, bodyText(11.5, color: Ui.muted)),
         ]),
       ),
     ]);
@@ -36,9 +36,15 @@ Widget _line(String label, String value, {Color color = Ui.text}) => Padding(
       ]),
     );
 
-Widget _section(String t) => Padding(
+Widget _section(String t, {Color color = Ui.muted}) => Padding(
       padding: const EdgeInsets.only(top: 8, bottom: 3),
-      child: Text(t.toUpperCase(), style: displayStyle(10.5, Ui.muted).copyWith(letterSpacing: 1.5)),
+      child: Text(t.toUpperCase(), style: displayStyle(10.5, color).copyWith(letterSpacing: 1.5)),
+    );
+
+/// Wie [_text], Klassennamen in Klassenfarbe.
+Widget _classText(String t, {Color color = Ui.text}) => Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: classText(t, bodyText(12.5, color: color)),
     );
 
 Widget _text(String t, {Color color = Ui.text}) => Padding(
@@ -53,7 +59,9 @@ String _pct(double v) => '${(v * 100).round()} %';
 
 /// Waffe in Stufe [tier]; [owned] = Slot im Inventar (zeigt Verkaufspreis).
 Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? price, bool showSell = true}) {
-  final d = weaponDefs[id]!, t = tiers[tier], s = r.weaponStats(id, tier);
+  final d = weaponDefs[id]!, t = tiers[tier], s = owned != null ? r.statsOf(owned) : r.weaponStats(id, tier);
+  final classes = owned?.classes ?? [d.cls];
+  final gift = weaponGifts[id]!;
   final kind = switch (d.kind) {
     WeaponKind.shot => 'Schuss',
     WeaponKind.lob => 'Wurf im Bogen',
@@ -66,8 +74,8 @@ Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? pri
   };
   final have = r.classCount(d.cls), lvl = setLevel(have), next = owned == null ? setLevel(have + 1) : lvl;
   final fx = <String>[
-    if (d.count > 1) '${d.count} Projektile${d.kind == WeaponKind.orbit ? ' (Klingen)' : ''}',
-    if (d.pierce > 0) 'durchschlägt alles',
+    if (s.count > 1) '${s.count} Projektile${d.kind == WeaponKind.orbit ? ' (Klingen)' : ''}',
+    if (s.pierce >= 50) 'durchschlägt alles' else if (s.pierce > 0) 'durchschlägt ${s.pierce} Gegner',
     if (s.explosion > 0) 'Explosion, Radius ${s.explosion.round()}${d.fuse > 0 ? ' nach ${_s(d.fuse)}' : ''}',
     if (s.burnTime > 0) 'Brand ${_s(s.burnTime)}, ${fmtNum(s.burnDps)} Schaden/s',
     if (s.slow > 0) 'verlangsamt um ${_pct(s.slow)} für ${_s(s.slowTime)}',
@@ -76,26 +84,45 @@ Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? pri
     if (s.curse > 0) 'verflucht ${_s(s.curse)} (+${_pct(r.curseBonus)} Schaden)',
     if (s.stickTime > 0) 'klebt ${_s(s.stickTime)}, ${fmtNum(s.stickDps)} Schaden/s',
     if (s.lifesteal > 0) '${s.lifesteal.round()} % Chance je Treffer auf +1 HP',
+    if (s.critBonus > 0) '+${s.critBonus.round()} % Krit-Chance',
+    if (s.stunChance > 0) '${_pct(s.stunChance)} Chance, ${_s(s.stunTime)} zu betäuben',
+    if (s.trapChance > 0) '${_pct(s.trapChance)} Chance, ${_s(s.trapTime)} einzufangen',
+    if (s.blastChance > 0)
+      '${s.blastChance >= 1 ? 'jeder Treffer' : '${_pct(s.blastChance)} der Treffer'} explodiert (Radius ${s.blastRadius.round()}, ${_pct(s.blastMul)})',
     if (d.hpCost > 0) 'kostet ${d.hpCost} HP pro Schuss',
     if (s.knock >= 15) 'starker Rückstoß (${s.knock.round()})',
     if (d.heavy) 'langsam und schwer: profitiert vom Stein-Set',
   ];
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-    _head(WeaponGlyph(id, tier: tier), d.name, 'Stufe ${t.label} · ${d.cls.label} · $kind', t.color),
+    _head(WeaponGlyph(id, tier: tier), d.name, 'Stufe ${t.label} · ${classes.map((c) => c.label).join(' + ')} · $kind',
+        t.color),
     _text(d.desc),
     _section('Werte'),
-    _line('Schaden', '${fmtNum(s.dmg)}${d.count > 1 ? ' ×${d.count}' : ''}'),
+    _line('Schaden', '${fmtNum(s.dmg)}${s.count > 1 ? ' ×${s.count}' : ''}'),
     _line(d.kind == WeaponKind.orbit ? 'Treffer je Gegner alle' : 'Abklingzeit', '${s.cooldown.toStringAsFixed(2)} s'),
     _line(d.kind == WeaponKind.orbit ? 'Kreisradius' : 'Reichweite', '${s.range.round()}'),
     if (fx.isNotEmpty) ...[
       _section('Effekte'),
       for (final f in fx) _text('• $f'),
     ],
-    _section('Klasse ${d.cls.label}'),
+    if (owned != null && owned.traits.isNotEmpty) ...[
+      _section('Eigenschaften'),
+      for (final tr in owned.traits) _text('• ${tr.label}: ${tr.descFor(d)}', color: _good),
+    ],
+    if (owned != null && owned.gifts.isNotEmpty) ...[
+      _section('Gaben ${owned.gifts.length} / ${maxGifts(owned.tier)}'),
+      for (final g in owned.gifts)
+        _text('• ${weaponGifts[g]!.name} (${weaponDefs[g]!.name}): ${weaponGifts[g]!.desc}', color: _good),
+    ],
+    ..._reactionLines(classes),
+    _section('Gabe beim Verschmelzen'),
+    _classText('${gift.name}: ${gift.desc}, dazu Klasse ${d.cls.label} – geht an eine andere Waffe, wenn du diese mit ihr verschmilzt.',
+        color: Ui.muted),
+    _section('Klasse ${d.cls.label}', color: d.cls.color),
     for (var i = 0; i < 3; i++)
       _text('${[2, 4, 6][i]} Waffen: ${d.cls.bonusTexts[i]}',
           color: lvl > i ? _good : (next > i ? Palette.sun : Ui.muted)),
-    _text(owned == null ? 'Du hast $have ${d.cls.label}-Waffen${next > lvl ? ' – Kauf erreicht den nächsten Bonus!' : ''}' : 'Du hast $have ${d.cls.label}-Waffen',
+    _classText(owned == null ? 'Du hast $have ${d.cls.label}-Waffen${next > lvl ? ' – Kauf erreicht den nächsten Bonus!' : ''}' : 'Du hast $have ${d.cls.label}-Waffen',
         color: Ui.muted),
     if (r.character.classBonus == d.cls) _text('${r.character.name}: +25 % Schaden mit dieser Klasse', color: _good),
     if (tier < 3) ...[
@@ -192,6 +219,9 @@ Widget statInfo(RunState r, Stat s) {
     Stat.pickup => 'Material in diesem Radius fliegt zu dir (Grundradius 70).',
     Stat.thrust => 'Stärkerer Schub beim Fliegen (Kolibri: schneller hoch und runter).',
     Stat.glide => 'Langsameres Sinken beim Gleiten.',
+    Stat.luck => 'Bessere Seltenheit im Shop, öfter seltene Level-ups, mehr Herzen und Geschenke.',
+    Stat.dodge => 'Chance, einem Treffer ganz auszuweichen (höchstens ${kDodgeMax.round()} %).',
+    Stat.actionSpeed => 'Kürzere Abklingzeit der Aktionstasten.',
   };
   final bonus = total - base;
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -244,7 +274,7 @@ Widget enemyInfo(EnemyType t) {
 /// Platzhalter für noch nicht Entdecktes.
 Widget unknownInfo(String hint) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       _head('?', '???', 'Noch nicht entdeckt', Ui.muted),
-      _text(hint, color: Ui.muted),
+      _classText(hint, color: Ui.muted),
     ]);
 
 Widget recipeInfo(RunState r, ActionRecipe rec, {required bool evolved}) => Column(
@@ -274,7 +304,7 @@ Widget evolutionPreview(RunState r, ActionRecipe rec) {
 
 /// Vorschau beim Verschmelzen zweier gleicher Waffen: Werte vorher → nachher.
 Widget weaponMergePreview(RunState r, OwnedWeapon w) {
-  final d = w.def, a = r.weaponStats(w.id, w.tier), b = r.weaponStats(w.id, w.tier + 1);
+  final d = w.def, a = r.statsOf(w), b = r.weaponStats(w.id, w.tier + 1, gifts: w.gifts, traits: w.traits);
   final ta = tiers[w.tier], tb = tiers[w.tier + 1];
   Widget cmp(String label, String from, String to) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 1),
@@ -297,8 +327,50 @@ Widget weaponMergePreview(RunState r, OwnedWeapon w) {
     _section('Beim Verschmelzen'),
     _text('• Dieser Slot steigt auf Stufe ${tb.label}.'),
     _text('• Die zweite ${d.name} (Stufe ${ta.label}) verschwindet, ihr Slot wird frei.', color: _good),
+    _text('• Du wählst eine von 3 Eigenschaften (z. B. ${WeaponTrait.values.where((x) => x.appliesTo(d)).take(2).map((x) => x.descFor(d)).join(', ')}).',
+        color: _good),
+    _text('• Platz für Gaben: ${maxGifts(w.tier)} → ${maxGifts(w.tier + 1)}; Gaben der zweiten Waffe gehen mit über.'),
   ]);
 }
+
+/// Reaktionen, an denen die Klassen einer Waffe beteiligt sind, mit der Partnerklasse.
+List<Widget> _reactionLines(List<WeaponClass> classes) {
+  final lines = <Widget>[];
+  for (final re in Reaction.values) {
+    if (!classes.contains(re.a) && !classes.contains(re.b)) continue;
+    final partner = [re.a, re.b].where((c) => !classes.contains(c)).map((c) => c.label).join(' + ');
+    final who = partner.isEmpty ? 'löst sie selbst aus' : 'mit $partner';
+    lines.add(_classText('• ${re.label} ($who): ${re.short}', color: Color.lerp(re.color, Colors.white, 0.3)!));
+  }
+  return lines.isEmpty ? const [] : [_section('Reaktionen'), ...lines];
+}
+
+/// Vorschau: [donor] gibt seine Gabe an [target] ab und verschwindet.
+Widget weaponGiftPreview(RunState r, OwnedWeapon donor, OwnedWeapon target) {
+  final g = weaponGifts[donor.id]!, d = target.def, t = tiers[target.tier];
+  final classes = {...target.classes, donor.def.cls};
+  return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+    _head(WeaponGlyph(target.id, tier: target.tier), d.name, 'erhält die Gabe „${g.name}“', t.color),
+    _text(g.desc, color: _good),
+    _section('Danach'),
+    Row(children: [
+      Expanded(child: Text('Klassen', style: bodyText(12, color: Ui.muted))),
+      classText(classes.map((c) => c.label).join(' + '), bodyText(12.5, color: Ui.text, weight: 900)),
+    ]),
+    _line('Gaben', '${target.gifts.length + 1} / ${maxGifts(target.tier)}'),
+    _text('• ${donor.def.name} (Stufe ${tiers[donor.tier].label}) verschwindet, ihr Slot wird frei.'),
+    if (donor.gifts.isNotEmpty) _text('• Ihre eigenen Gaben gehen verloren.', color: _bad),
+  ]);
+}
+
+Widget reactionInfo(Reaction re) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      _head(ReactionBadge(re, size: 30), re.label, '${re.a.label} + ${re.b.label}', re.color),
+      _text(re.desc),
+      _section('Regeln'),
+      _line('Höchstens je Gegner alle', _s(kReactionCd)),
+      if (re == Reaction.steam || re == Reaction.frost || re == Reaction.rainbow)
+        _line('Nässe hält', '${_s(kWetTime)} (Regen ×${fmtNum(kWetRainMul)})', color: _good),
+    ]);
 
 Widget eliteInfo(EliteMod m) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
       _head('★', 'Elite: ${m.label}', 'ab Welle $kEliteStartWave', const Color(0xFFFFC94A)),

@@ -17,6 +17,7 @@ enum CompendiumTab {
   items('Items'),
   actions('Aktionen'),
   recipes('Kombinationen'),
+  reactions('Reaktionen'),
   enemies('Gegner');
 
   const CompendiumTab(this.label);
@@ -48,6 +49,7 @@ class _CompendiumViewState extends State<CompendiumView> {
         CompendiumTab.items => (_items.where((it) => p.hasSeen(_key('i', it.id))).length, _items.length),
         CompendiumTab.actions => (ActionId.values.where((a) => p.hasSeen(_key('a', a.name))).length, ActionId.values.length),
         CompendiumTab.recipes => (actionRecipes.where((r) => p.hasSeen(_key('r', r.result.name))).length, actionRecipes.length),
+        CompendiumTab.reactions => (Reaction.values.where((re) => p.hasSeen(_key('k', re.name))).length, Reaction.values.length),
         CompendiumTab.enemies => (
             EnemyType.values.where((e) => p.hasSeen(_key('e', e.name))).length +
                 EliteMod.values.where((m) => p.hasSeen(_key('x', m.name))).length,
@@ -85,6 +87,7 @@ class _CompendiumViewState extends State<CompendiumView> {
         CompendiumTab.items => _grid([for (final it in _items) _item(it)]),
         CompendiumTab.actions => _grid([for (final a in ActionId.values) _action(a)]),
         CompendiumTab.recipes => ActionConstellation(progress: p, reference: _ref),
+        CompendiumTab.reactions => _grid([for (final re in Reaction.values) _reaction(re)]),
         CompendiumTab.enemies => _grid([
             for (final e in EnemyType.values) _enemy(e),
             for (final m in EliteMod.values) _elite(m),
@@ -167,6 +170,19 @@ class _CompendiumViewState extends State<CompendiumView> {
       color: a.evolved ? const Color(0xFFFFC94A) : Palette.sun,
       known: known,
       info: (_) => known ? actionInfo(_ref, OwnedAction(a), 0) : unknownInfo(hint),
+    );
+  }
+
+  Widget _reaction(Reaction re) {
+    final known = p.hasSeen(_key('k', re.name));
+    return _tile(
+      icon: known ? ReactionBadge(re, size: 44) : _unknown,
+      name: re.label,
+      color: re.color,
+      known: known,
+      info: (_) => known
+          ? reactionInfo(re)
+          : unknownInfo('Entsteht, wenn Waffen der Klassen ${re.a.label} und ${re.b.label} denselben Gegner treffen.'),
     );
   }
 

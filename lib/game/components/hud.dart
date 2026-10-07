@@ -39,6 +39,45 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
     c.restore();
   }
 
+  static const _warn = Color(0xFFFFA040);
+
+  /// Großer Countdown der letzten Sekunden in der Bildmitte: jede Zahl ploppt kurz auf
+  /// und verblasst; ab 3 rot. Deckkraft in wenigen Stufen (Text-Cache bleibt klein).
+  void _countdown(Canvas c, Vector2 s, double left) {
+    final n = left.ceil(), frac = left - (n - 1); // 1 → 0 innerhalb jeder Sekunde
+    final pop = 1 + 0.35 * clampD((frac - 0.75) / 0.25, 0, 1);
+    final alpha = ((0.18 + 0.42 * frac) * 8).round() / 8;
+    final col = n <= 3 ? _hp : _warn;
+    c.save();
+    c.translate(s.x / 2, s.y * 0.4);
+    c.scale(pop);
+    OutlineText.draw(c, '$n', Offset.zero, size: 96, color: col.withValues(alpha: alpha));
+    c.restore();
+    OutlineText.draw(c, 'WELLE ENDET', Offset(s.x / 2, s.y * 0.4 + 62), size: 13, color: _muted);
+  }
+
+  static final _chaosEdge = Paint()..style = PaintingStyle.stroke;
+
+  /// Aktive Chaos-Zustände: farbiger Bildschirmrand und Name mit Restzeit unten in der Mitte.
+  void _chaos(Canvas c, Vector2 s) {
+    var row = 0;
+    for (final e in ChaosEffect.values) {
+      final left = game.chaosT[e] ?? 0;
+      if (left <= 0) continue;
+      final pulse = 0.5 + 0.5 * sin(game.clock * 6);
+      _chaosEdge
+        ..strokeWidth = 22
+        ..color = e.color.withValues(alpha: 0.16 + 0.1 * pulse);
+      c.drawRect(Rect.fromLTWH(11, 11, s.x - 22, s.y - 22), _chaosEdge);
+      final y = s.y - 92 - row * 30;
+      OutlineText.draw(c, '${e.label.toUpperCase()} · ${e.desc}', Offset(s.x / 2, y), size: 14, color: e.color, display: false);
+      final bw = 140.0, f = clampD(left / e.duration, 0, 1);
+      drawRect(c, s.x / 2 - bw / 2, y + 12, bw, 4, const Color(0x66120A1E));
+      drawRect(c, s.x / 2 - bw / 2, y + 12, bw * f, 4, e.color);
+      row++;
+    }
+  }
+
   void _render(Canvas c, Vector2 s, double k) {
     final g = game, r = g.run!;
     const pad = 14.0;
@@ -94,9 +133,16 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       }
     } else {
       OutlineText.draw(c, 'WELLE ${r.wave}', Offset(cx, 18), size: 12, color: _muted);
-      final low = g.waveTime < 5;
-      OutlineText.draw(c, '${max(0, g.waveTime.ceil())}', Offset(cx, 46),
-          size: 30, color: low ? _hp : const Color(0xFFFFE6A0), display: false);
+      // Schlussphase: Timer orange ab 10 s, rot ab 5 s, pulsiert immer stärker
+      final left = g.waveTime, warn = left < kWaveWarnTime, low = left < kWaveCountdown;
+      final pulse = warn ? 0.5 + 0.5 * sin(g.clock * (low ? 10 : 6)) : 0.0;
+      c.save();
+      c.translate(cx, 46);
+      c.scale(1 + (low ? 0.16 : 0.08) * pulse);
+      OutlineText.draw(c, '${max(0, left.ceil())}', Offset.zero,
+          size: 30, color: low ? _hp : (warn ? _warn : const Color(0xFFFFE6A0)), display: false);
+      c.restore();
+      if (g.playing && left > 0 && left <= kWaveCountdown) _countdown(c, s, left);
       final goal = g.goalX;
       if (goal != null) _drawProgress(c, cx, 72, min(220.0, s.x * 0.34), g.player.x / goal);
       // Torwächter: Name und HP-Kapsel unter der Strecke
@@ -107,6 +153,7 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
         _capsule(c, Rect.fromLTWH(cx - bw / 2, 122, bw, 9), gate.hp / gate.maxHp, _boss);
       }
     }
+    if (g.playing) _chaos(c, s);
 
     // Wetteranzeige unter Timer bzw. Boss-Leiste
     final wt = g.weather;
@@ -193,7 +240,7 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
             ..strokeWidth = 3
             ..color = _xp;
           c.drawArc(Rect.fromCircle(center: Offset(ax, ay), radius: ar - 3), -pi / 2,
-              2 * pi * (1 - g.actionCds[i] / act.cooldown), false, _line);
+              2 * pi * (1 - g.actionCds[i] / r.actionCooldown(act)), false, _line);
         }
         c.save();
         c.translate(ax, ay);

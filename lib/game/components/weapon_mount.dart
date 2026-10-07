@@ -53,7 +53,7 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
     kick = max(0.0, kick - dt * 8);
 
     final d = weapon.def;
-    final s = run.weaponStats(weapon.id, weapon.tier, raining: game.weather.isRaining);
+    final s = run.statsOf(weapon, raining: game.weather.isRaining);
     if (d.kind == WeaponKind.orbit) {
       _updateOrbit(s, dt);
       return;
@@ -85,7 +85,7 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
     ang += da * min(1.0, k);
   }
 
-  bool _crit(RunState run) => game.rng.nextDouble() * 100 < run.stat(Stat.crit);
+  bool _crit(RunState run, WeaponStats s) => game.rng.nextDouble() * 100 < run.stat(Stat.crit) + s.critBonus;
 
   void _fire(WeaponStats s, double aim, RunState run, Enemy target) {
     final d = weapon.def;
@@ -98,29 +98,29 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
         return;
       case WeaponKind.summon:
         _minions.removeWhere((m) => m.life <= 0);
-        if (_minions.length >= d.count) return;
+        if (_minions.length >= s.count) return;
         final m = Minion(position.clone(), s, d.speed);
         _minions.add(m);
         game.world.add(m);
         return;
       case WeaponKind.cloud:
-        game.world.add(RainCloud(Vector2(target.x, max(kCeil + 30, target.y - 90)), s, d.radius, target));
+        game.world.add(RainCloud(Vector2(target.x, max(kCeil + 30, target.y - 90)), s, s.radius, target));
         return;
       case WeaponKind.roll:
-        final crit = _crit(run);
+        final crit = _crit(run, s);
         final dir = (target.x - x).sign == 0 ? game.player.face : (target.x - x).sign;
         game.world.add(Bullet(
           position: position.clone(),
           vel: Vector2(dir * d.speed, 0),
           dmg: s.dmg * (crit ? game.run!.character.critMul : 1),
           crit: crit,
-          pierce: d.pierce,
+          pierce: s.pierce,
           life: s.range / d.speed,
           explosion: 0,
           radius: d.radius,
           color: d.color,
           fx: s,
-          cls: d.cls,
+          classes: s.classes,
           look: d.id,
           gravity: 900,
           roll: true,
@@ -134,15 +134,16 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
     final lob = d.kind == WeaponKind.lob;
     for (var copy = 0; copy < (mirror ? 2 : 1); copy++) {
       final off = mirror ? (copy == 0 ? -0.07 : 0.07) : 0.0;
-      for (var k = 0; k < d.count; k++) {
+      for (var k = 0; k < s.count; k++) {
         final double a;
         if (d.kind == WeaponKind.disco) {
-          a = _disco + k / d.count * pi * 2 + off;
+          a = _disco + k / s.count * pi * 2 + off;
         } else {
-          a = aim + off +
-              (d.count > 1 ? (k / (d.count - 1) - 0.5) * d.spread : (rng.nextDouble() - 0.5) * d.spread);
+          // Zusätzliche Projektile ohne eigene Streuung fächern leicht auf
+          final spread = s.count > d.count && d.spread == 0 ? 0.12 * (s.count - 1) : s.spread;
+          a = aim + off + (s.count > 1 ? (k / (s.count - 1) - 0.5) * spread : (rng.nextDouble() - 0.5) * spread);
         }
-        final crit = _crit(run);
+        final crit = _crit(run, s);
         // Bogenwurf: Ziel in Wurfweite treffen, leicht nach oben gezielt
         final dist = target.position.distanceTo(position);
         final speed = lob ? clampD(sqrt(dist * 650), 220, d.speed * 1.6) : d.speed;
@@ -152,13 +153,13 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
           vel: Vector2(cos(la), sin(la))..scale(speed),
           dmg: s.dmg * (crit ? game.run!.character.critMul : 1),
           crit: crit,
-          pierce: d.pierce,
+          pierce: s.pierce,
           life: lob ? 3 : s.range / d.speed * 1.1,
           explosion: s.explosion,
           radius: d.radius,
           color: d.color,
           fx: s,
-          cls: d.cls,
+          classes: s.classes,
           look: d.id,
           gravity: lob ? 650 : (d.stick > 0 ? -25 : 0),
           fuse: d.fuse,
@@ -174,18 +175,18 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
   }
 
   void _whip(WeaponStats s, double aim, RunState run) {
-    final d = weapon.def;
     final p = game.player.position;
-    game.world.add(WhipArc(p.clone(), aim, s.range, d.spread));
+    game.world.add(WhipArc(p.clone(), aim, s.range, s.spread));
     for (final e in [...game.enemies]) {
       if (e.dead) continue;
       final dv = e.position - p;
       if (dv.length > s.range + e.r) continue;
       var da = atan2(dv.y, dv.x) - aim;
       da = atan2(sin(da), cos(da));
-      if (da.abs() > d.spread / 2 + 0.15) continue;
-      final crit = _crit(run);
-      game.hurtEnemy(e, s.dmg * (crit ? game.run!.character.critMul : 1), crit, dv.x.sign * s.knock, fx: s, cls: d.cls);
+      if (da.abs() > s.spread / 2 + 0.15) continue;
+      final crit = _crit(run, s);
+      game.hurtEnemy(e, s.dmg * (crit ? game.run!.character.critMul : 1), crit, dv.x.sign * s.knock,
+          fx: s, classes: s.classes);
     }
   }
 
@@ -200,15 +201,16 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
     _orbit += d.speed * dt;
     _orbitHits.updateAll((_, t) => t - dt);
     _orbitHits.removeWhere((e, t) => t <= 0 || e.dead);
-    for (var k = 0; k < d.count; k++) {
-      final b = _blade(k, d.count, s.range);
+    for (var k = 0; k < s.count; k++) {
+      final b = _blade(k, s.count, s.range);
       for (final e in [...game.enemies]) {
         if (e.dead || _orbitHits.containsKey(e)) continue;
         if (e.position.distanceTo(b) < e.r + d.radius) {
           _orbitHits[e] = s.cooldown;
-          final crit = _crit(run);
+          final crit = _crit(run, s);
           final dir = (e.x - game.player.x).sign;
-          game.hurtEnemy(e, s.dmg * (crit ? game.run!.character.critMul : 1), crit, dir * s.knock, fx: s, cls: d.cls);
+          game.hurtEnemy(e, s.dmg * (crit ? game.run!.character.critMul : 1), crit, dir * s.knock,
+              fx: s, classes: s.classes);
         }
       }
     }
@@ -226,10 +228,10 @@ class WeaponMount extends PositionComponent with HasGameReference<FederfeuerGame
   void render(Canvas c) {
     final d = weapon.def;
     if (d.kind == WeaponKind.orbit && game.run != null) {
-      final s = game.run!.weaponStats(weapon.id, weapon.tier);
-      for (var k = 0; k < d.count; k++) {
-        final b = _blade(k, d.count, s.range) - position;
-        final a = _orbit + k / d.count * pi * 2 + pi / 2;
+      final s = game.run!.statsOf(weapon);
+      for (var k = 0; k < s.count; k++) {
+        final b = _blade(k, s.count, s.range) - position;
+        final a = _orbit + k / s.count * pi * 2 + pi / 2;
         Glow.draw(c, b.x, b.y, 26, d.color.withAlpha(150));
         c.save();
         c.translate(b.x, b.y);

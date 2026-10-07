@@ -61,8 +61,34 @@ extension _WorldEnemies on Enemy {
         _eagleAi(dt, p, dx, dy);
       case EnemyType.avalanche:
         _avalancheAi(dt, dx);
+      case EnemyType.wirrling:
+        _wirrlingAi(dt, dx, dy, d);
       default:
     }
+  }
+
+  /// Schwebt in 160–220 Abstand um den Spieler und stößt nach kurzer Warnung Chaos-Wolken aus.
+  void _wirrlingAi(double dt, double dx, double dy, double d) {
+    final want = d > 220 ? 1 : (d < 160 ? -1 : 0);
+    vel.x += (dx / d * spd * want + sin(t * 1.3) * 25 - vel.x) * 2 * dt;
+    vel.y += (dy / d * spd * want + cos(t * 1.7) * 30 - vel.y) * 2 * dt;
+    if (warn > 0) {
+      warn += dt / kWirrlingWarn;
+      if (warn >= 1) {
+        warn = 0;
+        stateT = game.rnd(3.5, 4.5);
+        _chaosCloud();
+      }
+    } else {
+      stateT -= dt;
+      if (stateT <= 0 && d < 520) warn = 0.001;
+    }
+  }
+
+  /// Chaos-Wolke mit zufälligem Zustand an der eigenen Stelle (auch beim Tod).
+  void _chaosCloud() {
+    final fx = ChaosEffect.values[game.rng.nextInt(ChaosEffect.values.length)];
+    game.world.add(ChaosCloud(position.clone(), fx));
   }
 
   void _wispAi(double dt, Vector2 p, double d) {
@@ -252,6 +278,10 @@ extension _WorldEnemies on Enemy {
         eye(17, -8, 2.2, Enemy._eye);
       case EnemyType.avalanche:
         f(0, 0, r * 1.3, const Color(0xFFBFE3FF).withAlpha((40 + 40 * pulse).round()));
+      case EnemyType.wirrling:
+        f(0, -4, r * 1.5, const Color(0xFFC77DFF).withAlpha((50 + 50 * pulse + 150 * warn).round().clamp(0, 255)));
+        eye(-4.5, -1, 2, const Color(0xFFE6B8FF));
+        eye(4.5, -1, 2, const Color(0xFFE6B8FF));
       default:
     }
     // Angekündigter Angriff: helles, wachsendes Leuchten
@@ -286,6 +316,51 @@ class PoisonCloud extends PositionComponent with HasGameReference<FederfeuerGame
       Glow.draw(c, cos(ang) * 24, sin(ang) * 16, radius * 0.9, Color.fromRGBO(170, 255, 90, 0.28 * a));
     }
     Glow.draw(c, 0, 0, radius * 1.3, Color.fromRGBO(140, 220, 60, 0.3 * a));
+  }
+}
+
+/// Chaos-Wolke des Wirrlings: wirbelnde Schwaden in der Farbe ihres Zustands. Wer
+/// hineinfliegt, bekommt den Zustand (siehe [FederfeuerGame.applyChaos]).
+class ChaosCloud extends PositionComponent with HasGameReference<FederfeuerGame>, Transient, CombatEffect {
+  ChaosCloud(Vector2 pos, this.effect) : super(position: pos, priority: 18);
+  final ChaosEffect effect;
+  double life = kChaosCloudTime;
+
+  @override
+  void update(double dt) {
+    if (!game.playing) return;
+    life -= dt;
+    if (life <= 0) {
+      removeFromParent();
+      return;
+    }
+    if (position.distanceTo(game.player.position) < kChaosCloudRadius + game.player.r * 0.5) game.applyChaos(effect);
+  }
+
+  @override
+  void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.effects)) return;
+    final a = clampD(life / 0.6, 0, 1) * clampD((kChaosCloudTime - life) / 0.3, 0, 1);
+    final col = effect.color;
+    for (var i = 0; i < 6; i++) {
+      final ang = i / 6 * pi * 2 + game.clock * 1.4 * (i.isEven ? 1 : -1);
+      Glow.draw(c, cos(ang) * 26, sin(ang) * 18, kChaosCloudRadius * 0.8,
+          Color.fromRGBO((col.r * 255).round(), (col.g * 255).round(), (col.b * 255).round(), 0.3 * a));
+    }
+    Glow.draw(c, 0, 0, kChaosCloudRadius * 1.3, col.withValues(alpha: 0.25 * a));
+    // Wirbel in der Mitte, damit die Wolke als „verrückt“ lesbar ist
+    final p = Path();
+    for (var k = 0; k <= 24; k++) {
+      final rr = 2 + k * 0.9, ang = k * 0.55 + game.clock * 4;
+      final pt = Offset(cos(ang) * rr, sin(ang) * rr * 0.8);
+      k == 0 ? p.moveTo(pt.dx, pt.dy) : p.lineTo(pt.dx, pt.dy);
+    }
+    c.drawPath(
+        p,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2
+          ..color = Color.lerp(col, Colors.white, 0.4)!.withValues(alpha: 0.8 * a));
   }
 }
 

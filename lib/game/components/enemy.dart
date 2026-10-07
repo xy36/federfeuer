@@ -38,6 +38,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     // Weniger, aber zähere Gegner (nicht Boss, Torwächter und Spawner-Kinder)
     final regular = !boss && !child && !_gatekeeperType(type);
     toughness = regular ? enemyToughness(wave) : 1;
+    materialFactor = regular ? enemyMaterialFactor(wave) : 1;
     maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38)) * diff.hp * hpMul * toughness;
     hp = maxHp;
     dmg = ((boss ? d.dmg : d.dmg * (1 + (wave - 1) * 0.15)) * diff.dmg * (regular ? enemyDmgBonus(wave) : 1))
@@ -67,6 +68,9 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
   /// HP- und Material-Faktor (siehe [enemyToughness]); 1 für Boss, Torwächter, Kinder.
   late final double toughness;
+
+  /// Material-Faktor (siehe [enemyMaterialFactor]); 1 für Boss, Torwächter, Kinder.
+  late final double materialFactor;
   static bool _gatekeeperType(EnemyType t) =>
       t == EnemyType.strawKing || t == EnemyType.bell || t == EnemyType.spiderMother;
   double _healT = 0;
@@ -112,6 +116,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
   /// Restdauer (s) von Brand, Kleben, Verlangsamung, Betäubung, Einfangen, Fluch und Furcht.
   double burnT = 0, stickT = 0, slowT = 0, stunT = 0, trapT = 0, curseT = 0, fearT = 0;
+
+  /// Nässe (Wasser-Treffer), eingefroren (Reaktion Frost), Sperre bis zur nächsten Reaktion.
+  double wetT = 0, frozenT = 0, reactCd = 0;
+
+  /// Items: verwirrt (greift andere Gegner an), in ein Huhn verwandelt (harmlos, verwundbar).
+  double confusedT = 0, chickenT = 0, _confuseHitT = 0;
+
+  /// Kann von Wirrkraut und Hühnerzauber getroffen werden (nicht Boss, Torwächter, stationär).
+  bool get chaosable => !boss && !stationary;
   double burnDps = 0, stickDps = 0, slowAmt = 0;
   double _dotAcc = 0;
 
@@ -124,7 +137,10 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
   /// Radius des Glockenschlags.
   static const double bellRadius = 230;
-  bool get disabled => stunT > 0 || trapT > 0;
+  bool get disabled => stunT > 0 || trapT > 0 || frozenT > 0 || confusedT > 0 || chickenT > 0;
+  bool get wet => wetT > 0;
+  bool get frozen => frozenT > 0;
+  bool get burning => burnT > 0;
   bool get cursed => curseT > 0;
 
   /// Treffereffekte einer Waffe anwenden. Der Boss lässt sich nicht einfangen und nur kurz betäuben.
@@ -139,15 +155,18 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     }
     if (s.slow > 0) slow(s.slow, s.slowTime);
     if (s.stun > 0) stun(s.stun);
-    if (s.trap > 0) {
-      if (boss || stationary) {
-        slow(0.5, s.trap);
-      } else {
-        trapT = max(trapT, s.trap);
-        vel.setZero();
-      }
-    }
+    if (s.trap > 0) trapFor(s.trap);
     if (s.curse > 0) curseT = max(curseT, s.curse);
+  }
+
+  /// Einfangen; Boss und stationäre Gegner werden stattdessen verlangsamt.
+  void trapFor(double time) {
+    if (boss || stationary) {
+      slow(0.5, time);
+    } else {
+      trapT = max(trapT, time);
+      vel.setZero();
+    }
   }
 
   void slow(double amount, double time) {
@@ -170,6 +189,12 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     trapT = max(0.0, trapT - dt);
     curseT = max(0.0, curseT - dt);
     fearT = max(0.0, fearT - dt);
+    wetT = max(0.0, wetT - dt);
+    frozenT = max(0.0, frozenT - dt);
+    reactCd = max(0.0, reactCd - dt);
+    confusedT = max(0.0, confusedT - dt);
+    chickenT = max(0.0, chickenT - dt);
+    _confuseHitT = max(0.0, _confuseHitT - dt);
     // Schaden über Zeit in Schritten von 0,5 s
     final dps = (burnT > 0 ? burnDps : 0) + (stickT > 0 ? stickDps : 0);
     if (dps <= 0) {
@@ -180,6 +205,31 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     if (_dotAcc >= 0.5) {
       _dotAcc -= 0.5;
       game.hurtEnemy(this, dps * 0.5, false, 0, dot: true);
+    }
+  }
+
+  /// Verwirrt: jagt den nächsten anderen Gegner und rammt ihn (Wirrkraut).
+  void _confusedAi(double dt) {
+    Enemy? near;
+    var best = double.infinity;
+    for (final o in game.enemies) {
+      if (o.dead || identical(o, this)) continue;
+      final d2 = o.position.distanceToSquared(position);
+      if (d2 < best) {
+        best = d2;
+        near = o;
+      }
+    }
+    if (near == null) {
+      vel.scale(pow(0.1, dt).toDouble());
+      return;
+    }
+    final dv = near.position - position, d = max(1.0, dv.length);
+    vel.x += (dv.x / d * spd * 1.2 - vel.x) * 3 * dt;
+    if (fly) vel.y += (dv.y / d * spd * 1.2 - vel.y) * 3 * dt;
+    if (_confuseHitT <= 0 && d < r + near.r) {
+      _confuseHitT = 0.5;
+      game.hurtEnemy(near, max(1.0, dmg) * kConfuseHitMul, false, dv.x.sign * 20);
     }
   }
 
@@ -198,7 +248,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     // Verlangsamung und Zeitlupe (Taschenuhr) wirken auf Bewegung und Angriffe
     final realDt = dt;
     dt *= (slowT > 0 ? 1 - slowAmt : 1) * (game.timeSlowT > 0 ? 0.3 : 1);
-    t += dt;
+    // Eingefroren: auch die Animation steht still
+    if (frozenT <= 0) t += dt;
     final p = game.player.position;
     final dx = p.x - x, dy = p.y - y;
     final d = max(1.0, sqrt(dx * dx + dy * dy));
@@ -207,6 +258,15 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       // In der Blase: treibt hilflos nach oben
       vel.x *= pow(0.05, realDt).toDouble();
       vel.y = -55;
+    } else if (frozenT > 0) {
+      // Eingefroren: steht starr
+      vel.setZero();
+    } else if (chickenT > 0) {
+      // Huhn: hüpft ziellos herum und sinkt zu Boden
+      vel.x += (sin(t * 2.3) * 45 - vel.x) * 3 * dt;
+      vel.y += 700 * dt;
+    } else if (confusedT > 0) {
+      _confusedAi(dt);
     } else if (stunT > 0) {
       vel.scale(pow(0.02, realDt).toDouble());
     } else if (fearT > 0) {
@@ -257,7 +317,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.spider ||
             EnemyType.wisp ||
             EnemyType.eagle ||
-            EnemyType.avalanche:
+            EnemyType.avalanche ||
+            EnemyType.wirrling:
         _worldAi(dt, p, dx, dy, d);
         if (dead) return;
       case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
@@ -324,8 +385,9 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
   /// Vorgerenderter Körper (siehe [EnemyBodyPass]); null = live zeichnen.
   /// Der eingerollte Lawinenkäfer dreht sich frei und bleibt live.
-  EnemySpriteDef? get spriteDef =>
-      type == EnemyType.avalanche && (state == 1 || state == 2) ? null : enemySpriteDefs[type];
+  EnemySpriteDef? get spriteDef => chickenT > 0 || (type == EnemyType.avalanche && (state == 1 || state == 2))
+      ? null
+      : enemySpriteDefs[type];
 
   /// Zelle im Atlas: Variante, Pulsstufe, Phase der Hauptbewegung.
   int spriteCell(EnemySpriteDef def) {
@@ -358,8 +420,10 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     _spawnerRenderUnflipped(c);
     c.save();
     c.scale(face * sizeK, sizeK);
-    // Vorgerenderter Körper: hier nur, was live bleibt.
-    if (sprited) {
+    // Huhn (Hühnerzauber) statt des eigentlichen Körpers; vorgerenderter Körper: nur, was live bleibt.
+    if (chickenT > 0) {
+      _chicken(c, hit);
+    } else if (sprited) {
       _spriteExtras(c);
     } else {
     switch (type) {
@@ -370,7 +434,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.spider ||
             EnemyType.wisp ||
             EnemyType.eagle ||
-            EnemyType.avalanche:
+            EnemyType.avalanche ||
+            EnemyType.wirrling:
         _worldRender(c, k, pulse);
       case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
         _gateRender(c, k, pulse);
@@ -421,6 +486,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       c.drawCircle(Offset.zero, r + 7, _bubble);
       drawCircle(c, -r * 0.4, -r * 0.5, 3, const Color(0xB3FFFFFF));
     }
+    _statusOverlays(c);
     if (stunT > 0) {
       for (var i = 0; i < 3; i++) {
         final a = game.clock * 6 + i * 2.09;
@@ -439,6 +505,93 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       drawRect(c, -20, -r - 10, 40, 4, const Color(0xCC120A1E));
       drawRect(c, -20, -r - 10, 40 * clampD(hp / maxHp, 0, 1), 4, _ember);
     }
+  }
+
+  static final _drop = Paint()..color = const Color(0xFF8FD0FF);
+  static final _ice = Paint()..color = const Color(0x5590D8FF);
+  static final _iceEdge = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.4
+    ..strokeJoin = StrokeJoin.round
+    ..color = const Color(0xCCE8F8FF);
+  static final _rune = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 1.5
+    ..strokeCap = StrokeCap.round
+    ..color = const Color(0xFFD08CFF);
+
+  /// Sichtbare Zustände über dem Körper: Tropfen (nass), Eishülle (eingefroren),
+  /// kreisende Runen (verflucht). Brand-Flammen kommen als Leuchten, siehe [collectGlows].
+  void _statusOverlays(Canvas c) {
+    if (wetT > 0) {
+      for (var i = 0; i < 3; i++) {
+        final ph = (game.clock * 1.4 + i / 3) % 1;
+        final dx = (i - 1) * r * 0.55, dy = r * 0.2 + ph * r * 1.1;
+        _drop.color = Color.fromRGBO(143, 208, 255, 1 - ph);
+        c.drawPath(
+            Path()
+              ..moveTo(dx, dy - 3.2)
+              ..quadraticBezierTo(dx + 2.2, dy, dx, dy + 1.8)
+              ..quadraticBezierTo(dx - 2.2, dy, dx, dy - 3.2),
+            _drop);
+      }
+    }
+    if (frozenT > 0) {
+      // Eiskristall-Hülle: unregelmäßiges Vieleck mit hellen Kanten und Zacken
+      final ice = Path();
+      for (var i = 0; i < 7; i++) {
+        final a = i / 7 * pi * 2 + 0.3;
+        final rr = r * (1.12 + (i.isEven ? 0.12 : -0.02));
+        i == 0 ? ice.moveTo(cos(a) * rr, sin(a) * rr) : ice.lineTo(cos(a) * rr, sin(a) * rr);
+      }
+      ice.close();
+      c.drawPath(ice, _ice);
+      c.drawPath(ice, _iceEdge);
+      c.drawLine(Offset(-r * 0.5, -r * 0.6), Offset(-r * 0.15, -r * 0.2), _iceEdge);
+      c.drawLine(Offset(r * 0.3, -r * 0.7), Offset(r * 0.55, -r * 0.35), _iceEdge);
+    }
+    if (confusedT > 0) {
+      // Verwirrt: zwei kreisende Wirbel über dem Kopf
+      for (var i = 0; i < 2; i++) {
+        final a = game.clock * 7 + i * pi;
+        c.drawCircle(Offset(cos(a) * r * 0.6, -r - 9 + sin(a) * 2.5), 2.4, _rune);
+      }
+    }
+    if (curseT > 0) {
+      // Drei Runen kreisen über dem Kopf
+      for (var i = 0; i < 3; i++) {
+        final a = game.clock * 2.2 + i * pi * 2 / 3;
+        final rx = cos(a) * r * 0.75, ry = -r - 12 + sin(a) * 3;
+        c.drawPath(
+            Path()
+              ..moveTo(rx - 2.5, ry + 3)
+              ..lineTo(rx, ry - 3.5)
+              ..lineTo(rx + 2.5, ry + 3)
+              ..moveTo(rx - 1.5, ry + 0.5)
+              ..lineTo(rx + 1.5, ry + 0.5),
+            _rune);
+      }
+    }
+  }
+
+  static final _chickenBody = Paint()..color = const Color(0xFFF4F0E8);
+
+  /// Harmloses Huhn (Hühnerzauber): weißer Körper, roter Kamm, gelber Schnabel, Beinchen.
+  void _chicken(Canvas c, bool hit) {
+    _chickenBody.color = hit ? Colors.white : const Color(0xFFF4F0E8);
+    final hop = (sin(t * 9).abs()) * 3;
+    c.save();
+    c.translate(0, -hop);
+    drawRect(c, -4, 6, 1.6, 6, const Color(0xFFE8A030));
+    drawRect(c, 2, 6, 1.6, 6, const Color(0xFFE8A030));
+    c.drawOval(const Rect.fromLTRB(-11, -6, 9, 9), _chickenBody);
+    c.drawCircle(const Offset(8, -8), 5.5, _chickenBody);
+    drawCircle(c, 7, -15, 2.4, const Color(0xFFE8303A));
+    drawCircle(c, 10, -14, 2, const Color(0xFFE8303A));
+    drawTri(c, 13, -9, 17, -7.5, 13, -6, const Color(0xFFF0B030));
+    drawCircle(c, 9.5, -9, 1.1, const Color(0xFF1A1020));
+    drawTri(c, -11, -2, -16, -7, -12, 2, const Color(0xFFE8E0D0));
+    c.restore();
   }
 
   /// Teile vorgerenderter Gegner, die live gezeichnet werden (gespiegelter Raum).
@@ -480,10 +633,21 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     void eye(double lx, double ly, double rad, Color col) => f(lx, ly, rad * 3, col.withAlpha(200));
 
     // Statuseffekte
-    if (burnT > 0) front.add(x, y + r * 0.2, r * 1.7, Color.fromRGBO(255, 130, 40, 0.45 + 0.2 * sin(t * 18)));
+    if (burnT > 0) {
+      // Flammen: Glutkern plus aufsteigende, kleiner werdende Flammenzungen
+      front.add(x, y + r * 0.2, r * 1.3, Color.fromRGBO(255, 110, 30, 0.35 + 0.15 * sin(game.clock * 18)));
+      for (var i = 0; i < 4; i++) {
+        final ph = (game.clock * 1.8 + i / 4 + t * 0.37) % 1;
+        final sx = sin(game.clock * 5 + i * 2.1) * r * 0.45;
+        front.add(x + sx, y + r * 0.5 - ph * r * 2.1, r * 0.55 * (1 - ph) + 4,
+            Color.fromRGBO(255, (210 - 130 * ph).round(), 40, 0.9 * (1 - ph)));
+      }
+    }
     if (stickT > 0) front.add(x, y, r * 1.3, const Color(0x66FFFFE0));
     if (slowT > 0) front.add(x, y, r * 1.5, const Color(0x5578C8FF));
-    if (curseT > 0) front.add(x, y - r - 10, 14, const Color(0xCCB44CFF));
+    if (wetT > 0) front.add(x, y, r * 1.3, const Color(0x3A6EBEFF));
+    if (frozenT > 0) front.add(x, y, r * 1.7, const Color(0x73BEEBFF));
+    if (curseT > 0) front.add(x, y - r - 12, 12, const Color(0x99B44CFF));
 
     // Violette Aura, damit die dunklen Körper vor dunklem Hintergrund lesbar bleiben
     final el = elite;
@@ -500,6 +664,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     // Fäulnis-Stil: violetter Schimmer im Inneren des dunklen Körpers
     if (type != EnemyType.wisp && type != EnemyType.rift) front.add(x, y, r * 0.75, Color.fromRGBO(150, 60, 220, 0.16 + 0.08 * pulse));
     if (el == EliteMod.healer) back.add(x, y, 140, Color.fromRGBO(140, 245, 176, 0.08 + 0.05 * pulse));
+    if (confusedT > 0) front.add(x, y - r - 9, 16, const Color(0x99C77DFF));
+    if (chickenT > 0) return;
     switch (type) {
       case EnemyType.puffball ||
             EnemyType.scarecrow ||
@@ -508,7 +674,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.spider ||
             EnemyType.wisp ||
             EnemyType.eagle ||
-            EnemyType.avalanche:
+            EnemyType.avalanche ||
+            EnemyType.wirrling:
         _worldGlows(f, eye, front, pulse);
       case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
         _gateGlows(f, front, pulse);

@@ -449,14 +449,59 @@ class _Obj {
         shine(c, -3.5, -6, 1.4, 1.8, a: 0.7);
       case 'klee':
         glow(c, 0, 0, 14, const Color(0xFF50E070));
-        band(c, Path()..moveTo(0, 2)..quadraticBezierTo(2, 8, 6, 11), const Color(0xFF3E9A48), 1.6);
-        for (var k = 0; k < 4; k++) {
-          at(c, 0, 0, 1, rot: k * pi / 2 + pi / 4, () {
-            part(c, Path()..moveTo(0, 0)..cubicTo(-5, -2, -5, -8, -1.5, -8.5)..quadraticBezierTo(0, -7, 0, -6)..quadraticBezierTo(0, -7, 1.5, -8.5)..cubicTo(5, -8, 5, -2, 0, 0)..close(),
-                const Color(0xFF4CC85C), rim: 0.6);
-          });
+        _clover(c, 1);
+      case 'wirrkraut':
+        // Krauses Kraut mit violettem Wirbel
+        glow(c, 0, 0, 14, const Color(0xFFC77DFF), 0.35);
+        band(c, Path()..moveTo(0, 10)..quadraticBezierTo(-1, 2, 0, -2), const Color(0xFF3E9A48), 1.8);
+        for (final (x, y, rot) in [(-5.0, -2.0, -0.6), (5.0, -2.0, 0.6), (0.0, -8.0, 0.0)]) {
+          at(c, x, y, 1, () => part(c, oval(0, 0, 3.4, 5.5), const Color(0xFF4CC85C), rim: 0.6), rot: rot);
         }
-        dot(c, 0, 0, 1.4, const Color(0xFFB8FFB0));
+        final sp = Path();
+        for (var k = 0; k <= 14; k++) {
+          final rr = 0.6 + k * 0.42, a = k * 0.8;
+          final pt = Offset(cos(a) * rr, -2 + sin(a) * rr);
+          k == 0 ? sp.moveTo(pt.dx, pt.dy) : sp.lineTo(pt.dx, pt.dy);
+        }
+        beam(c, sp, const Color(0xFFC77DFF), 1.1);
+      case 'huehnerzauber':
+        // Weißes Huhn mit Zauberfunken
+        glow(c, 0, 0, 14, const Color(0xFFFFF4D0), 0.4);
+        part(c, oval(-1, 3, 7.5, 6), const Color(0xFFF4F0E8), dark: 0.25);
+        part(c, circle(5, -4, 4.2), const Color(0xFFF4F0E8), dark: 0.2);
+        part(c, circle(4, -9, 1.8), const Color(0xFFE8303A), rim: 0.3);
+        part(c, circle(6.5, -8.5, 1.5), const Color(0xFFE8303A), rim: 0.3);
+        part(c, poly([(8.5, -4.5), (12, -3.2), (8.5, -2.2)]), const Color(0xFFF0B030), rim: 0.3);
+        dot(c, 6, -4.6, 0.9, const Color(0xFF1A1020));
+        for (final (x, y) in [(-9.0, -8.0), (-5.0, -11.0), (10.0, 6.0)]) {
+          dot(c, x, y, 1.2, const Color(0xFFFFE680));
+        }
+      case 'gummifluegel':
+        // Rosa Gummiflügel mit Federbogen
+        glow(c, 0, 0, 14, const Color(0xFFFF7AD0), 0.4);
+        part(c, Path()..moveTo(-9, 6)..quadraticBezierTo(-8, -9, 9, -8)..quadraticBezierTo(4, -2, 8, 1)..quadraticBezierTo(2, 2, 5, 6)..quadraticBezierTo(-2, 5, -9, 6)..close(),
+            const Color(0xFFFF8AD8), light: 0.6);
+        beam(c, Path()..moveTo(-6, 9)..quadraticBezierTo(0, 13, 6, 9), const Color(0xFFFFC8F0), 1);
+        shine(c, -3, -3, 1.4, 2);
+      case 'hufeisen':
+        // Goldenes Hufeisen, Öffnung nach oben, mit Nagellöchern
+        glow(c, 0, 0, 14, const Color(0xFFFFC94A), 0.4);
+        band(c, Path()..moveTo(-6, -9)..lineTo(-7, 1)..cubicTo(-7, 9, 7, 9, 7, 1)..lineTo(6, -9), const Color(0xFFE8B040), 4.2);
+        for (final (x, y) in [(-6.6, -5.0), (-6.4, 1.5), (6.4, 1.5), (6.6, -5.0)]) {
+          dot(c, x, y, 0.8, const Color(0xFF6A4A10));
+        }
+        shine(c, -5.5, 3, 1, 2.2, a: 0.6);
+      case 'muenze':
+        // Goldmünze mit Kleeblatt-Prägung
+        glow(c, 0, 0, 14, const Color(0xFFFFC94A), 0.45);
+        part(c, circle(0, 0, 10), const Color(0xFFF0B83A), light: 0.6);
+        part(c, circle(0, 0, 7.5), const Color(0xFFD8A030), rim: 0.3, light: 0.3);
+        at(c, 0, -0.5, 0.55, () {
+          for (var k = 0; k < 4; k++) {
+            at(c, 0, 0, 1, rot: k * pi / 2 + pi / 4, () => part(c, oval(0, -4.5, 3, 4.2), const Color(0xFFFFE08A), rim: 0, dark: 0.15));
+          }
+        });
+        shine(c, -4.5, -4.5, 1.4, 2);
       case 'glas':
         glow(c, 0, -2, 14, const Color(0xFFA88AFF), 0.4);
         part(c, poly([(-6, 10), (6, 10), (4, 4.5), (-4, 4.5)]), const Color(0xFFD8A040));
@@ -1015,7 +1060,43 @@ class _Obj {
           beam(c, Path()..moveTo(x, y)..quadraticBezierTo(x + 4, y - 2, x + 8, y), const Color(0xFFBFEFFF), 0.7);
         }
         at(c, 0, 0, 1, () => feather(c, const Color(0xFFF4F8FF)), rot: 0.9);
+      case Stat.luck:
+        glow(c, 0, 0, 14, const Color(0xFF50E070), 0.4);
+        _clover(c, 0.9);
+      case Stat.dodge:
+        // Nachbild: blasse Kopie hinten, helle Feder vorn, Wischspuren
+        glow(c, 0, 0, 13, const Color(0xFFBFEFFF), 0.3);
+        at(c, -5, 2, 0.85, () => part(c, oval(0, 0, 5, 7), const Color(0x55BFEFFF), rim: 0, light: 0, dark: 0), rot: 0.4);
+        for (final y in [-4.0, 1.0, 6.0]) {
+          beam(c, Path()..moveTo(-12, y)..quadraticBezierTo(-8, y - 1.5, -4, y), const Color(0xFFBFEFFF), 0.7);
+        }
+        at(c, 3, 0, 1, () => part(c, oval(0, 0, 5, 7), const Color(0xFFE6F8FF), rim: 0.6), rot: 0.4);
+        shine(c, 1.5, -3, 1.2, 1.6);
+      case Stat.actionSpeed:
+        // Sanduhr mit rieselndem Licht
+        glow(c, 0, 0, 13, const Color(0xFFB48CFF), 0.38);
+        part(c, poly([(-6, -9), (6, -9), (1.2, 0), (6, 9), (-6, 9), (-1.2, 0)]), const Color(0xFF9A7CE8), light: 0.55);
+        part(c, poly([(-3.5, -6.5), (3.5, -6.5), (0, -1.5)]), const Color(0xFFFFE6A0), rim: 0, dark: 0.1);
+        part(c, poly([(-4.5, 7.5), (4.5, 7.5), (0, 3)]), const Color(0xFFFFE6A0), rim: 0, dark: 0.1);
+        for (final (x, y) in [(-7.0, -10.0), (7.0, -10.0)]) {
+          part(c, Path()..addRect(Rect.fromLTRB(x - 1, y - 1, x + 1, -y + 1)), const Color(0xFF5A4A80), rim: 0, light: 0.3);
+        }
+        dot(c, 0, 1, 0.9, const Color(0xFFFFF4C8));
     }
+  }
+
+  /// Vierblättriges Kleeblatt (Kleeblatt-Item und Wert Glück).
+  static void _clover(Canvas c, double s) {
+    at(c, 0, 0, s, () {
+      band(c, Path()..moveTo(0, 2)..quadraticBezierTo(2, 8, 6, 11), const Color(0xFF3E9A48), 1.6);
+      for (var k = 0; k < 4; k++) {
+        at(c, 0, 0, 1, rot: k * pi / 2 + pi / 4, () {
+          part(c, Path()..moveTo(0, 0)..cubicTo(-5, -2, -5, -8, -1.5, -8.5)..quadraticBezierTo(0, -7, 0, -6)..quadraticBezierTo(0, -7, 1.5, -8.5)..cubicTo(5, -8, 5, -2, 0, 0)..close(),
+              const Color(0xFF4CC85C), rim: 0.6);
+        });
+      }
+      dot(c, 0, 0, 1.4, const Color(0xFFB8FFB0));
+    });
   }
 
   // ---------------- Bedien-Symbole ----------------

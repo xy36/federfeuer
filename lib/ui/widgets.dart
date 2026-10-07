@@ -262,9 +262,13 @@ class PressState {
 /// Tipp-, Maus-, Tastatur- und Controller-bedienbare Fläche.
 /// Enter/Leertaste bzw. Controller-A lösen [onPressed] über [ActivateIntent] aus.
 class Pressable extends StatefulWidget {
-  const Pressable({super.key, required this.onPressed, required this.builder, this.focusNode});
+  const Pressable(
+      {super.key, required this.onPressed, required this.builder, this.focusNode, this.focusableWhenDisabled = false});
   final VoidCallback? onPressed;
   final FocusNode? focusNode;
+
+  /// Auch ohne [onPressed] ansteuerbar (z. B. zu teure Angebote: ansehen, aber nicht kaufen).
+  final bool focusableWhenDisabled;
   final Widget Function(BuildContext context, PressState state) builder;
 
   @override
@@ -280,7 +284,7 @@ class _PressableState extends State<Pressable> {
     final enabled = onPressed != null;
     return FocusableActionDetector(
       focusNode: widget.focusNode,
-      enabled: enabled,
+      enabled: enabled || widget.focusableWhenDisabled,
       mouseCursor: enabled ? SystemMouseCursors.click : SystemMouseCursors.basic,
       onFocusChange: (v) => setState(() => _focused = v),
       onShowHoverHighlight: (v) => setState(() => _hovered = v),
@@ -399,6 +403,59 @@ class GameButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Text, in dem jeder Klassenname (Licht, Glut, Wind, Böse, Wasser, Stein) in seiner
+/// Klassenfarbe erscheint – für Info-Panels, Waffenslots und Listen.
+Widget classText(String text, TextStyle style, {int? maxLines, TextOverflow? overflow, TextAlign? textAlign}) {
+  final spans = <InlineSpan>[];
+  var last = 0;
+  for (final m in _classPattern.allMatches(text)) {
+    if (m.start > last) spans.add(TextSpan(text: text.substring(last, m.start)));
+    final c = WeaponClass.values.firstWhere((c) => c.label == m[0]);
+    spans.add(TextSpan(text: m[0], style: TextStyle(color: c.color, fontWeight: FontWeight.w900, shadows: glowShadows(c.color, 0.35))));
+    last = m.end;
+  }
+  if (spans.isEmpty) return Text(text, style: style, maxLines: maxLines, overflow: overflow, textAlign: textAlign);
+  if (last < text.length) spans.add(TextSpan(text: text.substring(last)));
+  return Text.rich(TextSpan(children: spans), style: style, maxLines: maxLines, overflow: overflow, textAlign: textAlign);
+}
+
+final _classPattern = RegExp('(?<![A-Za-zÄÖÜäöüß])(${WeaponClass.values.map((c) => c.label).join('|')})(?![a-zäöüß])');
+
+/// Zeichen einer Elementar-Reaktion: zwei leuchtende Kugeln in den Klassenfarben, die
+/// ineinanderfließen, mit hellem Funken in der Mitte.
+class ReactionBadge extends StatelessWidget {
+  const ReactionBadge(this.reaction, {super.key, this.size = 40});
+  final Reaction reaction;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => CustomPaint(size: Size.square(size), painter: _ReactionPainter(reaction));
+}
+
+class _ReactionPainter extends CustomPainter {
+  _ReactionPainter(this.re);
+  final Reaction re;
+
+  @override
+  void paint(Canvas c, Size size) {
+    final s = size.shortestSide, m = size.center(Offset.zero);
+    for (final (dx, col) in [(-0.17, re.a.color), (0.17, re.b.color)]) {
+      final at = m + Offset(dx * s, 0);
+      c.drawCircle(
+          at,
+          s * 0.34,
+          Paint()
+            ..shader = RadialGradient(colors: [col, col.withAlpha(110), col.withAlpha(0)], stops: const [0, 0.55, 1])
+                .createShader(Rect.fromCircle(center: at, radius: s * 0.34))
+            ..blendMode = BlendMode.plus);
+    }
+    c.drawCircle(m, s * 0.09, Paint()..color = Color.lerp(re.color, Colors.white, 0.6)!);
+  }
+
+  @override
+  bool shouldRepaint(_ReactionPainter old) => old.re != re;
 }
 
 /// Auswahlliste im Glas-Stil: Knopf mit aktuellem Wert, darunter klappt die Liste auf.
@@ -585,6 +642,7 @@ class ChoiceCard extends StatelessWidget {
     this.badgeColor = Ui.badge,
     this.width = 176,
     this.height = 196,
+    this.focusableWhenDisabled = false,
   });
 
   final Color accent;
@@ -598,10 +656,14 @@ class ChoiceCard extends StatelessWidget {
   final VoidCallback? onPressed;
   final double width, height;
 
+  /// Auch ohne [onPressed] ansteuerbar (Info-Panel ansehen).
+  final bool focusableWhenDisabled;
+
   @override
   Widget build(BuildContext context) {
     return Pressable(
       onPressed: onPressed,
+      focusableWhenDisabled: focusableWhenDisabled,
       builder: (context, s) => Padding(
         padding: const EdgeInsets.only(top: 4, bottom: 10),
         child: SizedBox(

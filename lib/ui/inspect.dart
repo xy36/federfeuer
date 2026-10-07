@@ -13,6 +13,7 @@ class Inspectable extends StatefulWidget {
     required this.info,
     required this.child,
     this.focusable = false,
+    this.followFocus = true,
     this.radius = 12,
     this.onShow,
   });
@@ -22,6 +23,10 @@ class Inspectable extends StatefulWidget {
   final ValueChanged<bool>? onShow;
   final Widget child;
   final bool focusable;
+
+  /// false: Panel nur bei Maus darüber, nicht beim Fokus eines Knopfes darin
+  /// (wenn diese Knöpfe eigene Panels haben).
+  final bool followFocus;
   final double radius;
 
   @override
@@ -42,6 +47,7 @@ class _InspectableState extends State<Inspectable> {
   final _node = FocusNode(debugLabel: 'Inspectable');
 
   void _onNode() {
+    if (!widget.followFocus && !widget.focusable) return;
     final f = widget.focusable ? _node.hasPrimaryFocus : _node.hasFocus;
     if (f != _focus) _onFocus(f);
   }

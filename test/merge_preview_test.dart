@@ -41,6 +41,9 @@ void main() {
     await t.pump(const Duration(milliseconds: 150));
     expect(find.byType(InfoCard), findsOneWidget);
     expect(find.textContaining('Aktionsplatz 2 wird frei'), findsOneWidget);
+    // Waffe im Ring wählen – die Aktionsleiste zeigt dann den Verschmelzen-Knopf
+    await t.tap(find.byKey(const ValueKey('weapon-tile-0')));
+    await t.pump(const Duration(milliseconds: 150));
     await mouse.moveTo(t.getCenter(find.text('verschmelzen').first));
     await t.pump(const Duration(milliseconds: 150));
     expect(find.byType(InfoCard), findsOneWidget);

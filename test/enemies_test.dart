@@ -131,6 +131,31 @@ void main() {
     expect(spawnInterval(30), kSpawnIntervalMin);
   });
 
+  testWidgets('Schlussphase: in den letzten Sekunden keine neuen Gegner', (t) async {
+    final game = await _game(t);
+    game.startRun('pistol');
+    game.run!.weapons.clear();
+    game.godMode = true;
+    int markers() => game.world.children.whereType<SpawnMarker>().length;
+    Future<void> pump(double seconds) async {
+      for (var i = 0; i < seconds * 20; i++) {
+        await t.pump(const Duration(milliseconds: 50));
+      }
+    }
+
+    // Kurz vor Schluss: nichts Neues
+    game.waveTime = kWaveSpawnStop - 0.2;
+    final before = markers();
+    await pump(1);
+    expect(markers(), lessThanOrEqualTo(before));
+    expect(game.waveTime, greaterThan(0));
+
+    // Mit genug Restzeit wird wieder gespawnt
+    game.waveTime = 30;
+    await pump(4);
+    expect(markers() + game.enemies.length, greaterThan(0));
+  });
+
   test('Elite-Chance steigt ab Welle 5 und bleibt gedeckelt', () {
     expect(eliteChance(4), 0);
     expect(eliteChance(5), greaterThan(0));
