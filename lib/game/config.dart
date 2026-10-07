@@ -48,6 +48,10 @@ const double kSpawnScreenMargin = 40;
 /// Einblendung „Welle geschafft“, bevor Level-up/Shop erscheinen (Sekunden).
 const double kWaveClearDelay = 1.2;
 
+/// Schlussphase einer Timer-Welle (s Restzeit): Timer warnt ab [kWaveWarnTime], großer
+/// Countdown ab [kWaveCountdown], keine neuen Gegner mehr ab [kWaveSpawnStop].
+const double kWaveWarnTime = 10, kWaveCountdown = 5, kWaveSpawnStop = 3;
+
 /// So lange nach dem Öffnen eines Menüs wird Controller-A ignoriert, damit
 /// ein Tippen zum Fliegen nicht versehentlich etwas auswählt (Millisekunden).
 const int kMenuConfirmGraceMs = 500;
@@ -94,7 +98,7 @@ List<int> splitMaterial(int total) {
 const int kStartMoney = 15;
 
 /// Frühe Wellen (bis [kEarlySpawnWaves]): je Gegnergruppe [kEarlySpawnBonus] Gegner mehr.
-const int kEarlySpawnWaves = 3, kEarlySpawnBonus = 1;
+const int kEarlySpawnWaves = 4, kEarlySpawnBonus = 1;
 
 // Weniger, aber zähere Gegner: Spawn-Takt und Gruppengröße wachsen langsamer, dafür
 // steigen HP und Material je Gegner mit der Zähigkeit – Einkommen und XP bleiben ähnlich.
@@ -113,9 +117,27 @@ const int kMaxAliveEnemies = 40;
 const double kToughnessPerWave = 0.25;
 double enemyToughness(int wave) => 1 + kToughnessPerWave * (wave - 1);
 
+/// Material-Faktor regulärer Gegner je Welle (1–14; die Bosswelle nutzt den letzten Wert).
+/// Abgeleitet aus dem Einkommen pro Welle: Wellen 1–6 wie vor „wenige, aber zähe Gegner“,
+/// danach gleichmäßig weniger bis 80 % in Welle 14 (spät gab es zu viel Geld). Der Faktor
+/// springt, weil die Gruppengröße in Stufen wächst; das Einkommen pro Welle steigt gleichmäßig.
+const kMaterialByWave = [1.3, 1.35, 1.95, 1.45, 2.05, 2.15, 2.25, 3.0, 3.15, 2.95, 2.7, 2.5, 2.65, 2.45];
+double enemyMaterialFactor(int wave) => kMaterialByWave[(wave - 1).clamp(0, kMaterialByWave.length - 1)];
+
 /// Zusätzlicher Schaden regulärer Gegner je Welle (wenige Gegner sollen trotzdem wehtun).
 const double kEnemyDmgPerWave = 0.04;
 double enemyDmgBonus(int wave) => 1 + kEnemyDmgPerWave * (wave - 1);
+
+/// Glück je Punkt: Seltenheit im Shop (Selten/Episch/Legendär), seltene Level-up-Option,
+/// Herzen und Geschenke (relativ).
+const double kLuckRare = 0.005, kLuckEpic = 0.003, kLuckLegendary = 0.001;
+const double kLuckLevelRare = 0.01, kLuckDrops = 0.02;
+
+/// Chance auf ein Herz beim Tod eines Gegners (vor Glück).
+const double kHeartChance = 0.04;
+
+/// Ausweichen: höchstens so viel Prozent der Treffer.
+const double kDodgeMax = 60;
 
 /// Shop: Chance, dass ein Angebot eine Waffe ist – früh hoch, später mehr Items.
 const double kWeaponOfferStart = 0.8, kWeaponOfferStep = 0.04, kWeaponOfferMin = 0.55;
@@ -181,7 +203,7 @@ class Palette {
   static const bad = Color(0xFFD8425A);
 }
 
-enum Stat { maxHp, regen, dmg, atk, range, speed, armor, lifesteal, crit, pickup, thrust, glide }
+enum Stat { maxHp, regen, dmg, atk, range, speed, armor, lifesteal, crit, luck, dodge, actionSpeed, pickup, thrust, glide }
 
 extension StatInfo on Stat {
   String get label => switch (this) {
@@ -194,13 +216,25 @@ extension StatInfo on Stat {
         Stat.armor => 'Rüstung',
         Stat.lifesteal => 'Lebensraub',
         Stat.crit => 'Krit-Chance',
+        Stat.luck => 'Glück',
+        Stat.dodge => 'Ausweichen',
+        Stat.actionSpeed => 'Aktionstempo',
         Stat.pickup => 'Sammelradius',
         Stat.thrust => 'Schub',
         Stat.glide => 'Gleiten',
       };
 
   String get unit => switch (this) {
-        Stat.dmg || Stat.atk || Stat.speed || Stat.lifesteal || Stat.crit || Stat.thrust || Stat.glide => '%',
+        Stat.dmg ||
+        Stat.atk ||
+        Stat.speed ||
+        Stat.lifesteal ||
+        Stat.crit ||
+        Stat.dodge ||
+        Stat.actionSpeed ||
+        Stat.thrust ||
+        Stat.glide =>
+          '%',
         _ => '',
       };
 }
@@ -208,6 +242,194 @@ extension StatInfo on Stat {
 // ---------------- Waffenklassen ----------------
 
 /// Sechs Waffenklassen; mehrere Waffen einer Klasse geben Set-Boni (ab 2 / 4 / 6).
+// ---------------- Verschmelzen: Gaben und Eigenschaften ----------------
+
+/// Gabe, die eine Waffe weitergibt, wenn sie mit einer anderen Waffe verschmolzen wird
+/// (die Spenderwaffe verschwindet). Der Empfänger zählt zusätzlich zur Klasse des Spenders.
+class WeaponGift {
+  const WeaponGift(
+    this.name,
+    this.desc, {
+    this.dmgMul = 1,
+    this.atkMul = 1,
+    this.critBonus = 0,
+    this.rangeAdd = 0,
+    this.knockAdd = 0,
+    this.burnTime = 0,
+    this.slow = 0,
+    this.slowTime = 0,
+    this.stunChance = 0,
+    this.stunTime = 0,
+    this.trapChance = 0,
+    this.trapTime = 0,
+    this.curse = 0,
+    this.stick = 0,
+    this.lifesteal = 0,
+    this.blastChance = 0,
+    this.blastRadius = 0,
+    this.blastMul = 0,
+  });
+  final String name, desc;
+  final double dmgMul, atkMul, critBonus, rangeAdd, knockAdd, burnTime, slow, slowTime;
+  final double stunChance, stunTime, trapChance, trapTime, curse, stick, lifesteal;
+
+  /// Chance je Treffer auf eine kleine Explosion (Radius, Anteil des Treffers).
+  final double blastChance, blastRadius, blastMul;
+}
+
+/// Gabe jeder Waffe (Schlüssel: Waffen-ID).
+const weaponGifts = <String, WeaponGift>{
+  'pistol': WeaponGift('Präzision', '+10 % Krit-Chance', critBonus: 10),
+  'rail': WeaponGift('Fernlicht', '+80 Reichweite', rangeAdd: 80),
+  'disco': WeaponGift('Blendung', '10 % Chance zu betäuben (0,5 s)', stunChance: 0.1, stunTime: 0.5),
+  'rocket': WeaponGift('Zündfunke', 'jeder Treffer explodiert klein (Radius 30, 35 %)',
+      blastChance: 1, blastRadius: 30, blastMul: 0.35),
+  'shotgun': WeaponGift('Funkenflug', 'setzt 2 s in Brand', burnTime: 2),
+  'popcorn': WeaponGift('Plopp', '20 % Chance auf eine Explosion (Radius 50, 80 %)',
+      blastChance: 0.2, blastRadius: 50, blastMul: 0.8),
+  'smg': WeaponGift('Rückenwind', '+15 % Angriffstempo', atkMul: 1.15),
+  'feather': WeaponGift('Wirbel', '+25 Rückstoß', knockAdd: 25),
+  'dandelion': WeaponGift('Flugsamen', 'Treffer kleben 2 s', stick: 2),
+  'vine': WeaponGift('Dornen', '+10 % Lebensraub', lifesteal: 10),
+  'crowcall': WeaponGift('Krähenfluch', 'verflucht 2 s', curse: 2),
+  'lantern': WeaponGift('Pakt', '+20 % Schaden', dmgMul: 1.2),
+  'water': WeaponGift('Spritzer', 'verlangsamt um 30 % für 1 s', slow: 0.3, slowTime: 1),
+  'bubbles': WeaponGift('Blase', '8 % Chance einzufangen (1,5 s)', trapChance: 0.08, trapTime: 1.5),
+  'raincloud': WeaponGift('Nieselregen', 'verlangsamt um 20 % für 2 s', slow: 0.2, slowTime: 2),
+  'pebble': WeaponGift('Wucht', '+12 % Schaden, +25 Rückstoß', dmgMul: 1.12, knockAdd: 25),
+  'gnome': WeaponGift('Zwergenmütze', '15 % Chance zu betäuben (0,8 s)', stunChance: 0.15, stunTime: 0.8),
+  'bowling': WeaponGift('Strike', '+10 % Schaden, +40 Rückstoß', dmgMul: 1.1, knockAdd: 40),
+};
+
+/// Höchstens so viele Gaben trägt eine Waffe der Stufe [tier] (0 = I).
+int maxGifts(int tier) => tier + 1;
+
+/// Eigenschaft, die beim Verschmelzen zweier gleicher Waffen gewählt wird (1 aus 3).
+enum WeaponTrait {
+  sharp('Geschliffen', '+20 % Schaden'),
+  quick('Flink', '+20 % Angriffstempo'),
+  reach('Weitblick', '+60 Reichweite'),
+  keen('Scharfsinn', '+10 % Krit-Chance'),
+  multi('Mehrfach', '+1 Projektil'),
+  pierce('Durchschlag', 'durchschlägt 2 Gegner mehr'),
+  blast('Wucht', '+40 % Explosionsradius'),
+  arc('Weiter Bogen', 'Hieb +0,5 rad breiter'),
+  wide('Breite Wolke', 'Wolke 40 % breiter');
+
+  const WeaponTrait(this.label, this.desc);
+  final String label, desc;
+
+  /// Beschreibung passend zur Waffe (z. B. „+1 Klinge“ beim Federwirbel).
+  String descFor(WeaponDef d) => this == multi
+      ? switch (d.kind) {
+          WeaponKind.orbit => '+1 Klinge',
+          WeaponKind.summon => '+1 Begleiter',
+          WeaponKind.disco => '+2 Strahlen',
+          _ => desc,
+        }
+      : desc;
+
+  /// Passt die Eigenschaft zu dieser Waffe?
+  bool appliesTo(WeaponDef d) => switch (this) {
+        sharp || quick || keen => true,
+        reach => d.kind != WeaponKind.summon,
+        multi => d.kind == WeaponKind.shot ||
+            d.kind == WeaponKind.lob ||
+            d.kind == WeaponKind.disco ||
+            d.kind == WeaponKind.orbit ||
+            d.kind == WeaponKind.summon,
+        pierce => d.kind == WeaponKind.shot && d.pierce < 50 && d.explosion == 0,
+        blast => d.explosion > 0,
+        arc => d.kind == WeaponKind.whip,
+        wide => d.kind == WeaponKind.cloud,
+      };
+}
+
+const double kTraitDmg = 0.2, kTraitAtk = 0.2, kTraitRange = 60, kTraitCrit = 10;
+const int kTraitPierce = 2;
+const double kTraitBlast = 0.4, kTraitArc = 0.5, kTraitWide = 0.4;
+
+// ---------------- Chaos ----------------
+
+/// Verrückte Zustände des Spielers (aus den Wolken des Wirrlings). Jeder ist kurz, gut
+/// sichtbar angezeigt und danach [kChaosImmunity] s lang nicht erneut möglich.
+enum ChaosEffect {
+  confused('Verwirrt', 'links und rechts vertauscht', 3, Color(0xFFC77DFF)),
+  upsideDown('Kopfüber', 'Schwerkraft umgekehrt', 2.5, Color(0xFF6CE0FF)),
+  mirror('Spiegelwelt', 'das Bild ist gespiegelt', 4, Color(0xFFFFE08A)),
+  sticky('Verklebt', 'halber Schub, schnelleres Sinken', 3, Color(0xFFFFB347));
+
+  const ChaosEffect(this.label, this.desc, this.duration, this.color);
+  final String label, desc;
+  final double duration;
+  final Color color;
+}
+
+const double kChaosImmunity = 6;
+
+/// Verklebte Flügel: Schub- und Sinkfaktor.
+const double kStickyThrust = 0.5, kStickyFall = 1.7;
+
+/// Chaos-Wolke des Wirrlings: Radius, Dauer; Ausstoß alle 3,5–4,5 s nach 0,6 s Warnung.
+const double kChaosCloudRadius = 55, kChaosCloudTime = 3.5, kWirrlingWarn = 0.6;
+
+/// Items: Wirrkraut, Hühnerzauber, Gummiflügel.
+const double kConfuseChance = 0.08, kConfuseTime = 3, kConfuseHitMul = 2;
+const double kChickenChance = 0.05, kChickenTime = 3, kChickenVuln = 0.5;
+const double kRubberRadius = 90, kRubberCd = 1, kRubberMinSpeed = 150;
+
+// ---------------- Elementar-Reaktionen ----------------
+
+/// Nässe durch Wasser-Treffer (s); bei Regen × [kWetRainMul].
+const double kWetTime = 3, kWetRainMul = 2;
+
+/// Eine Reaktion je Gegner höchstens alle [kReactionCd] s; Einblendung je Typ höchstens alle [kReactionTextCd] s.
+const double kReactionCd = 0.8, kReactionTextCd = 0.5;
+
+const double kSteamRadius = 60, kSteamMul = 2;
+const double kFrostTime = 1.2, kFrostVuln = 0.25, kShatterMul = 3;
+const double kFirestormRadius = 70;
+const double kHellfireRadius = 120, kHellfireCurse = 2;
+const int kHellfireTargets = 2;
+const double kBanishMul = 0.6, kBanishRange = 400;
+const int kBanishTargets = 2;
+const double kRainbowMul = 0.4, kRainbowRadius = 200;
+const int kRainbowShards = 3;
+
+/// Reaktionen, wenn ein Treffer auf einen Gegner mit passendem Zustand trifft
+/// (Höllenfeuer: beim Tod). Belohnt Waffen verschiedener Klassen.
+enum Reaction {
+  steam('Dampfstoß', 'DAMPF!', WeaponClass.ember, WeaponClass.water, Color(0xFFE8F4FF),
+      'Nasser Gegner + Glut-Treffer oder brennender Gegner + Wasser-Treffer: Explosion (Radius 60, doppelter Trefferschaden); löscht Brand und Nässe.',
+      short: 'Explosion, löscht Brand und Nässe'),
+  frost('Frost', 'FROST!', WeaponClass.water, WeaponClass.wind, Color(0xFFBFE8FF),
+      'Nasser Gegner + Wind-Treffer: eingefroren für 1,2 s (Boss 30 %), nimmt dabei 25 % mehr Schaden.',
+      short: 'friert 1,2 s ein (nasse Gegner)'),
+  shatter('Zerschmettern', 'ZERSCHMETTERT!', WeaponClass.stone, WeaponClass.water, Color(0xFF9FE6FF),
+      'Eingefrorener Gegner + Stein-Treffer: dreifacher Schaden, der Frost zerspringt.',
+      short: 'eingefrorene Gegner: Treffer × 3'),
+  firestorm('Feuersturm', 'FEUERSTURM!', WeaponClass.ember, WeaponClass.wind, Color(0xFFFF8A3D),
+      'Brennender Gegner + Wind-Treffer: Der Brand springt auf alle Gegner im Umkreis 70 über.',
+      short: 'Brand springt auf Nachbarn über'),
+  hellfire('Höllenfeuer', 'HÖLLENFEUER!', WeaponClass.dark, WeaponClass.ember, Color(0xFFFF4AB4),
+      'Verfluchter Gegner stirbt brennend: Brand und Fluch springen auf die 2 nächsten Gegner (Umkreis 120).',
+      short: 'verflucht und brennend gestorben: Brand und Fluch springen über'),
+  banish('Bannstrahl', 'BANNSTRAHL!', WeaponClass.light, WeaponClass.dark, Color(0xFFE6B8FF),
+      'Verfluchter Gegner + Licht-Treffer: Ein Lichtstrahl springt auf bis zu 2 weitere verfluchte Gegner (je 60 % Schaden).',
+      short: 'Lichtbogen auf weitere verfluchte Gegner'),
+  rainbow('Regenbogen', 'REGENBOGEN!', WeaponClass.light, WeaponClass.water, Color(0xFFFFF0A0),
+      'Nasser Gegner + Licht-Treffer: Das Licht bricht sich in 3 Splitter auf Gegner in der Nähe (je 40 % Schaden); verbraucht die Nässe.',
+      short: '3 Lichtsplitter auf nasse Gegner');
+
+  const Reaction(this.label, this.shout, this.a, this.b, this.color, this.desc, {required this.short});
+  final String label, shout, desc;
+
+  /// Kurzfassung für Waffen-Info-Panels.
+  final String short;
+  final WeaponClass a, b;
+  final Color color;
+}
+
 enum WeaponClass {
   light('Licht', Color(0xFFFFE6A0)),
   ember('Glut', Color(0xFFFF8A3D)),
@@ -567,6 +789,9 @@ enum ItemEffect {
   compass, // doppelter Zeitbonus am Ziel
   greed, // 15 % doppelte Drops
   phoenix, // einmal pro Run Wiederbeleben mit 30 % HP
+  confuseHerb, // Treffer verwirren Gegner manchmal (sie greifen sich gegenseitig an)
+  chickenSpell, // Treffer verwandeln Gegner manchmal kurz in ein Huhn
+  rubberWings, // gegen die Decke: abprallen und Schockwelle
   action, // setzt die Aktion [ItemDef.action]
 }
 
@@ -595,7 +820,9 @@ const itemDefs = [
   ItemDef('hantel', 'Hantel', '🏋️', 18, {Stat.dmg: 12, Stat.speed: -3}, rarity: Rarity.rare),
   ItemDef('kaffee', 'Doppelter Espresso', '☕', 18, {Stat.atk: 15}, rarity: Rarity.rare),
   ItemDef('zahn', 'Vampirzahn', '🦷', 22, {Stat.lifesteal: 3}, rarity: Rarity.rare),
-  ItemDef('klee', 'Kleeblatt', '🍀', 16, {Stat.crit: 8}, rarity: Rarity.rare),
+  ItemDef('klee', 'Kleeblatt', '🍀', 16, {Stat.luck: 8, Stat.crit: 3}, rarity: Rarity.rare),
+  ItemDef('hufeisen', 'Hufeisen', '🐴', 18, {Stat.luck: 12}, rarity: Rarity.rare),
+  ItemDef('muenze', 'Glücksmünze', '🪙', 26, {Stat.luck: 22, Stat.dmg: -5}, rarity: Rarity.epic),
   ItemDef('glas', 'Glaskanone', '🔮', 25, {Stat.dmg: 30, Stat.maxHp: -6}, rarity: Rarity.rare),
   ItemDef('panzer', 'Schildkrötenpanzer', '🐢', 20, {Stat.armor: 5, Stat.speed: -8}, rarity: Rarity.rare),
   ItemDef('dose', 'Energiedose', '🥤', 22, {Stat.atk: 25, Stat.armor: -2}, rarity: Rarity.rare),
@@ -608,6 +835,12 @@ const itemDefs = [
   ItemDef('regenmantel', 'Regenmantel', '🧥', 18, {}, rarity: Rarity.rare, effect: ItemEffect.raincoat,
       desc: 'Keine Regen-Nachteile', unique: true),
   // ---- Spezial-Items
+  ItemDef('wirrkraut', 'Wirrkraut', '🌿', 22, {}, rarity: Rarity.rare, effect: ItemEffect.confuseHerb,
+      desc: '8 % der Treffer verwirren Gegner 3 s – sie greifen andere Gegner an', unique: true),
+  ItemDef('huehnerzauber', 'Hühnerzauber', '🐔', 26, {}, rarity: Rarity.epic, effect: ItemEffect.chickenSpell,
+      desc: '5 % der Treffer verwandeln Gegner 3 s in ein harmloses Huhn (+50 % Schaden)', unique: true),
+  ItemDef('gummifluegel', 'Gummiflügel', '🪀', 20, {}, rarity: Rarity.rare, effect: ItemEffect.rubberWings,
+      desc: 'Prallst du gegen die Decke, federst du zurück und löst eine Schockwelle aus', unique: true),
   ItemDef('gummiente', 'Gummiente', '🦆', 26, {Stat.armor: 2}, rarity: Rarity.epic, effect: ItemEffect.duck,
       desc: '10 % der Treffer werden ignoriert – quietsch!', unique: true),
   ItemDef('socke', 'Socke mit Loch', '🧦', 18, {Stat.speed: 20, Stat.armor: -2}, rarity: Rarity.rare),
@@ -880,9 +1113,10 @@ const levelOptions = [
   LevelOption(Stat.range, 25, '🎯'),
   LevelOption(Stat.speed, 5, '🪶'),
   LevelOption(Stat.lifesteal, 1, '🦷'),
-  LevelOption(Stat.crit, 4, '🍀'),
-  LevelOption(Stat.thrust, 6, '🪽'),
-  LevelOption(Stat.glide, 12, '🪁'),
+  LevelOption(Stat.crit, 4, '✨'),
+  LevelOption(Stat.luck, 5, '🍀'),
+  LevelOption(Stat.dodge, 3, '💨'),
+  LevelOption(Stat.actionSpeed, 8, '⏳'),
 ];
 
 // ---------------- Gegner ----------------
@@ -901,6 +1135,7 @@ enum EnemyType {
   wisp,
   eagle,
   avalanche,
+  wirrling,
   // Spawner und ihre Kinder
   crowNest,
   waspNest,
@@ -957,6 +1192,7 @@ extension EnemyInfo on EnemyType {
         EnemyType.wisp => 'Irrlicht',
         EnemyType.eagle => 'Felsadler',
         EnemyType.avalanche => 'Lawinenkäfer',
+        EnemyType.wirrling => 'Wirrling',
         EnemyType.crowNest => 'Krähennest',
         EnemyType.waspNest => 'Wespennest',
         EnemyType.wasp => 'Fäulniswespe',
@@ -984,6 +1220,7 @@ extension EnemyInfo on EnemyType {
         EnemyType.wisp => '👻',
         EnemyType.eagle => '🦅',
         EnemyType.avalanche => '🐚',
+        EnemyType.wirrling => '🍄',
         EnemyType.crowNest => '🪹',
         EnemyType.waspNest => '🐝',
         EnemyType.wasp => '🐝',
@@ -1011,6 +1248,7 @@ extension EnemyInfo on EnemyType {
         EnemyType.wisp => 'Springt von Ort zu Ort und explodiert in deiner Nähe.',
         EnemyType.eagle => 'Kreist oben und stürzt sich nach kurzer Warnung auf dich.',
         EnemyType.avalanche => 'Rollt sich ein und rast über den Boden.',
+        EnemyType.wirrling => 'Schwebender Sporenquall. Stößt Chaos-Wolken aus – wer hineinfliegt, wird verwirrt, steht kopf, sieht alles gespiegelt oder hat verklebte Flügel.',
         EnemyType.crowNest => 'Steht auf einem Pfahl; alle 4 s schlüpft eine Krähe (höchstens drei). Zuerst zerstören!',
         EnemyType.waspNest => 'Hängt an der Decke und tut nichts – bis man es trifft. Dann schwärmt pro Treffer eine Wespe aus.',
         EnemyType.wasp => 'Flink und klein, kommt aus dem Wespennest. Lässt kein Material fallen.',
@@ -1051,6 +1289,7 @@ const Map<EnemyType, EnemyDef> enemyDefs = {
   // Gebirge
   EnemyType.eagle: EnemyDef(
       hp: 30, speed: 120, dmg: 5, radius: 20, flying: true, drop: 2, wind: WeatherConfig.windFactorMedium),
+  EnemyType.wirrling: EnemyDef(hp: 14, speed: 55, dmg: 2, radius: 14, flying: true, drop: 1),
   EnemyType.avalanche: EnemyDef(
       hp: 40, speed: 70, dmg: 6, radius: 18, flying: false, drop: 2, wind: WeatherConfig.windFactorGround),
   // Spawner (geben mehr Material) und ihre Kinder (geben keins)
@@ -1113,6 +1352,7 @@ List<(EnemyType, double)> spawnPool(int wave) {
   if (w >= 3) pool.add((EnemyType.scarecrow, biome == Biome.fields ? 2 : 1));
   if (w >= 5) pool.add((EnemyType.bat, biome == Biome.village ? 6 : 3));
   if (w >= 6) pool.add((EnemyType.weathercock, biome == Biome.village ? 2.5 : 1));
+  if (w >= 5) pool.add((EnemyType.wirrling, biome == Biome.village ? 2.5 : 1.5));
   if (w >= 9) pool.add((EnemyType.spider, biome == Biome.forest ? 4 : 2));
   if (w >= 10) pool.add((EnemyType.wisp, biome == Biome.forest ? 3 : 1.5));
   if (w >= 13) pool.add((EnemyType.eagle, 4));

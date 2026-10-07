@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:gamepads/gamepads.dart';
 
@@ -5,6 +7,7 @@ import '../game/config.dart';
 import '../game/federfeuer_game.dart';
 import '../game/gamepad_input.dart' show controllerActive;
 import '../game/run_state.dart';
+import 'bird_preview.dart';
 import 'controls_editor.dart' show ShortcutHint;
 import 'fusion.dart';
 import 'inspect.dart';
@@ -48,7 +51,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
 
   void _hotkey(ShopHotkey key) {
     final r = game.run!;
-    if (_fusion != null) return; // Animation läuft
+    if (_fusion != null || r.traitChoice != null) return; // Animation bzw. Eigenschafts-Wahl läuft
     switch (key) {
       case ShopHotkey.reroll:
         if (r.money >= r.rerollCost) setState(() => r.reroll(game.rng));
@@ -168,16 +171,55 @@ class _ShopOverlayState extends State<ShopOverlay> {
         ],
       ),
     );
-    final f = _fusion;
-    if (f == null) return panel;
+    final f = _fusion, choice = r.traitChoice;
     return Stack(
       fit: StackFit.expand,
       children: [
-        panel,
-        FusionAnimation(a: f.$1, b: f.$2, result: f.$3, onDone: () => setState(() => _fusion = null)),
+        // Während der Eigenschafts-Wahl ist der Shop dahinter nicht ansteuerbar
+        ExcludeFocus(excluding: choice != null, child: panel),
+        if (choice != null) _traitChooser(r, choice),
+        if (f != null) FusionAnimation(a: f.$1, b: f.$2, result: f.$3, onDone: () => setState(() => _fusion = null)),
       ],
     );
   }
+
+  /// Nach dem Verschmelzen gleicher Waffen: 1 aus 3 Eigenschaften wählen.
+  Widget _traitChooser(RunState r, TraitChoice choice) {
+    final w = choice.weapon, d = w.def, t = tiers[w.tier];
+    return ColoredBox(
+      color: const Color(0xB3050814),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Text('EIGENSCHAFT WÄHLEN', style: displayStyle(24, Palette.sun).copyWith(shadows: glowShadows(Palette.sun))),
+            const SizedBox(height: 4),
+            Text('${d.name} ist jetzt Stufe ${t.label}', style: bodyText(14, color: Ui.muted)),
+            const SizedBox(height: 14),
+            Wrap(spacing: 12, runSpacing: 12, alignment: WrapAlignment.center, children: [
+              for (var k = 0; k < choice.options.length; k++)
+                ChoiceCard(
+                  accent: t.color,
+                  icon: '⤴',
+                  glyph: WeaponGlyph(w.id, tier: w.tier),
+                  title: choice.options[k].label,
+                  width: 176,
+                  height: 176,
+                  body: Center(
+                    child: Text(choice.options[k].descFor(d),
+                        textAlign: TextAlign.center, style: bodyText(15, color: const Color(0xFFB5FFD0), weight: 900)),
+                  ),
+                  footer: CardFooter(const Text('Wählen'), color: Palette.sun),
+                  onPressed: () => setState(() => r.chooseTrait(k)),
+                ),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  /// Slot, der gerade seine Gabe abgibt (Ziel wird gewählt), sonst null.
+  int? _donor;
 
   /// Laufende Verschmelz-Animation (Zutaten, Ergebnis).
   (ActionId, ActionId, ActionId)? _fusion;
@@ -291,6 +333,8 @@ class _ShopOverlayState extends State<ShopOverlay> {
           color: ok && !poor ? Palette.sun : const Color(0xFF6C7590),
         ),
         onPressed: poor || !ok ? null : () => _buy(i),
+        // Zu teuer oder kein Platz: nicht kaufbar, aber ansteuerbar, um es anzusehen
+        focusableWhenDisabled: !o.sold,
       );
     }
 
@@ -411,7 +455,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
                 radius: 999,
                 info: (_) => actionInfo(r, r.actions[k], k),
                 child: Pill(
-                  '${r.actions[k].label} · ${fmtNum(r.actions[k].cooldown)} s',
+                  '${r.actions[k].label} · ${fmtNum(r.actionCooldown(r.actions[k]))} s',
                   glyph: ActionGlyph(r.actions[k].id),
                   color: r.actions[k].id.evolved ? const Color(0x55FFC94A) : const Color(0x33FFD23F),
                 ),
@@ -457,7 +501,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
             decoration: BoxDecoration(color: cls.color.withAlpha(70), borderRadius: BorderRadius.circular(6)),
-            child: Text(cls.label, style: bodyText(11, color: Ui.cardText, weight: 900)),
+            child: Text(cls.label, style: bodyText(11, color: Color.lerp(cls.color, Colors.white, 0.35)!, weight: 900)),
           ),
           const SizedBox(width: 6),
           Expanded(
@@ -509,11 +553,8 @@ class _ShopOverlayState extends State<ShopOverlay> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         sectionTitle('Waffen ${r.weapons.length}/${r.maxWeapons}'),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [for (var i = 0; i < r.maxWeapons; i++) i < r.weapons.length ? _weaponSlot(r, i) : _emptySlot()],
-        ),
+        _weaponRing(r),
+        _weaponBar(r),
 
         sectionTitle('Items'),
         if (r.items.isEmpty)
@@ -565,91 +606,247 @@ class _ShopOverlayState extends State<ShopOverlay> {
     ];
   }
 
-  static const _slotW = 232.0, _slotH = 46.0;
+  // ---------------- Waffenring ----------------
 
-  Widget _emptySlot() => Container(
-    width: _slotW,
-    height: _slotH,
-    decoration: BoxDecoration(
-      color: Ui.slot,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: Ui.panelLine, width: 2),
-    ),
-  );
+  /// Gewählte Waffe (Index), für die die Aktionsleiste gilt.
+  int? _selected;
 
-  Widget _weaponSlot(RunState r, int i) {
-    final w = r.weapons[i];
+  static const _ringH = 270.0, _tile = 62.0;
+
+  /// Eigene Waffen schweben wie im Spiel im Kreis um den Vogel; freie Plätze gestrichelt.
+  Widget _weaponRing(RunState r) {
+    if (_selected != null && _selected! >= r.weapons.length) _selected = null;
+    return LayoutBuilder(builder: (context, box) {
+      final w = box.maxWidth, cx = w / 2, cy = _ringH / 2 - 6;
+      final rx = min(w / 2 - 44, 200.0), ry = 92.0, n = r.maxWeapons;
+      Offset at(int k) {
+        final a = -pi / 2 + k / n * pi * 2;
+        return Offset(cx + cos(a) * rx, cy + sin(a) * ry);
+      }
+
+      return SizedBox(
+        height: _ringH,
+        child: Stack(clipBehavior: Clip.none, children: [
+          Positioned.fill(child: CustomPaint(painter: _OrbitPainter(Offset(cx, cy), rx, ry))),
+          Positioned(
+            left: cx - 40,
+            top: cy - 40,
+            child: BirdPreview(character: r.character, size: 80, animate: true),
+          ),
+          for (var k = 0; k < n; k++)
+            Positioned(
+              left: at(k).dx - 40,
+              top: at(k).dy - _tile / 2,
+              width: 80,
+              child: k < r.weapons.length ? _ringTile(r, k) : _ringEmpty(),
+            ),
+        ]),
+      );
+    });
+  }
+
+  Widget _ringEmpty() => Column(mainAxisSize: MainAxisSize.min, children: [
+        Container(
+          width: _tile,
+          height: _tile,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Ui.slot,
+            border: Border.all(color: Ui.panelLine, width: 1.5),
+          ),
+          child: Text('frei', style: bodyText(11, color: Ui.muted)),
+        ),
+      ]);
+
+  void _tapTile(RunState r, int i) => setState(() {
+        final donor = _donor;
+        if (donor != null) {
+          if (i == donor) {
+            _donor = null;
+          } else if (r.canGift(donor, i)) {
+            final target = r.weapons[i];
+            r.giveGift(donor, i);
+            _donor = null;
+            _selected = r.weapons.indexOf(target);
+          }
+          return;
+        }
+        _selected = _selected == i ? null : i;
+      });
+
+  Widget _ringTile(RunState r, int i) {
+    final w = r.weapons[i], t = tiers[w.tier];
+    final selected = _selected == i;
+    final partner = _donor == null && _selected != null && _selected! < r.weapons.length && r.mergePartner(_selected!) == i;
+    final target = _donor != null && r.canGift(_donor!, i);
+    final donor = _donor == i;
+    final accent = target ? Palette.purple : (partner ? Palette.mint : (selected || donor ? Palette.sun : t.color));
+    final marked = selected || partner || target || donor;
     return Inspectable(
-      focusable: true,
-      info: (_) => weaponInfo(r, w.id, w.tier, owned: w),
-      child: _weaponSlotBox(r, i),
+      key: ValueKey('weapon-tile-$i'),
+      radius: 40,
+      info: (_) => target ? weaponGiftPreview(r, r.weapons[_donor!], w) : weaponInfo(r, w.id, w.tier, owned: w),
+      child: Pressable(
+        onPressed: () => _tapTile(r, i),
+        builder: (context, s) => Column(mainAxisSize: MainAxisSize.min, children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 120),
+            width: _tile,
+            height: _tile,
+            transform: Matrix4.translationValues(0, s.highlighted || marked ? -3 : 0, 0),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(colors: [
+                Color.alphaBlend(accent.withAlpha(marked ? 70 : 40), Ui.glass),
+                Color.alphaBlend(accent.withAlpha(12), Ui.glass),
+              ]),
+              border: Border.all(
+                color: s.focused ? Colors.white : accent.withAlpha(marked ? 255 : 170),
+                width: s.focused || marked ? 2.5 : 1.5,
+              ),
+              boxShadow: [BoxShadow(color: accent.withAlpha(s.highlighted || marked ? 130 : 50), blurRadius: marked ? 22 : 12)],
+            ),
+            child: Stack(clipBehavior: Clip.none, children: [
+              Center(child: Glyph(WeaponGlyph(w.id, tier: w.tier), size: 40)),
+              // Stufe als kleines Abzeichen oben rechts
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: t.color,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: [BoxShadow(color: t.color.withAlpha(120), blurRadius: 8)],
+                  ),
+                  child: Text(t.label, style: numberStyle(10, const Color(0xFF0A0F24))),
+                ),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 4),
+          // Klassen als Punkte, Gaben-Plätze als Rauten (gefüllt = belegt)
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            for (final c in w.classes) _dot(c.color),
+            const SizedBox(width: 4),
+            for (var g = 0; g < maxGifts(w.tier); g++) _diamond(g < w.gifts.length),
+          ]),
+        ]),
+      ),
     );
   }
 
-  Widget _weaponSlotBox(RunState r, int i) {
-    final w = r.weapons[i], t = tiers[w.tier];
-    return Container(
-      width: _slotW,
-      height: _slotH,
-      clipBehavior: Clip.antiAlias,
-      decoration: BoxDecoration(
-        color: Ui.glass,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: t.color.withAlpha(120), width: 1.2),
-        boxShadow: [BoxShadow(color: t.color.withAlpha(40), blurRadius: 12)],
-      ),
-      child: Row(
-        children: [
-          Container(width: 8, color: t.color),
-          const SizedBox(width: 4),
-          Glyph(WeaponGlyph(w.id, tier: w.tier), size: 24),
-          const SizedBox(width: 4),
+  Widget _dot(Color c) => Container(
+        width: 7,
+        height: 7,
+        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+        decoration: BoxDecoration(shape: BoxShape.circle, color: c, boxShadow: [BoxShadow(color: c.withAlpha(150), blurRadius: 5)]),
+      );
+
+  Widget _diamond(bool filled) => Transform.rotate(
+        angle: pi / 4,
+        child: Container(
+          width: 6,
+          height: 6,
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          decoration: BoxDecoration(
+            color: filled ? Palette.purple : Colors.transparent,
+            border: Border.all(color: Palette.purple.withAlpha(filled ? 255 : 150), width: 1),
+          ),
+        ),
+      );
+
+  /// Aktionsleiste für die gewählte Waffe (bzw. Hinweis beim Abgeben einer Gabe).
+  Widget _weaponBar(RunState r) {
+    final donor = _donor, sel = _selected;
+    if (donor != null && donor < r.weapons.length) {
+      final d = r.weapons[donor];
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Row(children: [
           Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(w.def.name, maxLines: 1, style: displayStyle(13, Ui.cardText)),
-                ),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    'Stufe ${t.label} · ${w.def.cls.label}',
-                    maxLines: 1,
-                    style: bodyText(11, color: Ui.cardMuted),
-                  ),
-                ),
-              ],
+            child: classText('Gabe „${weaponGifts[d.id]!.name}“ (${d.def.cls.label}): Wähle die Waffe, die sie erhält.',
+                bodyText(12.5, color: Palette.purple)),
+          ),
+          Inspectable(
+            radius: 8,
+            info: (_) => _giftHint(d),
+            child: _slotButton('↺', 'abbrechen', base: Ui.slot, active: Palette.coral.withAlpha(90),
+                onPressed: () => setState(() => _donor = null)),
+          ),
+        ]),
+      );
+    }
+    if (sel == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text('Waffe antippen: verschmelzen, Gabe abgeben oder verkaufen.', style: mutedStyle),
+      );
+    }
+    final w = r.weapons[sel], t = tiers[w.tier];
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+            Text('${w.def.name} ${t.label}', maxLines: 1, overflow: TextOverflow.ellipsis, style: displayStyle(14, Ui.cardText)),
+            classText(w.classes.map((c) => c.label).join(' + '), bodyText(11.5, color: Ui.cardMuted), maxLines: 1),
+          ]),
+        ),
+        if (r.mergePartner(sel) >= 0)
+          Inspectable(
+            radius: 8,
+            info: (_) => weaponMergePreview(r, w),
+            child: _slotButton(
+              '⤴ ${tiers[w.tier + 1].label}',
+              'verschmelzen',
+              base: Palette.mint.withAlpha(40),
+              active: Palette.mint.withAlpha(110),
+              onPressed: () => setState(() {
+                r.merge(sel);
+                _selected = r.weapons.indexOf(w);
+              }),
             ),
           ),
-          if (r.mergePartner(i) >= 0)
-            Inspectable(
-              radius: 8,
-              info: (_) => weaponMergePreview(r, w),
-              child: _slotButton(
-                '⤴ ${tiers[w.tier + 1].label}',
-                'verschmelzen',
-                base: Palette.mint.withAlpha(40),
-                active: Palette.mint.withAlpha(110),
-                onPressed: () => setState(() => r.merge(i)),
-              ),
-            ),
-          if (r.weapons.length > 1)
-            _slotButton(
+        if (r.hasGiftTarget(sel))
+          Inspectable(
+            radius: 8,
+            info: (_) => _giftHint(w),
+            child: _slotButton('✦', 'Gabe', base: Palette.purple.withAlpha(30), active: Palette.purple.withAlpha(110),
+                onPressed: () => setState(() => _donor = sel)),
+          ),
+        if (r.weapons.length > 1)
+          Inspectable(
+            radius: 8,
+            info: (_) => weaponInfo(r, w.id, w.tier, owned: w),
+            child: _slotButton(
               '+${r.sellPrice(w)}',
               'verkaufen',
               base: Ui.slot,
               active: Palette.sun.withAlpha(90),
-              onPressed: () => setState(() => r.sell(i)),
+              onPressed: () => setState(() {
+                r.sell(sel);
+                _selected = null;
+              }),
             ),
-        ],
-      ),
+          ),
+      ]),
     );
   }
 
-  /// Kleiner Knopf im Waffenslot (Verschmelzen, Verkaufen).
+  /// Info zum Gabe-Knopf: was diese Waffe weitergibt.
+  Widget _giftHint(OwnedWeapon w) {
+    final g = weaponGifts[w.id]!;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+      Text('Gabe „${g.name}“ abgeben', style: displayStyle(15, Palette.purple)),
+      const SizedBox(height: 4),
+      classText('${g.desc}, dazu Klasse ${w.def.cls.label}.', bodyText(12.5, color: Ui.text)),
+      Text('Danach die Waffe wählen, die sie erhält. ${w.def.name} verschwindet.', style: bodyText(12, color: Ui.muted)),
+    ]);
+  }
+
+  /// Kleiner Knopf im Waffenslot (Verschmelzen, Gabe, Verkaufen).
   Widget _slotButton(
     String label,
     String sub, {
@@ -735,4 +932,26 @@ class _ShopOverlayState extends State<ShopOverlay> {
       ],
     );
   }
+}
+
+/// Feine Umlaufbahn der Waffen um den Vogel.
+class _OrbitPainter extends CustomPainter {
+  _OrbitPainter(this.center, this.rx, this.ry);
+  final Offset center;
+  final double rx, ry;
+
+  @override
+  void paint(Canvas c, Size size) {
+    final rect = Rect.fromCenter(center: center, width: rx * 2, height: ry * 2);
+    c.drawOval(rect, Paint()..color = const Color(0x10CFE3FF));
+    c.drawOval(
+        rect,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2
+          ..color = Ui.panelLine);
+  }
+
+  @override
+  bool shouldRepaint(_OrbitPainter old) => old.center != center || old.rx != rx || old.ry != ry;
 }

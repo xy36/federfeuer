@@ -90,6 +90,45 @@ class Ring extends PositionComponent with Transient {
   }
 }
 
+/// Kurzer Lichtbogen zwischen zwei Punkten (Reaktionen Bannstrahl, Regenbogen, Höllenfeuer).
+class ArcBeam extends Component with Transient {
+  ArcBeam(this.from, this.to, this.color) : super(priority: 19);
+  final Vector2 from, to;
+  final Color color;
+  double life = 0.28;
+  static final _paint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..blendMode = BlendMode.plus;
+
+  @override
+  void update(double dt) {
+    if (dt == 0) return;
+    life -= dt;
+    if (life <= 0) removeFromParent();
+  }
+
+  @override
+  void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.effects)) return;
+    final k = clampD(life / 0.28, 0, 1);
+    // Leicht gezackt: Mittelpunkt seitlich versetzt
+    final mid = (from + to) / 2 + Vector2(to.y - from.y, from.x - to.x).normalized() * 10 * sin(life * 40);
+    final path = Path()
+      ..moveTo(from.x, from.y)
+      ..lineTo(mid.x, mid.y)
+      ..lineTo(to.x, to.y);
+    _paint
+      ..strokeWidth = 9
+      ..color = color.withValues(alpha: 0.3 * k);
+    c.drawPath(path, _paint);
+    _paint
+      ..strokeWidth = 2.5
+      ..color = Color.lerp(color, const Color(0xFFFFFFFF), 0.5)!.withValues(alpha: k);
+    c.drawPath(path, _paint);
+  }
+}
+
 /// Aufsteigende Schadens- und Heilzahlen.
 class FloatText extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
   FloatText(Vector2 pos, this.text, this.color, this.fontSize) : super(position: pos, priority: 21);

@@ -317,6 +317,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void startWave() {
     final r = run!;
+    _clearChaos();
     _bodyPass.prewarm([for (final (t, _) in spawnPool(r.wave)) t]);
     phase = Phase.play;
     _setOverlays(['controls']);
@@ -476,6 +477,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void toMenu({bool play = false}) {
     menuOpensPlay = play;
+    _clearChaos();
     menuGeneration++;
     godMode = benchmarkRunning = analysisRunning = false;
     perfSkip.clear();
@@ -640,6 +642,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     enemies.removeWhere((e) => e.dead);
     if (!isBossWave(r.wave)) _despawnStragglers();
     _separateEnemies();
+    _tickChaos(dt);
+    rubberCd = max(0.0, rubberCd - dt);
     _updateCamera(dt);
 
     if (winT > 0) {
@@ -677,7 +681,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
 
     _spawnT -= dt;
-    if (_spawnT <= 0) {
+    // Schlussphase: keine neuen Gegner mehr, die Welle läuft aus
+    final winding = !isBossWave(r.wave) && waveTime <= kWaveSpawnStop;
+    if (_spawnT <= 0 && !winding) {
       _spawnBatch();
       _spawnT =
           spawnInterval(r.wave) /
@@ -707,7 +713,10 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void _placeCamera(double sx, double sy) {
-    camera.viewfinder.position = Vector2(camX + sx, -offY + sy);
+    // Spiegelwelt: Bild horizontal gespiegelt (Anker bleibt oben links, also rechten Rand ansetzen)
+    final mirrored = chaos(ChaosEffect.mirror);
+    camera.viewfinder.position = Vector2(camX + sx + (mirrored ? viewW : 0), -offY + sy);
+    camera.viewfinder.transform.scale = Vector2(mirrored ? -zoom : zoom, zoom);
   }
 
   void _spawnBatch() {
@@ -879,6 +888,12 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       floatText(player.position - Vector2(0, 20), 'Quietsch!', const Color(0xFFFFE066), 14);
       return;
     }
+    // Ausweichen: Treffer geht ganz daneben
+    if (rng.nextDouble() * 100 < min(kDodgeMax, r.stat(Stat.dodge))) {
+      player.iframe = 0.3;
+      floatText(player.position - Vector2(0, 20), 'Ausgewichen', const Color(0xFFBFEFFF), 14);
+      return;
+    }
     final a = r.stat(Stat.armor);
     final f = a >= 0 ? 15 / (15 + a) : 1 + (-a) / 15;
     final dmg = max(1, (amount * f).round());
@@ -938,10 +953,19 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   /// Schaden an einem Gegner. [fx]: Treffereffekte der Waffe, [cls]: Klasse (Brennglas),
   /// [dot]: Schaden über Zeit (ohne Rückstoß, Lebensraub und Effekte).
-  void hurtEnemy(Enemy e, double dmg, bool crit, double knock, {bool dot = false, WeaponStats? fx, WeaponClass? cls}) {
+  void hurtEnemy(Enemy e, double dmg, bool crit, double knock,
+      {bool dot = false, WeaponStats? fx, List<WeaponClass> classes = const []}) {
     if (e.dead) return;
     final r = run!;
     if (e.cursed) dmg *= 1 + r.curseBonus;
+    // Elementar-Reaktion aus dem Zustand vor dem Treffer
+    final reaction = dot || classes.isEmpty ? null : reactionFor(e, classes);
+    if (reaction == Reaction.shatter) {
+      dmg *= kShatterMul;
+    } else if (e.frozen) {
+      dmg *= 1 + kFrostVuln;
+    }
+    if (e.chickenT > 0) dmg *= 1 + kChickenVuln;
     if (!dot) e.onHit();
     // Gepanzerte Elite: halber Schaden, kein Rückstoß
     if (e.elite == EliteMod.armored) {
@@ -965,11 +989,144 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         lifestealCd = kLifestealInterval;
         heal(1);
       }
-      if (fx != null) e.applyEffects(fx);
-      if (crit && cls == WeaponClass.light && r.has(ItemEffect.burningGlass)) e.ignite(2, dmg * 0.3);
+      if (fx != null) {
+        e.applyEffects(fx);
+        // Chaos-Items: Gegner verwirren bzw. in ein Huhn verwandeln
+        if (e.chaosable && r.has(ItemEffect.confuseHerb) && rng.nextDouble() < kConfuseChance) {
+          e.confusedT = max(e.confusedT, kConfuseTime);
+        }
+        if (e.chaosable && r.has(ItemEffect.chickenSpell) && e.chickenT <= 0 && rng.nextDouble() < kChickenChance) {
+          e.chickenT = kChickenTime;
+          burst(e.position, const Color(0xFFFFFFFF), 10, 120);
+        }
+        // Gaben: Chancen auf Betäuben und Einfangen, kleine Explosionen
+        if (fx.stunChance > 0 && rng.nextDouble() < fx.stunChance) e.stun(fx.stunTime);
+        if (fx.trapChance > 0 && rng.nextDouble() < fx.trapChance) e.trapFor(fx.trapTime);
+        if (fx.blastChance > 0 && rng.nextDouble() < fx.blastChance) {
+          explode(e.position.clone(), fx.blastRadius, dmg * fx.blastMul, false, color: const Color(0xFFFFB060), small: true);
+        }
+      }
+      if (crit && classes.contains(WeaponClass.light) && r.has(ItemEffect.burningGlass)) e.ignite(2, dmg * 0.3);
       if (crit && r.has(ItemEffect.stardust)) explode(e.position.clone(), 36, dmg * 0.4, false);
+      if (classes.contains(WeaponClass.water) && reaction != Reaction.steam) {
+        e.wetT = max(e.wetT, kWetTime * (weather.isRaining ? kWetRainMul : 1));
+      }
+      if (reaction != null) _react(reaction, e, dmg);
     }
     if (e.hp <= 0) killEnemy(e);
+  }
+
+  // ---------------- Chaos ----------------
+
+  /// Restdauer der Chaos-Zustände des Spielers und die Immunität danach.
+  final chaosT = <ChaosEffect, double>{};
+  final _chaosImmune = <ChaosEffect, double>{};
+
+  bool chaos(ChaosEffect e) => (chaosT[e] ?? 0) > 0;
+
+  /// Startet einen Chaos-Zustand (nicht, solange er läuft oder man danach noch immun ist).
+  void applyChaos(ChaosEffect e) {
+    if (chaos(e) || (_chaosImmune[e] ?? 0) > 0 || godMode) return;
+    chaosT[e] = e.duration;
+    floatText(player.position - Vector2(0, 34), '${e.label.toUpperCase()}!', e.color, 16);
+    burst(player.position, e.color, 10, 140);
+  }
+
+  void _tickChaos(double dt) {
+    for (final e in ChaosEffect.values) {
+      final left = chaosT[e] ?? 0;
+      if (left > 0) {
+        chaosT[e] = left - dt;
+        if (left - dt <= 0) _chaosImmune[e] = kChaosImmunity;
+      }
+      _chaosImmune[e] = max(0.0, (_chaosImmune[e] ?? 0) - dt);
+    }
+  }
+
+  void _clearChaos() {
+    chaosT.clear();
+    _chaosImmune.clear();
+  }
+
+  /// Gummiflügel: Abklingzeit der Schockwelle.
+  double rubberCd = 0;
+
+  /// Gummiflügel: gegen die Decke geprallt – Schockwelle um den Vogel.
+  void rubberBounce() {
+    rubberCd = kRubberCd;
+    explode(player.position.clone(), kRubberRadius, actionDamage, false, color: const Color(0xFFFF7AD0));
+    floatText(player.position + Vector2(0, 30), 'BOING!', const Color(0xFFFF7AD0), 14);
+  }
+
+  // ---------------- Elementar-Reaktionen ----------------
+
+  /// Spielzeit der letzten Einblendung je Reaktion (gegen Flackern).
+  final _reactionShown = <Reaction, double>{};
+
+  /// Welche Reaktion ein Treffer der Klassen [cs] auf [e] auslöst (Höllenfeuer siehe [killEnemy]).
+  Reaction? reactionFor(Enemy e, List<WeaponClass> cs) {
+    if (e.reactCd > 0) return null;
+    bool has(WeaponClass c) => cs.contains(c);
+    if (e.frozen && has(WeaponClass.stone)) return Reaction.shatter;
+    if ((e.wet && has(WeaponClass.ember)) || (e.burning && has(WeaponClass.water))) return Reaction.steam;
+    if (e.wet && has(WeaponClass.wind)) return Reaction.frost;
+    if (e.burning && has(WeaponClass.wind)) return Reaction.firestorm;
+    if (e.wet && has(WeaponClass.light)) return Reaction.rainbow;
+    if (e.cursed && has(WeaponClass.light)) return Reaction.banish;
+    return null;
+  }
+
+  void _announce(Reaction re, Vector2 at) {
+    progress.see('k:${re.name}');
+    if ((_reactionShown[re] ?? -1) + kReactionTextCd > clock) return;
+    _reactionShown[re] = clock;
+    floatText(at, re.shout, re.color, 15);
+  }
+
+  void _react(Reaction re, Enemy e, double dmg) {
+    e.reactCd = kReactionCd;
+    final at = e.position.clone();
+    _announce(re, at - Vector2(0, e.r + 16));
+    switch (re) {
+      case Reaction.steam:
+        e.burnT = 0;
+        e.wetT = 0;
+        burst(at, re.color, 16, 160);
+        explode(at, kSteamRadius, dmg * kSteamMul, false, color: re.color);
+      case Reaction.frost:
+        e.wetT = 0;
+        e.frozenT = e.boss ? kFrostTime * 0.3 : kFrostTime;
+        e.vel.setZero();
+        burst(at, re.color, 10, 120);
+      case Reaction.shatter:
+        e.frozenT = 0;
+        burst(at, re.color, 18, 240);
+      case Reaction.firestorm:
+        world.add(Ring(at, kFirestormRadius, color: re.color));
+        for (final o in [...enemies]) {
+          if (!o.dead && !identical(o, e) && o.position.distanceTo(at) < kFirestormRadius + o.r) o.ignite(e.burnT, e.burnDps);
+        }
+      case Reaction.banish:
+        _chain(e, (o) => o.cursed, kBanishTargets, kBanishRange, dmg * kBanishMul, const [Color(0xFFE6B8FF)]);
+      case Reaction.rainbow:
+        e.wetT = 0;
+        _chain(e, (_) => true, kRainbowShards, kRainbowRadius, dmg * kRainbowMul,
+            const [Color(0xFFFF6A6A), Color(0xFF8CFF7A), Color(0xFF7AB8FF)]);
+      case Reaction.hellfire:
+    }
+  }
+
+  /// Springt von [from] auf die [n] nächsten passenden Gegner im Umkreis [range] (Lichtbogen je Ziel).
+  void _chain(Enemy from, bool Function(Enemy) ok, int n, double range, double dmg, List<Color> colors) {
+    final targets = [
+      for (final o in enemies)
+        if (!o.dead && !identical(o, from) && ok(o) && o.position.distanceTo(from.position) < range) o,
+    ]..sort((a, b) => a.position.distanceTo(from.position).compareTo(b.position.distanceTo(from.position)));
+    var i = 0;
+    for (final o in targets.take(n)) {
+      world.add(ArcBeam(from.position.clone(), o.position.clone(), colors[i++ % colors.length]));
+      hurtEnemy(o, dmg, false, 0);
+    }
   }
 
   void killEnemy(Enemy e) {
@@ -978,6 +1135,21 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final r = run!;
     r.kills++;
     if (e.burnT > 0) r.burnKills++;
+    // Höllenfeuer: verflucht und brennend gestorben – Brand und Fluch springen über
+    if (e.burnT > 0 && e.cursed && e.type != EnemyType.boss) {
+      final near = [
+        for (final o in enemies)
+          if (!o.dead && o.position.distanceTo(e.position) < kHellfireRadius) o,
+      ]..sort((a, b) => a.position.distanceTo(e.position).compareTo(b.position.distanceTo(e.position)));
+      if (near.isNotEmpty) {
+        _announce(Reaction.hellfire, e.position - Vector2(0, e.r + 16));
+        for (final o in near.take(kHellfireTargets)) {
+          world.add(ArcBeam(e.position.clone(), o.position.clone(), Reaction.hellfire.color));
+          o.ignite(max(e.burnT, 2), e.burnDps);
+          o.curseT = max(o.curseT, kHellfireCurse);
+        }
+      }
+    }
     if (e.type == EnemyType.boss) {
       burst(e.position, Palette.sun, 60, 320);
       shake = 20;
@@ -1006,6 +1178,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
     // Pusteling platzt auch beim Abschuss in eine Giftwolke
     if (e.type == EnemyType.puffball) world.add(PoisonCloud(e.position.clone(), e.dmg));
+    if (e.type == EnemyType.wirrling) {
+      world.add(ChaosCloud(e.position.clone(), ChaosEffect.values[rng.nextInt(ChaosEffect.values.length)]));
+    }
     // Kinder von Spawnern lassen nichts fallen
     if (e.child) return;
     final fall = r.dropFallSpeed;
@@ -1022,29 +1197,33 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
     if (e.elite != null) {
       burst(e.position, const Color(0xFFFFC94A), 18, 220);
-      if (rng.nextDouble() < kEliteGiftChance) {
+      if (rng.nextDouble() < kEliteGiftChance * r.luckDropMul) {
         world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
       }
     }
     // Goldgier: 15 % doppelte Drops
     final times = (r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1) * (e.elite != null ? kEliteDrops : 1);
-    dropMaterial(e.position, (enemyDefs[e.type]!.drop * e.toughness).round() * times);
-    if (rng.nextDouble() < 0.04) {
+    // Zufällig gerundet: 1,3 ergibt in 30 % der Fälle 2, sonst 1 – im Mittel genau der Faktor
+    final mat = enemyDefs[e.type]!.drop * e.materialFactor;
+    dropMaterial(e.position, (mat.floor() + (rng.nextDouble() < mat - mat.floor() ? 1 : 0)) * times);
+    if (rng.nextDouble() < kHeartChance * r.luckDropMul) {
       world.add(Drop(e.position.clone(), material: false, rng: rng, fallSpeed: fall));
     }
     // Elster: manchmal ein Geschenk
-    if (r.character.giftChance > 0 && rng.nextDouble() < r.character.giftChance) {
+    if (r.character.giftChance > 0 && rng.nextDouble() < r.character.giftChance * r.luckDropMul) {
       world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
     }
   }
 
-  void explode(Vector2 at, double radius, double dmg, bool crit, {WeaponStats? fx, Color color = const Color(0xFFFF9F1C)}) {
-    shake = max(shake, 5);
-    burst(at, color, 18, 220);
+  /// [small]: kleine Explosion aus einer Gabe – ohne Wackeln, weniger Funken.
+  void explode(Vector2 at, double radius, double dmg, bool crit,
+      {WeaponStats? fx, List<WeaponClass> classes = const [], Color color = const Color(0xFFFF9F1C), bool small = false}) {
+    if (!small) shake = max(shake, 5);
+    burst(at, color, small ? 6 : 18, small ? 140 : 220);
     world.add(Ring(at.clone(), radius, color: color));
     for (final e in [...enemies]) {
       if (!e.dead && e.position.distanceTo(at) < radius + e.r) {
-        hurtEnemy(e, dmg, crit, 0, fx: fx);
+        hurtEnemy(e, dmg, crit, 0, fx: fx, classes: classes);
       }
     }
   }
@@ -1157,7 +1336,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final r = run;
     if (r == null || !playing || !actionReady(slot)) return;
     final act = r.actions[slot];
-    actionCds[slot] = act.cooldown;
+    actionCds[slot] = r.actionCooldown(act);
     final pw = act.power;
     _actionPower = pw;
     final p = player.position;

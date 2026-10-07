@@ -26,7 +26,7 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
     required this.radius,
     required this.color,
     this.fx,
-    this.cls,
+    this.classes = const [],
     this.look = '',
     this.gravity = 0,
     this.fuse = 0,
@@ -44,9 +44,9 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
   final bool crit, roll;
   final Color color;
 
-  /// Treffereffekte (Brand, Verlangsamen, …) und Klasse der Waffe.
+  /// Treffereffekte (Brand, Verlangsamen, …) und Klassen der Waffe (eigene plus Gaben).
   final WeaponStats? fx;
-  final WeaponClass? cls;
+  final List<WeaponClass> classes;
 
   /// Waffen-ID für die Darstellung (Popcorn, Gartenzwerg, Bowlingkugel, …).
   final String look;
@@ -98,7 +98,7 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
           }
           _hit.add(e);
           final dir = vel.x == 0 ? 0.0 : vel.x.sign;
-          game.hurtEnemy(e, dmg, crit, dir * knock, fx: fx, cls: cls);
+          game.hurtEnemy(e, dmg, crit, dir * knock, fx: fx, classes: classes);
           if (--pierce < 0) {
             life = 0;
             break;
@@ -119,9 +119,9 @@ class Bullet extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
   void _explode() {
     if (_done) return;
     _done = true;
-    final stone = cls == WeaponClass.stone;
+    final stone = classes.isNotEmpty && classes.first == WeaponClass.stone;
     game.explode(position, explosion, dmg, crit,
-        fx: fx, color: stone ? const Color(0xFFFFD27A) : const Color(0xFFFF9F1C));
+        fx: fx, classes: classes, color: stone ? const Color(0xFFFFD27A) : const Color(0xFFFF9F1C));
     removeFromParent();
   }
 

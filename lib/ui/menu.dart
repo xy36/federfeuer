@@ -539,7 +539,7 @@ class _PlayPageState extends State<_PlayPage> {
             const SizedBox(width: 6),
             Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
               Text(d.name, style: bodyText(12.5, color: selected ? Palette.sun : Ui.text, weight: 900)),
-              Text(d.cls.label, style: bodyText(10.5, color: Ui.muted)),
+              Text(d.cls.label, style: bodyText(10.5, color: d.cls.color)),
             ]),
             if (selected) ...[
               const SizedBox(width: 6),

@@ -45,7 +45,7 @@ class RunOverview extends StatelessWidget {
                 focusable: true,
                 radius: 999,
                 info: (_) => actionInfo(r, r.actions[k], k),
-                child: Pill('${r.actions[k].label} · ${fmtNum(r.actions[k].cooldown)} s',
+                child: Pill('${r.actions[k].label} · ${fmtNum(r.actionCooldown(r.actions[k]))} s',
                     glyph: ActionGlyph(r.actions[k].id),
                     color: r.actions[k].id.evolved ? const Color(0x55FFC94A) : const Color(0x33FFD23F)),
               ),
@@ -110,7 +110,8 @@ class RunOverview extends StatelessWidget {
           Expanded(
             child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
               FittedBox(fit: BoxFit.scaleDown, child: Text(w.def.name, maxLines: 1, style: displayStyle(12.5, Ui.cardText))),
-              Text('Stufe ${t.label} · ${w.def.cls.label}', maxLines: 1, style: bodyText(10.5, color: Ui.cardMuted)),
+              classText('Stufe ${t.label} · ${w.classes.map((c) => c.label).join(' + ')}', bodyText(10.5, color: Ui.cardMuted),
+                  maxLines: 1),
             ]),
           ),
         ]),

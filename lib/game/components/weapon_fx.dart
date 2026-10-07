@@ -57,7 +57,7 @@ class Minion extends PositionComponent with HasGameReference<FederfeuerGame>, Tr
     vel.lerp(want, min(1.0, dt * 5));
     position.addScaled(vel, dt);
     if (t != null && _hitCd <= 0 && t.position.distanceTo(position) < t.r + 8) {
-      game.hurtEnemy(t, stats.dmg, false, vel.x.sign * stats.knock, fx: stats, cls: WeaponClass.dark);
+      game.hurtEnemy(t, stats.dmg, false, vel.x.sign * stats.knock, fx: stats, classes: stats.classes);
       _hitCd = 0.6;
       vel.scale(-0.8);
     }
@@ -106,7 +106,7 @@ class RainCloud extends PositionComponent with HasGameReference<FederfeuerGame>,
       _tick = 0.5;
       for (final e in [...game.enemies]) {
         if (e.dead || (e.x - x).abs() > span + e.r || e.y < y) continue;
-        game.hurtEnemy(e, stats.dmg, false, 0, fx: stats, cls: WeaponClass.water);
+        game.hurtEnemy(e, stats.dmg, false, 0, fx: stats, classes: stats.classes);
       }
     }
   }
