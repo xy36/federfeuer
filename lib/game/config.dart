@@ -349,6 +349,19 @@ const double kTraitDmg = 0.2, kTraitAtk = 0.2, kTraitRange = 60, kTraitCrit = 10
 const int kTraitPierce = 2;
 const double kTraitBlast = 0.4, kTraitArc = 0.5, kTraitWide = 0.4;
 
+// ---------------- Automatische Aktionen ----------------
+
+/// Aktionen lösen selbst aus, sobald sie bereit sind und es sich lohnt (Q/E bzw. X/Y lösen
+/// sofort aus). Schwellen: Gefahr (Abstand einer Kugel bzw. eines Gegners zum Vogel),
+/// Gegner in der Nähe, Gegner im Bild, wenig HP, herumliegendes Material.
+const double kAutoThreat = 60, kAutoShieldThreat = 70, kAutoLowHp = 0.35;
+const double kAutoNearRadius = 170, kAutoStormRadius = 460, kAutoPullRadius = 260, kAutoEggRadius = 260;
+const int kAutoNearCount = 2, kAutoViewCount = 5, kAutoStormCount = 3, kAutoPullCount = 3, kAutoMaterial = 12;
+
+/// Spätestens so lange nach dem Bereitwerden lösen Kampf-Aktionen aus, sobald irgendein
+/// Gegner im Bild ist (damit nichts ungenutzt herumliegt).
+const double kAutoFallback = 6;
+
 // ---------------- Chaos ----------------
 
 /// Verrückte Zustände des Spielers (aus den Wolken des Wirrlings). Jeder ist kurz, gut

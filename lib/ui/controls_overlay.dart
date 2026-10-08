@@ -55,21 +55,7 @@ class ControlsOverlay extends StatelessWidget {
           bottom: 124,
           child: HoldButton(label: '▼', size: 64, fontSize: 22, onChanged: (v) => game.touchDown = v),
         ),
-      if (touch)
-        for (var i = 0; i < (game.run?.actions.length ?? 0); i++)
-          Positioned(
-            right: 130 + i * 76.0,
-            bottom: 24,
-            child: HoldButton(
-              label: game.run!.actions[i].id.label,
-            glyph: ActionGlyph(game.run!.actions[i].id),
-              size: 64,
-              fontSize: 24,
-              onChanged: (v) {
-                if (v) game.useAction(i);
-              },
-            ),
-          ),
+      // Aktionen lösen automatisch aus – keine eigenen Touch-Knöpfe nötig
     ]);
   }
 }

@@ -10,6 +10,7 @@ import 'constellation.dart';
 import 'inspect.dart';
 import 'inspect_info.dart';
 import 'widgets.dart';
+import 'workbench.dart';
 
 enum CompendiumTab {
   birds('Vögel'),
@@ -18,6 +19,7 @@ enum CompendiumTab {
   actions('Aktionen'),
   recipes('Kombinationen'),
   reactions('Reaktionen'),
+  workbench('Werkbank'),
   enemies('Gegner');
 
   const CompendiumTab(this.label);
@@ -50,6 +52,8 @@ class _CompendiumViewState extends State<CompendiumView> {
         CompendiumTab.actions => (ActionId.values.where((a) => p.hasSeen(_key('a', a.name))).length, ActionId.values.length),
         CompendiumTab.recipes => (actionRecipes.where((r) => p.hasSeen(_key('r', r.result.name))).length, actionRecipes.length),
         CompendiumTab.reactions => (Reaction.values.where((re) => p.hasSeen(_key('k', re.name))).length, Reaction.values.length),
+        // Werkbank: kein eigener Inhalt zum Entdecken
+        CompendiumTab.workbench => (0, 0),
         CompendiumTab.enemies => (
             EnemyType.values.where((e) => p.hasSeen(_key('e', e.name))).length +
                 EliteMod.values.where((m) => p.hasSeen(_key('x', m.name))).length,
@@ -74,7 +78,7 @@ class _CompendiumViewState extends State<CompendiumView> {
       Wrap(spacing: 6, children: [
         for (final t in CompendiumTab.values)
           GameButton(
-            label: '${t.label} ${_count(t).$1}/${_count(t).$2}',
+            label: t == CompendiumTab.workbench ? t.label : '${t.label} ${_count(t).$1}/${_count(t).$2}',
             size: 12,
             color: t == _tab ? Palette.sun : Ui.card,
             onPressed: () => setState(() => _tab = t),
@@ -88,6 +92,7 @@ class _CompendiumViewState extends State<CompendiumView> {
         CompendiumTab.actions => _grid([for (final a in ActionId.values) _action(a)]),
         CompendiumTab.recipes => ActionConstellation(progress: p, reference: _ref),
         CompendiumTab.reactions => _grid([for (final re in Reaction.values) _reaction(re)]),
+        CompendiumTab.workbench => Workbench(progress: p, reference: _ref),
         CompendiumTab.enemies => _grid([
             for (final e in EnemyType.values) _enemy(e),
             for (final m in EliteMod.values) _elite(m),
