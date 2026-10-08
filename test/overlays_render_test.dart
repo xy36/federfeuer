@@ -1,6 +1,7 @@
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:federfeuer/game/config.dart';
 import 'package:federfeuer/game/federfeuer_game.dart';
 import 'package:federfeuer/game/run_state.dart';
 import 'package:federfeuer/main.dart' show buildOverlayMap;
@@ -66,6 +67,7 @@ void main() {
       game.run!
         ..money = 57
         ..goalBonus = 6
+        ..slotsUnlocked = kMaxWeapons
         ..addWeapon('smg', 1)
         ..addWeapon('rocket', 0)
         ..addWeapon('pistol', 0) // Paar → Verschmelzen-Knopf im Slot

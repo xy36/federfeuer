@@ -43,13 +43,14 @@ void main() {
     await t.pump(const Duration(milliseconds: 150));
     expect(find.byType(InfoCard), findsOneWidget);
     expect(find.textContaining('Aktionsplatz 2 wird frei'), findsOneWidget);
-    // Waffe im Ring wählen – die Aktionsleiste zeigt dann den Verschmelzen-Knopf
+    // Waffe im Ring wählen – das Kreismenü zeigt dann den Verschmelzen-Knopf
     await t.tap(find.byKey(const ValueKey('weapon-tile-0')));
     await t.pump(const Duration(milliseconds: 150));
+    await t.pump(const Duration(milliseconds: 200));
+    // Bei offenem Kreismenü keine Info-Panels – auch nicht über den Segmenten
     await mouse.moveTo(t.getCenter(find.text('verschmelzen').first));
     await t.pump(const Duration(milliseconds: 150));
-    expect(find.byType(InfoCard), findsOneWidget);
-    expect(find.textContaining('Verschmelzen: Stufe I + I '), findsOneWidget);
+    expect(find.byType(InfoCard), findsNothing);
     await mouse.removePointer();
     game.overlays.remove('shop');
     game.toMenu();

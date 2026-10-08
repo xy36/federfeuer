@@ -1,10 +1,14 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../game/config.dart';
+import '../game/gamepad_input.dart' show closeInfoPanel, modalMenu, pointerInput;
 import 'widgets.dart';
 
-/// Macht ein Element im Menü ansteuerbar (Tastatur, Controller, Maus) und zeigt bei
-/// Fokus oder Maus darüber ein Info-Panel daneben. Es ist immer nur ein Panel offen.
+/// Macht ein Element im Menü ansteuerbar (Tastatur, Controller, Maus) und zeigt ein Info-Panel
+/// daneben – mit der Maus nur, solange sie darüber ist; mit Tastatur oder Controller für das
+/// angesteuerte Element. Es ist immer nur ein Panel offen.
 /// [focusable]: selbst fokussierbar (für Anzeigen ohne eigenen Knopf); sonst reagiert
 /// es auf den Fokus eines Knopfes darin (z. B. einer Angebotskarte).
 class Inspectable extends StatefulWidget {
@@ -46,6 +50,25 @@ class _InspectableState extends State<Inspectable> {
   /// damit ein Knopf darin (z. B. „Verschmelzen“ im Waffenslot) sein eigenes Panel zeigt.
   final _node = FocusNode(debugLabel: 'Inspectable');
 
+  /// Merkt sich global, ob zuletzt Maus/Touch oder Tastatur benutzt wurde (Controller setzt es selbst).
+  static bool _tracking = false;
+  static void _trackInput() {
+    if (_tracking) return;
+    _tracking = true;
+    closeInfoPanel = () {
+      if (_active.value == null) return false;
+      _active.value = null;
+      return true;
+    };
+    GestureBinding.instance.pointerRouter.addGlobalRoute((e) {
+      if (e is PointerDownEvent || e is PointerHoverEvent) pointerInput = true;
+    });
+    HardwareKeyboard.instance.addHandler((e) {
+      pointerInput = false;
+      return false;
+    });
+  }
+
   void _onNode() {
     if (!widget.followFocus && !widget.focusable) return;
     final f = widget.focusable ? _node.hasPrimaryFocus : _node.hasFocus;
@@ -55,6 +78,7 @@ class _InspectableState extends State<Inspectable> {
   @override
   void initState() {
     super.initState();
+    _trackInput();
     _node.addListener(_onNode);
     _active.addListener(_sync);
   }
@@ -92,7 +116,8 @@ class _InspectableState extends State<Inspectable> {
     setState(() => _focus = v);
     if (v) {
       _focused = this;
-      _active.value = this;
+      // Fokus per Klick oder aus dem Programm: mit der Maus entscheidet nur das Überfahren
+      if (!pointerInput) _active.value = this;
     } else {
       if (_focused == this) _focused = null;
       if (_active.value == this && !_hover) _active.value = null;
@@ -104,7 +129,8 @@ class _InspectableState extends State<Inspectable> {
     if (v) {
       _active.value = this;
     } else if (_active.value == this) {
-      _active.value = _focused;
+      // Maus verlässt das Element: Panel zu (kein Rückfall auf das fokussierte)
+      _active.value = null;
     }
   }
 
@@ -125,7 +151,11 @@ class _InspectableState extends State<Inspectable> {
     }
     return OverlayPortal(
       controller: _portal,
-      overlayChildBuilder: _overlay,
+      // Bei offenem Kreismenü keine Info-Panels
+      overlayChildBuilder: (context) => ValueListenableBuilder(
+        valueListenable: modalMenu,
+        builder: (context, m, _) => m != null && m.hidesInfo ? const SizedBox.shrink() : _overlay(context),
+      ),
       child: Focus(
         canRequestFocus: widget.focusable,
         skipTraversal: !widget.focusable,

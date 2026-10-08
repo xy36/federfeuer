@@ -643,6 +643,7 @@ class ChoiceCard extends StatelessWidget {
     this.width = 176,
     this.height = 196,
     this.focusableWhenDisabled = false,
+    this.dimmed = false,
   });
 
   final Color accent;
@@ -659,12 +660,17 @@ class ChoiceCard extends StatelessWidget {
   /// Auch ohne [onPressed] ansteuerbar (Info-Panel ansehen).
   final bool focusableWhenDisabled;
 
+  /// Grau wie deaktiviert, bleibt aber anklickbar (z. B. zu teuer: Kreismenü zum Zurückhalten).
+  final bool dimmed;
+
   @override
   Widget build(BuildContext context) {
     return Pressable(
       onPressed: onPressed,
       focusableWhenDisabled: focusableWhenDisabled,
-      builder: (context, s) => Padding(
+      builder: (context, ps) {
+        final s = dimmed ? PressState(enabled: false, focused: ps.focused, hovered: ps.hovered, pressed: false) : ps;
+        return Padding(
         padding: const EdgeInsets.only(top: 4, bottom: 10),
         child: SizedBox(
           width: width,
@@ -729,7 +735,8 @@ class ChoiceCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
+      );
+      },
     );
   }
 }

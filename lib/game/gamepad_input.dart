@@ -8,6 +8,26 @@ import 'input_bindings.dart';
 /// Wird gerade mit Controller gespielt? Global, damit Menüs ihre Knopf-Hinweise ein- und ausblenden.
 final controllerActive = ValueNotifier<bool>(false);
 
+/// Offenes modales Menü (z. B. Kreismenü): bekommt Richtungen und „Zurück“ (B) vom Controller,
+/// Shop-Kurztasten ruhen so lange.
+abstract class ModalMenu {
+  void navigate(TraversalDirection dir);
+  void close();
+
+  /// Info-Panels ausblenden, solange es offen ist?
+  bool get hidesInfo;
+}
+
+/// Letzte Eingabe kam von Maus oder Touch (nicht Tastatur/Controller): Info-Panels dann nur beim Überfahren.
+bool pointerInput = false;
+
+/// Schließt das offene Info-Panel (Controller-B im Shop); true, wenn eines offen war. Von `ui/inspect.dart` gesetzt.
+bool Function()? closeInfoPanel;
+
+final modalMenu = ValueNotifier<ModalMenu?>(null);
+ModalMenu? get openModalMenu => modalMenu.value;
+set openModalMenu(ModalMenu? m) => modalMenu.value = m;
+
 /// Übersetzt Controller-Eingaben (Xbox-Standardbelegung) in Spielsteuerung
 /// und Menü-Navigation. Mehrere Controller werden zusammengefasst.
 class GamepadInput {
@@ -138,6 +158,7 @@ class GamepadInput {
   }
 
   void _pressed(GamepadButton b) {
+    pointerInput = false;
     final capture = onCapture;
     if (capture != null) {
       capture(b);
@@ -177,7 +198,10 @@ class GamepadInput {
       if (_stickY > navThreshold) dir = TraversalDirection.up;
       if (_stickY < -navThreshold) dir = TraversalDirection.down;
     }
-    if (dir != null && dir != _stickDir) onNavigate(dir);
+    if (dir != null && dir != _stickDir) {
+      pointerInput = false;
+      onNavigate(dir);
+    }
     _stickDir = dir;
   }
 }

@@ -379,6 +379,65 @@ class _Obj {
       case 'klee':
         glow(c, 0, 0, 14, const Color(0xFF50E070));
         _clover(c, 1);
+      // ---- Verflucht: dunkler Schimmer als gemeinsames Zeichen
+      case 'bleifeder':
+        _curse(c);
+        at(c, 0, 0, 1, () => feather(c, const Color(0xFF8A90A0)), rot: 0.6);
+        dot(c, 5, 7, 2.6, const Color(0xFF5A6070));
+      case 'gierschlund':
+        _curse(c);
+        part(c, oval(0, 1, 10, 7.5), const Color(0xFF7A1A3A), light: 0.4);
+        part(c, oval(0, 2, 7, 4), const Color(0xFF1A0610), rim: 0, light: 0, dark: 0);
+        for (var k = -2; k <= 2; k++) {
+          part(c, poly([(k * 2.8 - 1.2, -2), (k * 2.8 + 1.2, -2), (k * 2.8, 1.2)]), const Color(0xFFF4F0E8), rim: 0, dark: 0.1);
+        }
+      case 'glaskoerper':
+        _curse(c);
+        crystal(c, 0, 0, 1.1, const Color(0xFFBFEFFF));
+        line(c, Path()..moveTo(-3, -6)..lineTo(1, 0)..lineTo(-1, 5), const Color(0xCCFFFFFF), 0.8);
+      case 'wirrkopf':
+        _curse(c);
+        part(c, circle(0, 0, 9), const Color(0xFF5A2A6A), light: 0.4);
+        final sp = Path();
+        for (var k = 0; k <= 16; k++) {
+          final rr = 0.5 + k * 0.45, an = k * 0.85 + t * 3;
+          final pt = Offset(cos(an) * rr, sin(an) * rr);
+          k == 0 ? sp.moveTo(pt.dx, pt.dy) : sp.lineTo(pt.dx, pt.dy);
+        }
+        beam(c, sp, const Color(0xFFE6B8FF), 1.1);
+      case 'brennfedern':
+        _curse(c);
+        glow(c, 0, 0, 12, const Color(0xFFFF7A2A), 0.5);
+        at(c, 0, 0, 1, () => feather(c, const Color(0xFFFF9A4A)), rot: 0.6);
+        dot(c, -4, -7, 1.6, const Color(0xFFFFE6A0));
+        dot(c, 5, -4, 1.2, const Color(0xFFFFE6A0));
+      case 'dickbauch':
+        _curse(c);
+        part(c, circle(0, 2, 9.5), const Color(0xFFE8D8C0), light: 0.55);
+        part(c, circle(5, -8, 4), const Color(0xFFE8D8C0), dark: 0.2);
+        dot(c, 6, -8.5, 0.9, const Color(0xFF1A1020));
+        shine(c, -4, -2, 1.6, 2.6);
+      case 'fluchmagnet':
+        _curse(c);
+        at(c, 0, 1, 0.8, () => magnetU(c));
+        part(c, GlyphArt._star(5, 2.2, 5, rot: t * 0.6), const Color(0xFFFFC94A), rim: 0.4);
+      case 'einsamerwolf':
+        _curse(c);
+        part(c, circle(0, 0, 9), const Color(0xFFDDE4F0), light: 0.5);
+        part(c, circle(4, -2, 8), const Color(0xFF1A1428), rim: 0, light: 0, dark: 0);
+        for (final x in [-6.0, -3.5, -1.0]) {
+          beam(c, Path()..moveTo(x, -4)..lineTo(x - 1.5, 5), const Color(0xFFE0408A), 0.9);
+        }
+      case 'sturmkind':
+        _curse(c);
+        at(c, 0, -3, 0.9, () => cloud(c));
+        at(c, 1, 5, 0.6, () => bolt(c));
+      case 'nachtschatten':
+        _curse(c);
+        part(c, oval(0, 0, 10, 5.5), const Color(0xFF1A1428), rim: 0.5);
+        part(c, circle(0, 0, 3.6), const Color(0xFFE0408A), rim: 0, light: 0.5);
+        dot(c, 0, 0, 1.4, const Color(0xFF05020A));
+        spark(c, 7, -6, 2.4, const Color(0xFFFFE6F0));
       case 'wirrkraut':
         // Krauses Kraut mit violettem Wirbel
         glow(c, 0, 0, 14, const Color(0xFFC77DFF), 0.35);
@@ -846,6 +905,12 @@ class _Obj {
         }
         dot(c, 0, 1, 0.9, const Color(0xFFFFF4C8));
     }
+  }
+
+  /// Gemeinsames Zeichen verfluchter Items: dunkel-magentafarbener Schimmer.
+  static void _curse(Canvas c) {
+    glow(c, 0, 0, 15, const Color(0xFFE0408A), 0.35);
+    glow(c, 0, 0, 11, const Color(0xFF3A0A20), 0.5);
   }
 
   /// Vierblättriges Kleeblatt (Kleeblatt-Item und Wert Glück).

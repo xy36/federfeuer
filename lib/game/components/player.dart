@@ -23,7 +23,10 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     _body = BirdArt.bodyPaint(c);
   }
 
-  double get r => character.radius;
+  double get r => character.radius * _belly;
+
+  /// Dicker Bauch (verflucht): größerer Vogel.
+  double get _belly => game.run?.has(ItemEffect.bigBelly) == true ? kBigBellyScale : 1;
 
   /// Verbleibender Schub (Huhn).
   double stamina = 1;
@@ -121,6 +124,14 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
         !fly &&
         ((position.x <= r + 1 && dir < 0) || (position.x >= game.worldW - r - 1 && dir > 0));
     if (clinging) vel.y = 0;
+    // Bleifeder (verflucht): nur bis zur halben Höhe
+    if (run.has(ItemEffect.leadFeather)) {
+      final top = kCeil + (kGround - kCeil) * kLeadCeiling;
+      if (position.y < top + r) {
+        position.y = top + r;
+        vel.y = max(0.0, vel.y);
+      }
+    }
     if (position.y < kCeil + r) {
       position.y = kCeil + r;
       // Gummiflügel: schnell gegen die Decke – abprallen und Schockwelle
@@ -222,7 +233,10 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     }
 
     // Aura
-    Glow.draw(c, 0, 0, 62 * ch.scale, g.withValues(alpha: blink ? 0.25 : 0.55));
+    final sc = ch.scale * _belly;
+    // Verfluchtes Item: dunkler, violetter Schimmer um den Vogel
+    if (game.run?.cursed == true) Glow.draw(c, 0, 0, 78 * sc, Rarity.cursed.color.withValues(alpha: 0.3 + 0.1 * sin(game.clock * 3)));
+    Glow.draw(c, 0, 0, 62 * sc, g.withValues(alpha: blink ? 0.25 : 0.55));
     if (game.shieldT > 0) {
       final a = clampD(game.shieldT, 0, 1);
       Glow.draw(c, 0, 0, r * 3.4, Color.fromRGBO(160, 230, 255, 0.35 * a));
@@ -232,7 +246,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     if (blink) return;
 
     c.save();
-    c.scale(face * ch.scale, ch.scale);
+    c.scale(face * sc, sc);
     final webbed = webT > 0;
     final upright = ch.look == BirdLook.penguin;
     c.rotate(upright ? 0 : clampD(vel.y / 1000, -0.35, 0.35));

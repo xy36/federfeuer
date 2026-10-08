@@ -47,6 +47,7 @@ void main() {
     game.startRun('pistol');
     final r = game.run!
       ..weapons.clear()
+      ..slotsUnlocked = kMaxWeapons
       ..addWeapon('pistol', 0)
       ..addWeapon('pistol', 0)
       ..addWeapon('smg', 0)

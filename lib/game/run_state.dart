@@ -119,6 +119,7 @@ class RunState {
     if (c.startAction != null) actions.add(OwnedAction(c.startAction!));
     c.mods.forEach((s, v) => stats[s] = stats[s]! + v);
     stats[Stat.maxHp] = max(1.0, (stats[Stat.maxHp]! * c.maxHpMul).roundToDouble());
+    statBase.addAll(stats);
     hp = maxHp;
   }
 
@@ -139,6 +140,13 @@ class RunState {
   final Map<Stat, double> stats = {
     for (final s in Stat.values) s: s == Stat.maxHp ? 20.0 : (s == Stat.crit ? 5.0 : 0.0),
   };
+  /// Herkunft der Werte (Werte-Seite): Startwerte des Vogels und Summe der Level-ups;
+  /// der Rest von [stats] stammt aus Items, [stat] − [stats] aus Set-Boni und Item-Effekten.
+  final statBase = <Stat, double>{};
+  final statFromLevels = {for (final s in Stat.values) s: 0.0};
+  double statFromItems(Stat s) => stats[s]! - statBase[s]! - statFromLevels[s]!;
+  double statFromSets(Stat s) => stat(s) - stats[s]!;
+
   final weapons = <OwnedWeapon>[];
   final items = <String, int>{};
 
@@ -261,6 +269,7 @@ class RunState {
       level++;
       pendingLevels++;
       stats[Stat.maxHp] = maxHp + 1;
+      statFromLevels[Stat.maxHp] = statFromLevels[Stat.maxHp]! + 1;
       hp += 1;
       up = true;
     }
@@ -290,15 +299,18 @@ class RunState {
     double prod(double Function(WeaponGift) f) => gs.fold(1.0, (a, g) => a * f(g));
     double most(double Function(WeaponGift) f) => gs.fold(0.0, (a, g) => max(a, f(g)));
     var mul = (1 + stat(Stat.dmg) / 100) * prod((g) => g.dmgMul) * (1 + kTraitDmg * n(WeaponTrait.sharp));
+    final storm = has(ItemEffect.stormChild) && stormy;
+    if (storm) mul *= 1 + kStormChildDmg;
     if (character.classBonus == d.cls) mul *= 1.25;
     if (d.heavy) mul *= 1 + kSetHeavy[setLevelOf(WeaponClass.stone)];
     if (has(ItemEffect.mirror) && _projectile(d.kind)) mul *= 0.7;
     mul *= worldDamageMul(raining: raining);
-    final dmg = d.dmg * t.dmg * mul;
+    final dmg = d.dmg * t.dmg * kWeaponDmgMul * mul;
     final ember = 1 + kSetEmber[setLevelOf(WeaponClass.ember)];
     final water = 1 + kSetSlow[setLevelOf(WeaponClass.water)];
     final burnFactor = character.burnBonus ? 1.25 : 1.0;
-    final atk = (1 + stat(Stat.atk) / 100) * prod((g) => g.atkMul) * (1 + kTraitAtk * n(WeaponTrait.quick));
+    final atk = (1 + stat(Stat.atk) / 100) * prod((g) => g.atkMul) * (1 + kTraitAtk * n(WeaponTrait.quick)) *
+        (storm ? 1 + kStormChildAtk : 1);
     final rangeAdd = stat(Stat.range) + sum((g) => g.rangeAdd) + kTraitRange * n(WeaponTrait.reach);
     final stick = max(d.stick, sum((g) => g.stick));
     return WeaponStats(
@@ -307,7 +319,7 @@ class RunState {
       range: d.range + (d.kind == WeaponKind.orbit ? rangeAdd / 6 : rangeAdd),
       explosion: d.explosion * ember * (1 + kTraitBlast * n(WeaponTrait.blast)),
       burnTime: max(d.burn, sum((g) => g.burnTime)) * (character.burnBonus ? 1.5 : 1),
-      burnDps: d.dmg * t.dmg * kBurnDpsFactor * ember * burnFactor * (1 + stat(Stat.dmg) / 100),
+      burnDps: d.dmg * t.dmg * kWeaponDmgMul * kBurnDpsFactor * ember * burnFactor * (1 + stat(Stat.dmg) / 100),
       slow: min(0.85, max(d.slow, most((g) => g.slow)) * water),
       slowTime: max(d.slowTime, most((g) => g.slowTime)) * water,
       stun: d.stun,
@@ -339,20 +351,54 @@ class RunState {
 
   int weaponPrice(String id, int tier) =>
       (weaponDefs[id]!.price * kWeaponPriceScale * tiers[tier].price * weaponPriceFactor(wave) * character.shopMul).round();
-  int itemPrice(ItemDef it) => (it.price * itemPriceFactor(wave) * character.shopMul).round();
+  int itemPrice(ItemDef it) {
+    final base = it.effect == ItemEffect.weaponBelt ? kBeltPrice + kBeltPriceStep * (items[it.id] ?? 0) : it.price;
+    return (base * itemPriceFactor(wave) * character.shopMul * (it.rarity == Rarity.cursed ? kCursedPriceMul : 1)).round();
+  }
   int get rerollCost => (has(ItemEffect.freeReroll) && rerolls == 0) ? 0 : rerollBaseCost(wave) + rerolls * 2;
   int sellPrice(OwnedWeapon w) => (weaponPrice(w.id, w.tier) * 0.4).round();
 
-  int get maxWeapons => character.maxWeapons;
+  /// Reserve: feuert nicht, zählt nicht für Sets; zum Verschmelzen und als Gaben-Spender.
+  final reserve = <OwnedWeapon>[];
+
+  /// Freigeschaltete aktive Plätze (Waffengurt, Torwächter).
+  late int slotsUnlocked = min(kStartWeaponSlots, character.maxWeapons);
+
+  /// Höchstzahl aktiver Plätze dieses Vogels (Einsamer Wolf: weniger).
+  int get weaponSlotCap => has(ItemEffect.loneWolf) ? min(kLoneWolfSlots, character.maxWeapons) : character.maxWeapons;
+
+  /// Aktuell nutzbare aktive Plätze.
+  int get maxWeapons => min(slotsUnlocked, weaponSlotCap);
+
+  bool get reserveFull => reserve.length >= kReserveSlots;
+
+  /// Einen aktiven Platz freischalten (Waffengurt, Torwächter); false, wenn schon alle offen sind.
+  bool unlockSlot() {
+    if (slotsUnlocked >= character.maxWeapons) return false;
+    slotsUnlocked++;
+    return true;
+  }
+
+  /// Alle eigenen Waffen (aktiv und Reserve).
+  Iterable<OwnedWeapon> get allWeapons => [...weapons, ...reserve];
+
+  /// Faktor kritischer Treffer (Adler ×2,5, Nachtschatten ×3).
+  double get critMul => has(ItemEffect.nightShade) ? max(kNightCritMul, character.critMul) : character.critMul;
+
+  /// Schlechtwetter in der laufenden Welle (vom Spiel gesetzt; für Sturmkind).
+  bool stormy = false;
+
+  /// Hat der Run ein verfluchtes Item? (dunkler Schimmer um den Vogel)
+  bool get cursed => items.keys.any((id) => itemById[id]!.rarity == Rarity.cursed);
 
   bool get slotsFull => weapons.length >= maxWeapons;
 
   /// Gibt es schon eine gleiche Waffe gleicher Stufe (unter IV), mit der sie verschmelzen könnte?
-  bool canMerge(String id, int tier) => tier < 3 && weapons.any((w) => w.id == id && w.tier == tier);
+  bool canMerge(String id, int tier) => tier < 3 && allWeapons.any((w) => w.id == id && w.tier == tier);
 
   /// Kauf verschmilzt nur, wenn alle Slots belegt sind – sonst kommt die Waffe in einen freien Slot.
   bool mergesOnBuy(String id, int tier) => slotsFull && canMerge(id, tier);
-  bool canAddWeapon(String id, int tier) => !slotsFull || canMerge(id, tier);
+  bool canAddWeapon(String id, int tier) => !slotsFull || canMerge(id, tier) || !reserveFull;
 
   /// Fügt eine Waffe in einen freien Slot ein. Sind alle Slots belegt,
   /// verschmilzt sie mit einer gleichen Waffe gleicher Stufe (eine Stufe, keine Kette).
@@ -361,8 +407,12 @@ class RunState {
       weapons.add(OwnedWeapon(id, tier));
       return;
     }
-    final i = weapons.indexWhere((w) => w.id == id && w.tier == tier);
-    if (i >= 0 && tier < 3) _tierUp(weapons[i]);
+    final same = allWeapons.where((w) => w.id == id && w.tier == tier && tier < 3).firstOrNull;
+    if (same != null) {
+      _tierUp(same);
+    } else if (!reserveFull) {
+      reserve.add(OwnedWeapon(id, tier));
+    }
   }
 
   /// Ausstehende Wahl einer Eigenschaft (nach dem Verschmelzen gleicher Waffen).
@@ -383,21 +433,101 @@ class RunState {
     traitChoice = null;
   }
 
-  /// Kann Slot [donor] seine Gabe an Slot [target] abgeben? (Verschiedene Waffen,
-  /// freier Gaben-Platz, Gabe noch nicht vorhanden.)
-  bool canGift(int donor, int target) {
-    if (donor == target || donor >= weapons.length || target >= weapons.length) return false;
-    final d = weapons[donor], t = weapons[target];
-    return d.id != t.id && !t.gifts.contains(d.id) && t.gifts.length < maxGifts(t.tier);
+  /// Kann [d] seine Gabe an [t] abgeben? (Verschiedene Waffen, freier Gaben-Platz, Gabe noch
+  /// nicht vorhanden; die letzte aktive Waffe gibt nichts ab.)
+  bool canGiftTo(OwnedWeapon d, OwnedWeapon t) =>
+      !identical(d, t) &&
+      d.id != t.id &&
+      !t.gifts.contains(d.id) &&
+      t.gifts.length < maxGifts(t.tier) &&
+      !(weapons.contains(d) && weapons.length < 2);
+
+  bool hasGiftTargetFor(OwnedWeapon d) => allWeapons.any((t) => canGiftTo(d, t));
+
+  /// [d] gibt seine Gabe an [t] ab und verschwindet (aus Plätzen oder Reserve).
+  bool giftTo(OwnedWeapon d, OwnedWeapon t) {
+    if (!canGiftTo(d, t)) return false;
+    t.gifts.add(d.id);
+    if (!weapons.remove(d)) reserve.remove(d);
+    return true;
   }
 
-  bool hasGiftTarget(int donor) => [for (var t = 0; t < weapons.length; t++) t].any((t) => canGift(donor, t));
+  /// Angebotene Waffe [i] direkt als Gabe an [t] kaufen – sie belegt weder Platz noch Reserve.
+  bool canBuyAsGift(int i, OwnedWeapon t) {
+    final o = offers[i];
+    return o.isWeapon && !o.sold && money >= o.price && canGiftTo(OwnedWeapon(o.id, o.tier), t);
+  }
 
-  /// Verschmilzt Slot [donor] in Slot [target]: Das Ziel erbt die Gabe, der Spender wird frei.
-  bool giveGift(int donor, int target) {
-    if (!canGift(donor, target)) return false;
-    weapons[target].gifts.add(weapons[donor].id);
-    weapons.removeAt(donor);
+  bool offerHasGiftTarget(int i) {
+    final o = offers[i];
+    return o.isWeapon && !o.sold && hasGiftTargetFor(OwnedWeapon(o.id, o.tier));
+  }
+
+  bool buyAsGift(int i, OwnedWeapon t) {
+    if (!canBuyAsGift(i, t)) return false;
+    final o = offers[i];
+    t.gifts.add(o.id);
+    money -= o.price;
+    o.sold = true;
+    return true;
+  }
+
+  // Index-Varianten für die aktiven Plätze
+  bool canGift(int donor, int target) =>
+      donor < weapons.length && target < weapons.length && canGiftTo(weapons[donor], weapons[target]);
+  bool hasGiftTarget(int donor) => donor < weapons.length && hasGiftTargetFor(weapons[donor]);
+  bool giveGift(int donor, int target) => canGift(donor, target) && giftTo(weapons[donor], weapons[target]);
+
+  /// Gleiche Waffe gleicher Stufe (aktiv oder Reserve) zum Verschmelzen mit [w].
+  OwnedWeapon? partnerFor(OwnedWeapon w) =>
+      w.tier >= 3 ? null : allWeapons.where((o) => !identical(o, w) && o.id == w.id && o.tier == w.tier).firstOrNull;
+
+  /// [w] steigt eine Stufe auf, der Partner verschwindet; seine Gaben gehen mit über, soweit Platz ist.
+  bool mergeWeapon(OwnedWeapon w) {
+    final p = partnerFor(w);
+    if (p == null) return false;
+    for (final g in p.gifts) {
+      if (!w.gifts.contains(g) && w.gifts.length < maxGifts(w.tier + 1)) w.gifts.add(g);
+    }
+    _tierUp(w);
+    if (!weapons.remove(p)) reserve.remove(p);
+    return true;
+  }
+
+  /// Aktive Waffe in die Reserve (nicht die letzte aktive).
+  bool toReserve(OwnedWeapon w) {
+    if (!weapons.contains(w) || weapons.length < 2 || reserveFull) return false;
+    weapons.remove(w);
+    reserve.add(w);
+    return true;
+  }
+
+  /// Reserve-Waffe einsetzen (freier aktiver Platz nötig).
+  bool toActive(OwnedWeapon w) {
+    if (!reserve.contains(w) || slotsFull) return false;
+    reserve.remove(w);
+    weapons.add(w);
+    return true;
+  }
+
+  /// Reserve-Waffe [r] gegen aktive Waffe [a] tauschen.
+  bool swapWeapons(OwnedWeapon r, OwnedWeapon a) {
+    final i = weapons.indexOf(a), j = reserve.indexOf(r);
+    if (i < 0 || j < 0) return false;
+    weapons[i] = r;
+    reserve[j] = a;
+    return true;
+  }
+
+  /// Verkaufen aus Plätzen oder Reserve (die letzte aktive Waffe bleibt).
+  bool sellWeapon(OwnedWeapon w) {
+    if (weapons.contains(w)) {
+      if (weapons.length < 2) return false;
+      weapons.remove(w);
+    } else if (!reserve.remove(w)) {
+      return false;
+    }
+    money += sellPrice(w);
     return true;
   }
 
@@ -412,18 +542,7 @@ class RunState {
   }
 
   /// Verschmilzt Slot [i] mit seinem Partner: [i] steigt eine Stufe auf, der Partner wird frei.
-  bool merge(int i) {
-    final j = mergePartner(i);
-    if (j < 0) return false;
-    final w = weapons[i], p = weapons[j];
-    // Gaben des Partners gehen mit über, soweit Platz ist; seine Eigenschaften verfallen
-    for (final g in p.gifts) {
-      if (!w.gifts.contains(g) && w.gifts.length < maxGifts(w.tier + 1)) w.gifts.add(g);
-    }
-    _tierUp(w);
-    weapons.remove(p);
-    return true;
-  }
+  bool merge(int i) => i < weapons.length && mergeWeapon(weapons[i]);
 
   /// [kShopOffers] normale Angebote (bis Welle [kEarlyWaves] mindestens [kEarlyMinWeapons] Waffen)
   /// plus immer ein Aktions-Angebot am Ende.
@@ -447,8 +566,35 @@ class RunState {
         i++;
       }
     }
+    _guaranteeBelt(list, r);
     final act = kept[kShopOffers] ?? _actionOffer(r);
     offers = [...list, ?act];
+  }
+
+  /// Shops in Folge ohne Waffengurt-Angebot (nur neue Shops zählen, nicht Neu würfeln).
+  int shopsWithoutBelt = 0;
+  int _lastOfferWave = -1;
+
+  void _guaranteeBelt(List<Offer> list, Random r) {
+    final belt = itemById['waffengurt']!;
+    final fresh = wave != _lastOfferWave;
+    _lastOfferWave = wave;
+    if (!itemAvailable(belt)) return;
+    if (list.any((o) => o.id == belt.id)) {
+      shopsWithoutBelt = 0;
+      return;
+    }
+    if (!fresh) return;
+    if (shopsWithoutBelt >= kBeltGuaranteeShops) {
+      final free = [for (var i = 0; i < list.length; i++) if (!list[i].locked) i];
+      if (free.isNotEmpty) {
+        final i = free.lastWhere((i) => !list[i].isWeapon, orElse: () => free.last);
+        list[i] = Offer.item(belt.id, itemPrice(belt));
+        shopsWithoutBelt = 0;
+        return;
+      }
+    }
+    shopsWithoutBelt++;
   }
 
   void toggleLock(int i) {
@@ -492,6 +638,8 @@ class RunState {
 
   /// Seltenheit eines Item-Angebots je Welle.
   Rarity rollRarity(Random r) {
+    // Verflucht: unabhängig von Glück, ab Welle kCursedFromWave
+    if (wave >= kCursedFromWave && r.nextDouble() < kCursedChance) return Rarity.cursed;
     final x = r.nextDouble();
     final luck = max(0.0, stat(Stat.luck));
     final legendary = wave >= 8 ? 0.04 + kLuckLegendary * luck : 0.0;
@@ -508,6 +656,7 @@ class RunState {
     // Aktions-Items: solange sie noch etwas bewirken (neu, Stufe II oder Ersatz)
     if (it.action != null) return actionBuy(it.action!) != ActionBuy.none;
     if (it.unique && items.containsKey(it.id)) return false;
+    if (it.effect == ItemEffect.weaponBelt) return slotsUnlocked < weaponSlotCap;
     return true;
   }
 
@@ -523,7 +672,8 @@ class RunState {
         return Offer.item(it.id, itemPrice(it));
       }
       if (rarity == Rarity.common) break;
-      rarity = Rarity.values[rarity.index - 1];
+      // Keine verfluchten mehr übrig: normales seltenes Item statt eines legendären
+      rarity = rarity == Rarity.cursed ? Rarity.rare : Rarity.values[rarity.index - 1];
     }
     final it = itemDefs.first;
     return Offer.item(it.id, itemPrice(it));
@@ -540,6 +690,18 @@ class RunState {
       applyMods(it.mods);
       items[o.id] = (items[o.id] ?? 0) + 1;
       if (it.action != null) addAction(it.action!, replaceSlot: replaceSlot);
+      // Waffengurt: ein aktiver Platz mehr
+      if (it.effect == ItemEffect.weaponBelt) unlockSlot();
+      // Einsamer Wolf: überzählige Waffen in die Reserve, sonst verkaufen (die schwächsten zuerst)
+      while (weapons.length > maxWeapons) {
+        final low = weapons.reduce((a, b) => b.tier < a.tier ? b : a);
+        weapons.remove(low);
+        if (reserveFull) {
+          money += sellPrice(low);
+        } else {
+          reserve.add(low);
+        }
+      }
     }
     money -= o.price;
     o.sold = true;
@@ -574,6 +736,7 @@ class RunState {
   void chooseLevel(int i) {
     final c = levelChoices[i];
     applyMods({c.option.stat: c.value});
+    statFromLevels[c.option.stat] = statFromLevels[c.option.stat]! + c.value;
     pendingLevels--;
   }
 
@@ -590,11 +753,16 @@ class RunState {
     for (var i = 0; i < levels; i++) {
       level++;
       stats[Stat.maxHp] = maxHp + 1;
+      statFromLevels[Stat.maxHp] = statFromLevels[Stat.maxHp]! + 1;
       pendingLevels++;
       rollLevelChoices(rng);
       chooseLevel(rng.nextInt(levelChoices.length));
     }
 
+    // Plätze: wie nach den Torwächtern der geschafften Welten
+    for (final gate in [4, 8, 12]) {
+      if (done >= gate) unlockSlot();
+    }
     // Waffen: zwei Klassen (die der Startwaffe und eine zweite), Anzahl und Stufe wachsen mit der Welle
     final count = min(maxWeapons, (1 + done / 2.6).round());
     final firstCls = weapons.isNotEmpty ? weapons.first.def.cls : WeaponClass.values[rng.nextInt(WeaponClass.values.length)];
@@ -620,6 +788,8 @@ class RunState {
     for (var i = 0; i < (done * 0.8).round(); i++) {
       this.wave = 1 + rng.nextInt(done);
       final rarity = rollRarity(rng);
+      // Verfluchte Items sind bewusste Tauschgeschäfte – nicht in der Debug-Ausrüstung
+      if (rarity == Rarity.cursed) continue;
       final pool = itemDefs.where((it) => it.action == null && it.rarity == rarity && itemAvailable(it)).toList();
       if (pool.isEmpty) continue;
       final it = pool[rng.nextInt(pool.length)];

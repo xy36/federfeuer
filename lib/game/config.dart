@@ -241,7 +241,7 @@ extension StatInfo on Stat {
 
 // ---------------- Waffenklassen ----------------
 
-/// Sechs Waffenklassen; mehrere Waffen einer Klasse geben Set-Boni (ab 2 / 4 / 6).
+/// Sechs Waffenklassen; mehrere Waffen einer Klasse geben Set-Boni (ab 2 / 3 / 4).
 // ---------------- Verschmelzen: Gaben und Eigenschaften ----------------
 
 /// Gabe, die eine Waffe weitergibt, wenn sie mit einer anderen Waffe verschmolzen wird
@@ -373,6 +373,36 @@ const double kShieldWindup = 0.15;
 /// Gegner im Bild ist (damit nichts ungenutzt herumliegt).
 const double kAutoFallback = 6;
 
+// ---------------- Verfluchte Items ----------------
+
+/// Ab Welle [kCursedFromWave] ist jedes Item-Angebot mit [kCursedChance] verflucht; Preis × [kCursedPriceMul].
+const int kCursedFromWave = 3;
+const double kCursedChance = 0.12, kCursedPriceMul = 0.7;
+
+/// Bleifeder: höchste erreichbare Höhe als Anteil der Strecke Decke → Boden.
+const double kLeadCeiling = 0.5;
+
+/// Glaskörper: Mindestschaden je Treffer.
+const double kGlassMinDmg = 5;
+
+/// Wirrkopf: alle [kDizzyEvery] s verwirrt, Warnung [kDizzyWarn] s vorher.
+const double kDizzyEvery = 20, kDizzyWarn = 1.5;
+
+/// Brennende Federn: eigener Brand (−1 HP je [kSelfBurnEvery] s, tötet nie), Brand der Treffer.
+const double kSelfBurnEvery = 3, kFeatherBurnTime = 2, kFeatherBurnShare = 0.25;
+
+/// Dicker Bauch: Größe des Vogels (Trefferfläche und Darstellung).
+const double kBigBellyScale = 1.4;
+
+/// Einsamer Wolf: Waffenplätze.
+const int kLoneWolfSlots = 2;
+
+/// Sturmkind: Bonus bei Schlechtwetter.
+const double kStormChildDmg = 0.35, kStormChildAtk = 0.2;
+
+/// Nachtschatten: Krit-Faktor und Sichtradius um den Vogel (Welteinheiten).
+const double kNightCritMul = 3, kNightRadius = 170;
+
 // ---------------- Chaos ----------------
 
 /// Verrückte Zustände des Spielers (aus den Wolken des Wirrlings). Jeder ist kurz, gut
@@ -409,6 +439,20 @@ const double kWetTime = 3, kWetRainMul = 2;
 
 /// Eine Reaktion je Gegner höchstens alle [kReactionCd] s; Einblendung je Typ höchstens alle [kReactionTextCd] s.
 const double kReactionCd = 0.8, kReactionTextCd = 0.5;
+
+/// Grundchance je Treffer, dass eine mögliche Reaktion auch auslöst (Höllenfeuer: je Tod).
+/// Bei Waffen × min(1, Abklingzeit / [kReactionRefCooldown]) ÷ Projektile, damit schnelle
+/// Waffen und Streuschüsse pro Sekunde nicht häufiger reagieren als langsame.
+const kReactionChance = {
+  Reaction.frost: 0.15,
+  Reaction.firestorm: 0.2,
+  Reaction.rainbow: 0.2,
+  Reaction.steam: 0.25,
+  Reaction.banish: 0.25,
+  Reaction.hellfire: 0.4,
+  Reaction.shatter: 0.5,
+};
+const double kReactionRefCooldown = 1;
 
 const double kSteamRadius = 60, kSteamMul = 2;
 const double kFrostTime = 1.2, kFrostVuln = 0.25, kShatterMul = 3;
@@ -466,7 +510,7 @@ enum WeaponClass {
   final String label;
   final Color color;
 
-  /// Set-Bonus je Stufe (2 / 4 / 6 Waffen), als lesbarer Text.
+  /// Set-Bonus je Stufe (2 / 3 / 4 Waffen), als lesbarer Text.
   List<String> get bonusTexts => switch (this) {
         light => const ['+5 % Krit', '+10 % Krit', '+20 % Krit'],
         ember => const ['Brand/Explosion +15 %', 'Brand/Explosion +30 %', 'Brand/Explosion +50 %'],
@@ -478,7 +522,28 @@ enum WeaponClass {
 }
 
 /// Set-Bonus-Stufe (0–3) bei [count] Waffen einer Klasse.
-int setLevel(int count) => count >= 6 ? 3 : (count >= 4 ? 2 : (count >= 2 ? 1 : 0));
+/// Waffenplätze (Glitzer einer weniger). Wenige Waffen, dafür jede mit Gaben und Eigenschaften.
+const int kMaxWeapons = 4;
+
+/// Aktive Plätze zu Beginn; weitere über den Waffengurt und besiegte Torwächter.
+const int kStartWeaponSlots = 2;
+
+/// Reserve: Waffen, die nicht feuern und nicht für Sets zählen (zum Verschmelzen, als Gaben-Spender).
+const int kReserveSlots = 2;
+
+/// Waffengurt: Basispreis des ersten, jeder weitere teurer; garantiert nach so vielen Shops ohne Angebot.
+const int kBeltPrice = 18, kBeltPriceStep = 12, kBeltGuaranteeShops = 2;
+
+/// Waffen einer Klasse für Set-Stufe 1 / 2 / 3.
+const kSetThresholds = [2, 3, 4];
+
+/// Grundschaden aller Waffen – gleicht die geringere Zahl an Waffenplätzen aus.
+const double kWeaponDmgMul = 1.35;
+
+int setLevel(int count) => kSetThresholds.where((t) => count >= t).length;
+
+/// Waffen bis zur nächsten Set-Stufe (0 = höchste erreicht).
+int nextSetAt(int count) => kSetThresholds.firstWhere((t) => count < t, orElse: () => 0);
 
 /// Werte der Set-Boni je Stufe (Index 0 = keine).
 const kSetCrit = [0.0, 5, 10, 20];
@@ -739,7 +804,10 @@ enum Rarity {
   common('Gewöhnlich', Color(0xFFCFCFD6)),
   rare('Selten', Color(0xFF4FB3FF)),
   epic('Episch', Color(0xFFB36BFF)),
-  legendary('Legendär', Color(0xFFFF5D73));
+  legendary('Legendär', Color(0xFFFF5D73)),
+
+  /// Starker Vorteil mit spürbarem Nachteil; günstiger, ab Welle [kCursedFromWave].
+  cursed('Verflucht', Color(0xFFE0408A));
 
   const Rarity(this.label, this.color);
   final String label;
@@ -767,6 +835,18 @@ enum ItemEffect {
   confuseHerb, // Treffer verwirren Gegner manchmal (sie greifen sich gegenseitig an)
   chickenSpell, // Treffer verwandeln Gegner manchmal kurz in ein Huhn
   rubberWings, // gegen die Decke: abprallen und Schockwelle
+  // ---- Verflucht (Vorteil über Werte bzw. Effekt, Nachteil über den Effekt)
+  leadFeather, // nur bis zur halben Höhe
+  greedMaw, // doppeltes Material, Herzen heilen nicht
+  glassBody, // jeder Treffer mindestens 5 Schaden
+  dizzyHead, // alle 20 s verwirrt
+  burningFeathers, // Treffer setzen in Brand, du brennst selbst
+  bigBelly, // 40 % größer
+  curseMagnet, // doppelt so viele Eliten, doppeltes Elite-Material
+  loneWolf, // höchstens 2 Waffen
+  stormChild, // stärker bei Schlechtwetter, immer Schlechtwetter
+  nightShade, // Krits ×3, Sicht nur um den Vogel
+  weaponBelt, // +1 aktiver Waffenplatz
   action, // setzt die Aktion [ItemDef.action]
 }
 
@@ -816,6 +896,29 @@ const itemDefs = [
       desc: '5 % der Treffer verwandeln Gegner 3 s in ein harmloses Huhn (+50 % Schaden)', unique: true),
   ItemDef('gummifluegel', 'Gummiflügel', '🪀', 20, {}, rarity: Rarity.rare, effect: ItemEffect.rubberWings,
       desc: 'Prallst du gegen die Decke, federst du zurück und löst eine Schockwelle aus', unique: true),
+  ItemDef('waffengurt', 'Waffengurt', '🎒', kBeltPrice, {}, rarity: Rarity.rare, effect: ItemEffect.weaponBelt,
+      desc: '+1 Waffenplatz – solange noch Plätze fehlen'),
+  // ---- Verflucht: starker Vorteil, spürbarer Nachteil
+  ItemDef('bleifeder', 'Bleifeder', '🪨', 24, {Stat.dmg: 50}, rarity: Rarity.cursed, effect: ItemEffect.leadFeather,
+      desc: 'Nachteil: du kommst nur bis zur halben Höhe', unique: true),
+  ItemDef('gierschlund', 'Gierschlund', '👄', 26, {}, rarity: Rarity.cursed, effect: ItemEffect.greedMaw,
+      desc: 'Doppeltes Material. Nachteil: Herzen heilen nicht mehr', unique: true),
+  ItemDef('glaskoerper', 'Glaskörper', '🔮', 24, {Stat.atk: 40, Stat.speed: 20}, rarity: Rarity.cursed,
+      effect: ItemEffect.glassBody, desc: 'Nachteil: jeder Treffer kostet mindestens 5 HP', unique: true),
+  ItemDef('wirrkopf', 'Wirrkopf', '😵', 24, {Stat.dmg: 60}, rarity: Rarity.cursed, effect: ItemEffect.dizzyHead,
+      desc: 'Nachteil: alle 20 s bist du 3 s verwirrt (links/rechts vertauscht)', unique: true),
+  ItemDef('brennfedern', 'Brennende Federn', '🔥', 26, {}, rarity: Rarity.cursed, effect: ItemEffect.burningFeathers,
+      desc: 'Alle Treffer setzen 2 s in Brand. Nachteil: du brennst selbst (−1 HP alle 3 s)', unique: true),
+  ItemDef('dickbauch', 'Dicker Bauch', '🫃', 22, {Stat.maxHp: 20, Stat.armor: 6, Stat.speed: -15}, rarity: Rarity.cursed,
+      effect: ItemEffect.bigBelly, desc: 'Nachteil: 40 % größer – leichter zu treffen', unique: true),
+  ItemDef('fluchmagnet', 'Fluchmagnet', '🧲', 24, {}, rarity: Rarity.cursed, effect: ItemEffect.curseMagnet,
+      desc: 'Eliten kommen doppelt so oft und lassen doppeltes Material fallen', unique: true),
+  ItemDef('einsamerwolf', 'Einsamer Wolf', '🐺', 26, {Stat.dmg: 70}, rarity: Rarity.cursed, effect: ItemEffect.loneWolf,
+      desc: 'Nachteil: höchstens 2 Waffen – überzählige werden beim Kauf verkauft', unique: true),
+  ItemDef('sturmkind', 'Sturmkind', '⛈️', 24, {}, rarity: Rarity.cursed, effect: ItemEffect.stormChild,
+      desc: 'Bei Schlechtwetter +35 % Schaden und +20 % Angriffstempo. Nachteil: jede Welle hat Schlechtwetter', unique: true),
+  ItemDef('nachtschatten', 'Nachtschatten', '🌑', 26, {Stat.crit: 25}, rarity: Rarity.cursed, effect: ItemEffect.nightShade,
+      desc: 'Krits machen ×3. Nachteil: du siehst nur noch den Bereich um dich herum', unique: true),
   ItemDef('gummiente', 'Gummiente', '🦆', 26, {Stat.armor: 2}, rarity: Rarity.epic, effect: ItemEffect.duck,
       desc: '10 % der Treffer werden ignoriert – quietsch!', unique: true),
   ItemDef('socke', 'Socke mit Loch', '🧦', 18, {Stat.speed: 20, Stat.armor: -2}, rarity: Rarity.rare),
@@ -905,7 +1008,7 @@ class CharacterDef {
     this.materialChance = 0,
     this.shopMul = 1,
     this.giftChance = 0,
-    this.maxWeapons = 6,
+    this.maxWeapons = kMaxWeapons,
     this.nightBonus = 0,
     this.dayMalus = 0,
     this.maxHpMul = 1,
@@ -1034,7 +1137,7 @@ const characterDefs = [
     id: 'glitzer', name: 'Glitzer', species: 'Elster', icon: '🐦', role: 'Wirtschaft',
     strength: 'Shop −15 %, manchmal Geschenk beim Kill', weakness: 'nur 4 Waffenslots', flight: 'normal',
     look: BirdLook.magpie, glow: Color(0xFF9FD4FF), body: Color(0xFF20242E), belly: Color(0xFFF6F6F6),
-    startWeapons: ['water', 'disco', 'pebble'], startAction: ActionId.whirlwind, shopMul: 0.85, giftChance: 0.01, maxWeapons: 4,
+    startWeapons: ['water', 'disco', 'pebble'], startAction: ActionId.whirlwind, shopMul: 0.85, giftChance: 0.01, maxWeapons: kMaxWeapons - 1,
     unlock: UnlockDef(UnlockKind.totalMaterial, '3000 Material sammeln', amount: 3000),
   ),
   CharacterDef(

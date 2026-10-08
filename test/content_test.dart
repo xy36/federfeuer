@@ -99,12 +99,13 @@ void main() {
   });
 
   group('Set-Boni', () {
-    test('Schwellen bei 2, 4 und 6 Waffen', () {
-      expect([for (var n = 0; n <= 6; n++) setLevel(n)], [0, 0, 1, 1, 2, 2, 3]);
+    test('Schwellen bei 2, 3 und 4 Waffen', () {
+      expect([for (var n = 0; n <= 5; n++) setLevel(n)], [0, 0, 1, 2, 3, 3]);
+      expect([for (var n = 0; n <= 4; n++) nextSetAt(n)], [2, 2, 3, 4, 0]);
     });
 
     test('Licht-Set erhöht Krit, Stein-Set Rüstung', () {
-      final r = RunState('pistol');
+      final r = RunState('pistol')..slotsUnlocked = kMaxWeapons;
       final crit = r.stat(Stat.crit);
       r.addWeapon('rail', 0);
       expect(r.stat(Stat.crit), crit + kSetCrit[1]);
@@ -182,10 +183,10 @@ void main() {
       expect(p.checkUnlocks(RunState(null, difficulty: 4), won: true).map((c) => c.id), contains('adler'));
     });
 
-    test('Glitzer: Shop 15 % günstiger, nur 4 Slots', () {
+    test('Glitzer: Shop 15 % günstiger, ein Waffenplatz weniger', () {
       final s = RunState(null), g = RunState(null, characterId: 'glitzer');
       expect(g.weaponPrice('rail', 0), (s.weaponPrice('rail', 0) / 1 * 0.85).round());
-      expect(g.maxWeapons, 4);
+      expect(g.weaponSlotCap, kMaxWeapons - 1);
     });
   });
 
@@ -270,6 +271,7 @@ void main() {
     test('Frack: Welle 10 mit 3 Wasser-Waffen', () {
       final p = Progress();
       final r = RunState('water')
+        ..slotsUnlocked = kMaxWeapons
         ..addWeapon('bubbles', 0)
         ..wave = 10;
       expect(p.checkUnlocks(r, won: false).map((c) => c.id), isNot(contains('frack')));

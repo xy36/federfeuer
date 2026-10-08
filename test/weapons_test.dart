@@ -24,6 +24,7 @@ void main() {
 
     test('Manuelles Verschmelzen: Slot steigt auf, Partner wird frei', () {
       final r = RunState('pistol')
+        ..slotsUnlocked = kMaxWeapons
         ..addWeapon('smg', 0)
         ..addWeapon('pistol', 0);
       expect(r.mergePartner(0), 2);
@@ -35,6 +36,7 @@ void main() {
 
     test('Keine Kette: zwei Stufe-II nach Verschmelzen erst per zweitem Klick', () {
       final r = RunState('pistol')
+        ..slotsUnlocked = kMaxWeapons
         ..addWeapon('pistol', 0)
         ..addWeapon('pistol', 1);
       r.merge(0); // pistol I + I → II
@@ -52,19 +54,24 @@ void main() {
       expect(r.canMerge('pistol', 3), isFalse);
     });
 
-    test('Volle Slots: Kauf nur, wenn er verschmilzt – dann eine Stufe', () {
-      final r = RunState('pistol');
-      for (final id in ['smg', 'shotgun', 'rail', 'rocket', 'smg']) {
+    test('Volle Slots: neue Waffe in die Reserve, danach Kauf nur, wenn er verschmilzt', () {
+      final r = RunState('pistol')..slotsUnlocked = kMaxWeapons;
+      for (final id in ['smg', 'shotgun', 'rail']) {
         r.addWeapon(id, 0);
       }
       expect(r.slotsFull, isTrue);
+      expect(r.canAddWeapon('rocket', 0), isTrue, reason: 'Reserve frei');
+      r.addWeapon('rocket', 0);
+      expect(r.reserve.map((w) => w.id), ['rocket']);
+      r.addWeapon('water', 0);
+      expect(r.reserveFull, isTrue);
       expect(r.canAddWeapon('shotgun', 1), isFalse);
       expect(r.mergesOnBuy('rail', 0), isTrue);
       r
         ..money = 100
         ..offers = [Offer.weapon('rail', 0, 28)];
       expect(r.buy(0), isTrue);
-      expect(r.weapons.length, 6);
+      expect(r.weapons.length, kMaxWeapons);
       expect(r.weapons.where((w) => w.id == 'rail').single.tier, 1);
     });
 

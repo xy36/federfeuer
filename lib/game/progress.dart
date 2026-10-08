@@ -58,7 +58,7 @@ class Progress {
 
   /// Alles, was ein Run gerade zeigt: Angebote, Inventar, Aktionen samt Rezepten, Evolutionen.
   void noteRun(RunState r) {
-    for (final w in r.weapons) {
+    for (final w in r.allWeapons) {
       see('w:${w.id}');
     }
     for (final id in r.items.keys) {

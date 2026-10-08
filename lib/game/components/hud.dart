@@ -94,6 +94,23 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
     c.restore();
   }
 
+  static final _night = Paint();
+
+  /// Nachtschatten (verflucht): Bild außerhalb eines Kreises um den Vogel dunkel.
+  void _nightShade(Canvas c, Vector2 s, double k) {
+    final g = game;
+    final mirrored = g.chaos(ChaosEffect.mirror);
+    final px = (mirrored ? g.camX + g.viewW - g.player.x : g.player.x - g.camX) * g.zoom / k;
+    final py = (g.player.y + g.offY) * g.zoom / k;
+    final rad = kNightRadius * g.zoom / k;
+    _night.shader = RadialGradient(
+      radius: 1,
+      colors: const [Color(0x00000000), Color(0x00000000), Color(0xE6020308)],
+      stops: const [0, 0.55, 1],
+    ).createShader(Rect.fromCircle(center: Offset(px, py), radius: rad));
+    c.drawRect(Rect.fromLTWH(0, 0, s.x, s.y), _night);
+  }
+
   static final _chaosEdge = Paint()..style = PaintingStyle.stroke;
 
   /// Aktive Chaos-Zustände: farbiger Bildschirmrand und Name mit Restzeit unten in der Mitte.
@@ -192,6 +209,7 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       }
     }
     if (g.playing) {
+      if (g.run?.has(ItemEffect.nightShade) == true) _nightShade(c, s, k);
       _chaos(c, s);
       _actionBanner(c, s);
     }

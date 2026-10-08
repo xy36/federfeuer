@@ -37,7 +37,7 @@ enum Phase { menu, play, cleared, levelUp, shop, paused, over }
 class ArenaWorld extends World {}
 
 /// Kurztasten im Shop.
-enum ShopHotkey { reroll, start, lock, nextSection, prevSection }
+enum ShopHotkey { reroll, start, lock, nextSection, prevSection, stats }
 
 class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   FederfeuerGame() : super(world: ArenaWorld());
@@ -172,7 +172,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   /// Kurztaste an den Shop geben – nicht direkt nach dem Öffnen (Taste war fürs Spiel gemeint).
   void _shopHotkey(ShopHotkey key) {
-    if (phase != Phase.shop) return;
+    if (phase != Phase.shop || openModalMenu != null) return;
     if (DateTime.now().difference(_menuShownAt).inMilliseconds < kMenuConfirmGraceMs) return;
     onShopHotkey?.call(key);
   }
@@ -186,9 +186,15 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       GamepadButton.start => ShopHotkey.start,
       GamepadButton.rightBumper => ShopHotkey.nextSection,
       GamepadButton.leftBumper => ShopHotkey.prevSection,
+      GamepadButton.back => ShopHotkey.stats,
       _ => null,
     };
     if (key == null) return false;
+    // Offenes Kreismenü bzw. Werte-Seite: View schließt, die übrigen Kurztasten ruhen
+    if (openModalMenu case final m?) {
+      if (key == ShopHotkey.stats) m.close();
+      return true;
+    }
     _shopHotkey(key);
     return true;
   }
@@ -197,12 +203,15 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   /// nicht ans Spiel weitergibt. Fest belegt, nicht W/Leertaste/S (im Spiel zum Fliegen).
   bool _onShopKey(KeyEvent e) {
     if (phase != Phase.shop || inputCapture || e is! KeyDownEvent) return false;
+    // Offenes Kreismenü bzw. Werte-Seite: Tasten gehen an deren Fokus (Esc, C schließen)
+    if (openModalMenu != null) return false;
     final key = switch (e.logicalKey) {
       LogicalKeyboardKey.keyR => ShopHotkey.reroll,
       LogicalKeyboardKey.keyN => ShopHotkey.start,
       LogicalKeyboardKey.keyL => ShopHotkey.lock,
       LogicalKeyboardKey.pageDown => ShopHotkey.nextSection,
       LogicalKeyboardKey.pageUp => ShopHotkey.prevSection,
+      LogicalKeyboardKey.keyC => ShopHotkey.stats,
       _ => null,
     };
     if (key == null) return false;
@@ -347,6 +356,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       pool: biomeDef.weatherPool,
       bonus: biomeDef.badWeatherBonus,
     );
+    // Sturmkind: jede Welle Schlechtwetter
+    if (r.has(ItemEffect.stormChild) && weather.isClear) weather.set(rng.nextBool() ? WeatherType.rain : WeatherType.wind);
+    r.stormy = !weather.isClear;
+    _dizzyT = kDizzyEvery;
+    _selfBurnT = kSelfBurnEvery;
     waveTime = boss ? 0 : waveDuration(r.wave);
     _spawnT = 1.2;
     banner = 2;
@@ -544,7 +558,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   void _padNavigate(TraversalDirection dir) {
     if (playing) return;
-    if (_menuUnfocused) {
+    if (openModalMenu case final m?) {
+      m.navigate(dir);
+    } else if (_menuUnfocused) {
       _focusFirstMenuItem();
     } else {
       FocusManager.instance.primaryFocus!.focusInDirection(dir);
@@ -564,6 +580,15 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   void _padBack() {
+    if (openModalMenu case final m?) {
+      m.close();
+      return;
+    }
+    // Shop: B schließt das Info-Panel (sonst hat B dort keine Aufgabe)
+    if (phase == Phase.shop) {
+      closeInfoPanel?.call();
+      return;
+    }
     if (phase == Phase.paused) togglePause();
     if (phase == Phase.menu) menuBack?.call();
   }
@@ -643,6 +668,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (!isBossWave(r.wave)) _despawnStragglers();
     _separateEnemies();
     _tickChaos(dt);
+    _tickCurses(dt);
     rubberCd = max(0.0, rubberCd - dt);
     _updateCamera(dt);
 
@@ -827,7 +853,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (enemyDefs[type]!.spawner && enemies.where((e) => !e.dead && enemyDefs[e.type]!.spawner).length >= kMaxSpawners) {
       type = EnemyType.crow;
     }
-    final elite = type != EnemyType.boss && rng.nextDouble() < eliteChance(w)
+    final elite = type != EnemyType.boss && rng.nextDouble() < eliteChance(w) * (run!.has(ItemEffect.curseMagnet) ? 2 : 1)
         ? EliteMod.values[rng.nextInt(EliteMod.values.length)]
         : null;
     // Stationäre Gegner können sich nicht teilen
@@ -896,7 +922,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     }
     final a = r.stat(Stat.armor);
     final f = a >= 0 ? 15 / (15 + a) : 1 + (-a) / 15;
-    final dmg = max(1, (amount * f).round());
+    // Glaskörper: jeder Treffer kostet mindestens kGlassMinDmg
+    final dmg = max(r.has(ItemEffect.glassBody) ? kGlassMinDmg.round() : 1, (amount * f).round());
     r.hp -= dmg;
     player.iframe = 0.6;
     shake = 8;
@@ -929,9 +956,17 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   /// Herz eingesammelt (Rabe Ruß heilt nur halb).
-  void healHeart() => heal(max(1, (3 * run!.character.heartMul).round()));
+  void healHeart() {
+    // Gierschlund: Herzen heilen nicht
+    if (run!.has(ItemEffect.greedMaw)) {
+      floatText(player.position - Vector2(0, 30), 'Gierschlund', Rarity.cursed.color, 13);
+      return;
+    }
+    heal(max(1, (3 * run!.character.heartMul).round()));
+  }
 
   void gain(int v) {
+    if (run!.has(ItemEffect.greedMaw)) v *= 2;
     if (run!.gain(v)) {
       floatText(player.position - Vector2(0, 40), 'LEVEL UP', Palette.sun, 18);
     }
@@ -956,8 +991,9 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (e.dead) return;
     final r = run!;
     if (e.cursed) dmg *= 1 + r.curseBonus;
-    // Elementar-Reaktion aus dem Zustand vor dem Treffer
-    final reaction = dot || classes.isEmpty ? null : reactionFor(e, classes);
+    // Elementar-Reaktion aus dem Zustand vor dem Treffer, mit Wahrscheinlichkeit
+    var reaction = dot || classes.isEmpty ? null : reactionFor(e, classes);
+    if (reaction != null && !debugAlwaysReact && rng.nextDouble() >= reactionChance(reaction, fx)) reaction = null;
     if (reaction == Reaction.shatter) {
       dmg *= kShatterMul;
     } else if (e.frozen) {
@@ -1000,6 +1036,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         // Gaben: Chancen auf Betäuben und Einfangen, kleine Explosionen
         if (fx.stunChance > 0 && rng.nextDouble() < fx.stunChance) e.stun(fx.stunTime);
         if (fx.trapChance > 0 && rng.nextDouble() < fx.trapChance) e.trapFor(fx.trapTime);
+        // Brennende Federn: jeder Waffentreffer setzt in Brand
+        if (r.has(ItemEffect.burningFeathers)) e.ignite(kFeatherBurnTime, dmg * kFeatherBurnShare);
         if (fx.blastChance > 0 && rng.nextDouble() < fx.blastChance) {
           explode(e.position.clone(), fx.blastRadius, dmg * fx.blastMul, false, color: const Color(0xFFFFB060), small: true);
         }
@@ -1046,6 +1084,37 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     _chaosImmune.clear();
   }
 
+  // ---------------- Verfluchte Items ----------------
+
+  double _dizzyT = kDizzyEvery, _selfBurnT = kSelfBurnEvery;
+
+  /// Wirrkopf (regelmäßig verwirrt, mit Warnung) und Brennende Federn (eigener Brand).
+  void _tickCurses(double dt) {
+    final r = run;
+    if (r == null) return;
+    if (r.has(ItemEffect.dizzyHead)) {
+      final was = _dizzyT;
+      _dizzyT -= dt;
+      if (was > kDizzyWarn && _dizzyT <= kDizzyWarn) {
+        floatText(player.position - Vector2(0, 40), 'WIRRKOPF …', Rarity.cursed.color, 15);
+      }
+      if (_dizzyT <= 0) {
+        _dizzyT = kDizzyEvery;
+        applyChaos(ChaosEffect.confused);
+      }
+    }
+    if (r.has(ItemEffect.burningFeathers)) {
+      _selfBurnT -= dt;
+      if (_selfBurnT <= 0) {
+        _selfBurnT = kSelfBurnEvery;
+        if (r.hp > 1 && !godMode && !debugInvincible) {
+          r.hp -= 1;
+          floatText(player.position - Vector2(0, 26), '-1', const Color(0xFFFF8A3D), 12);
+        }
+      }
+    }
+  }
+
   /// Gummiflügel: Abklingzeit der Schockwelle.
   double rubberCd = 0;
 
@@ -1057,6 +1126,16 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   }
 
   // ---------------- Elementar-Reaktionen ----------------
+
+  /// Tests: Reaktionen lösen immer aus (statt mit Wahrscheinlichkeit).
+  bool debugAlwaysReact = false;
+
+  /// Chance, dass eine mögliche Reaktion bei diesem Treffer auslöst (siehe [kReactionChance]).
+  double reactionChance(Reaction re, WeaponStats? fx) {
+    final base = kReactionChance[re]!;
+    if (fx == null) return base;
+    return base * min(1.0, fx.cooldown / kReactionRefCooldown) / max(1, fx.count);
+  }
 
   /// Spielzeit der letzten Einblendung je Reaktion (gegen Flackern).
   final _reactionShown = <Reaction, double>{};
@@ -1134,7 +1213,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     r.kills++;
     if (e.burnT > 0) r.burnKills++;
     // Höllenfeuer: verflucht und brennend gestorben – Brand und Fluch springen über
-    if (e.burnT > 0 && e.cursed && e.type != EnemyType.boss) {
+    if (e.burnT > 0 && e.cursed && e.type != EnemyType.boss &&
+        (debugAlwaysReact || rng.nextDouble() < kReactionChance[Reaction.hellfire]!)) {
       final near = [
         for (final o in enemies)
           if (!o.dead && o.position.distanceTo(e.position) < kHellfireRadius) o,
@@ -1169,6 +1249,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       shake = max(shake, 14);
       burst(e.position, const Color(0xFFFFC94A), 40, 300);
       floatText(e.position - Vector2(0, e.r + 20), 'DAS TOR IST OFFEN', Palette.sun, 20);
+      if (r.unlockSlot()) floatText(e.position - Vector2(0, e.r + 46), 'NEUER WAFFENPLATZ!', Palette.mint, 17);
       final fall = r.dropFallSpeed;
       dropMaterial(e.position, kGateDrops, spread: 30);
       world.add(Drop(e.position.clone(), material: false, gift: true, rng: rng, fallSpeed: fall));
@@ -1200,7 +1281,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       }
     }
     // Goldgier: 15 % doppelte Drops
-    final times = (r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1) * (e.elite != null ? kEliteDrops : 1);
+    final times = (r.has(ItemEffect.greed) && rng.nextDouble() < 0.15 ? 2 : 1) *
+        (e.elite != null ? kEliteDrops * (r.has(ItemEffect.curseMagnet) ? 2 : 1) : 1);
     // Zufällig gerundet: 1,3 ergibt in 30 % der Fälle 2, sonst 1 – im Mittel genau der Faktor
     final mat = enemyDefs[e.type]!.drop * e.materialFactor;
     dropMaterial(e.position, (mat.floor() + (rng.nextDouble() < mat - mat.floor() ? 1 : 0)) * times);
@@ -1567,14 +1649,15 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   // ---------------- Debug: Performance-Test ----------------
 
   /// Lastszene: Wald mit Regen (meiste Effekte), dauerhaft [benchmarkEnemies] Gegner,
-  /// sechs Stufe-IV-Waffen, Stufe Phönix, Held unverwundbar. Nach einer Aufwärmphase
+  /// alle Waffenplätze mit Stufe-IV-Waffen, Stufe Phönix, Held unverwundbar. Nach einer Aufwärmphase
   /// wird [benchmarkSeconds] lang gemessen.
   void startBenchmark() {
     startRun('smg', kDifficultyCount);
     final r = run!;
     r.wave = 12;
+    r.slotsUnlocked = r.weaponSlotCap;
     r.weapons.first.tier = 3;
-    for (final id in ['pistol', 'shotgun', 'rail', 'rocket', 'smg']) {
+    for (final id in ['shotgun', 'rail', 'rocket', 'pistol', 'smg'].take(r.maxWeapons - 1)) {
       r.addWeapon(id, 3);
     }
     startWave();

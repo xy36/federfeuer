@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +29,7 @@ Future<FederfeuerGame> _game(WidgetTester t) async {
     ..wave = 6;
   game.godMode = true;
   game.player.position.setValues(200, 300);
+  game.debugAlwaysReact = true;
   return game;
 }
 
@@ -139,5 +142,32 @@ void main() {
     final hp = near.hp;
     game.hurtEnemy(e, 10, false, 0, fx: s, classes: s.classes);
     expect(near.hp, lessThan(hp), reason: 'kleine Explosion der Gabe');
+  });
+
+  testWidgets('Reaktionen lösen nur mit Wahrscheinlichkeit aus – schnelle Waffen seltener je Treffer', (t) async {
+    final game = await _game(t);
+    game.debugAlwaysReact = false;
+    final r = game.run!;
+    // Formel: Grundchance × min(1, Abklingzeit / 1 s) ÷ Projektile
+    expect(game.reactionChance(Reaction.frost, null), kReactionChance[Reaction.frost]);
+    final smg = r.weaponStats('smg', 0), shotgun = r.weaponStats('shotgun', 0);
+    expect(game.reactionChance(Reaction.frost, smg), closeTo(0.15 * smg.cooldown, 1e-9));
+    expect(game.reactionChance(Reaction.steam, shotgun),
+        closeTo(0.25 * min(1.0, shotgun.cooldown) / shotgun.count, 1e-9));
+
+    // Stichprobe: nasser Gegner, Wind-Treffer ohne Waffe → etwa 15 % Frost
+    final e = _rock(game, 900);
+    var frozen = 0;
+    const n = 600;
+    for (var i = 0; i < n; i++) {
+      e
+        ..wetT = 2
+        ..frozenT = 0
+        ..reactCd = 0
+        ..hp = 1e9;
+      game.hurtEnemy(e, 1, false, 0, classes: const [WeaponClass.wind]);
+      if (e.frozen) frozen++;
+    }
+    expect(frozen / n, closeTo(kReactionChance[Reaction.frost]!, 0.05));
   });
 }

@@ -1,17 +1,21 @@
+import 'dart:collection';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:gamepads/gamepads.dart';
 
 import '../game/config.dart';
 import '../game/federfeuer_game.dart';
-import '../game/gamepad_input.dart' show controllerActive;
+import '../game/gamepad_input.dart' show ModalMenu, controllerActive, openModalMenu;
 import '../game/run_state.dart';
 import 'bird_preview.dart';
 import 'controls_editor.dart' show ShortcutHint;
 import 'fusion.dart';
 import 'inspect.dart';
 import 'inspect_info.dart';
+import 'radial_menu.dart';
+import 'stats_page.dart';
 import 'widgets.dart';
 
 class ShopOverlay extends StatefulWidget {
@@ -43,16 +47,25 @@ class _ShopOverlayState extends State<ShopOverlay> {
   @override
   void dispose() {
     if (game.onShopHotkey == _hotkey) game.onShopHotkey = null;
+    if (identical(openModalMenu, _picker)) openModalMenu = null;
+    for (final n in _tileNodes.values) {
+      n.dispose();
+    }
     for (final n in _sections) {
       n.dispose();
     }
     super.dispose();
   }
 
+  /// Eigene Seite mit allen Werten offen?
+  bool _statsOpen = false;
+
   void _hotkey(ShopHotkey key) {
     final r = game.run!;
     if (_fusion != null || r.traitChoice != null) return; // Animation bzw. Eigenschafts-Wahl läuft
     switch (key) {
+      case ShopHotkey.stats:
+        setState(() => _statsOpen = true);
       case ShopHotkey.reroll:
         if (r.money >= r.rerollCost) setState(() => r.reroll(game.rng));
       case ShopHotkey.start:
@@ -83,6 +96,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
   Widget build(BuildContext context) {
     final r = game.run!;
     game.progress.noteRun(r); // Kompendium: alles hier Gezeigte gilt als gesehen
+    _syncPicking(r);
     final next = biomeForWave(r.wave + 1);
     final panel = Panel(
       maxWidth: 960,
@@ -90,10 +104,11 @@ class _ShopOverlayState extends State<ShopOverlay> {
         (GamepadButton.a, 'Kaufen'),
         (GamepadButton.x, 'Neu würfeln'),
         (GamepadButton.y, 'Zurückhalten'),
+        (GamepadButton.b, 'Info schließen'),
         (GamepadButton.leftBumper, '/ RB Bereich'),
         (GamepadButton.start, 'Welle starten'),
       ],
-      footer: Row(
+      footer: _blockWhenPicking(Row(
         children: [
           MoneyPill(r.money),
           const SizedBox(width: 12),
@@ -103,7 +118,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
               valueListenable: controllerActive,
               builder: (context, pad, _) => pad || isTouchPlatform
                   ? const SizedBox.shrink()
-                  : GlyphText('R würfeln · L zurückhalten · Bild ↑↓ Bereich',
+                  : GlyphText('R würfeln · L zurückhalten · C Werte · Bild ↑↓ Bereich',
                       maxLines: 1, overflow: TextOverflow.ellipsis, style: bodyText(11.5, color: Ui.muted)),
             ),
           ),
@@ -116,7 +131,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
             onPressed: game.nextWave,
           ),
         ],
-      ),
+      )),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -134,7 +149,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
               ],
             ),
           ),
-          Row(
+          _blockWhenPicking(Row(
             children: [
               Expanded(child: sectionTitle('Angebote')),
               const SizedBox(width: 12),
@@ -147,14 +162,14 @@ class _ShopOverlayState extends State<ShopOverlay> {
                 onPressed: r.money >= r.rerollCost ? () => setState(() => r.reroll(game.rng)) : null,
               ),
             ],
-          ),
-          _sectionArea(
+          )),
+          _blockWhenPicking(_sectionArea(
             0,
             Wrap(spacing: 12, runSpacing: 4, children: [for (var i = 0; i < r.offers.length; i++) _offer(r, i)]),
-          ),
+          )),
           LayoutBuilder(
             builder: (context, box) {
-              final left = _sectionArea(1, _inventory(r)), right = _sectionArea(2, _stats(r));
+              final left = _sectionArea(1, _inventory(r)), right = _blockWhenPicking(_sectionArea(2, _stats(r)));
               if (box.maxWidth > 680) {
                 return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,14 +187,22 @@ class _ShopOverlayState extends State<ShopOverlay> {
       ),
     );
     final f = _fusion, choice = r.traitChoice;
-    return Stack(
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.escape): () {
+          if (_picking) _picker.close();
+        },
+      },
+      child: Stack(
       fit: StackFit.expand,
       children: [
-        // Während der Eigenschafts-Wahl ist der Shop dahinter nicht ansteuerbar
-        ExcludeFocus(excluding: choice != null, child: panel),
+        // Während der Eigenschafts-Wahl bzw. auf der Werte-Seite ist der Shop dahinter nicht ansteuerbar
+        ExcludeFocus(excluding: choice != null || _statsOpen, child: panel),
         if (choice != null) _traitChooser(r, choice),
+        if (_statsOpen && choice == null) StatsPage(run: r, onClose: () => setState(() => _statsOpen = false)),
         if (f != null) FusionAnimation(a: f.$1, b: f.$2, result: f.$3, onDone: () => setState(() => _fusion = null)),
       ],
+    ),
     );
   }
 
@@ -218,8 +241,71 @@ class _ShopOverlayState extends State<ShopOverlay> {
     );
   }
 
-  /// Slot, der gerade seine Gabe abgibt (Ziel wird gewählt), sonst null.
-  int? _donor;
+  /// Waffe, die gerade ihre Gabe abgibt bzw. aus der Reserve getauscht wird (Ziel wird gewählt).
+  OwnedWeapon? _donor, _swap;
+
+  /// Waffen-Angebot, das gerade direkt als Gabe gekauft wird ([_donor] ist dann eine Vorschau-Waffe).
+  int? _giftOffer;
+
+  void _cancelGift() {
+    _donor = null;
+    _giftOffer = null;
+  }
+
+  /// Ziel wählen (Gabe abgeben/kaufen, aus der Reserve tauschen): nur gültige Ziele und
+  /// „abbrechen“ sind ansteuerbar, der Rest ist gedimmt und gesperrt; Esc/B brechen ab.
+  bool get _picking => _donor != null || _swap != null;
+  late final _picker = _Picker(() => setState(() {
+        _cancelGift();
+        _swap = null;
+      }));
+  bool _wasPicking = false;
+
+  /// Fokusknoten der Waffenkacheln (Controller springt beim Zielwählen aufs erste Ziel).
+  final _tileNodes = HashMap<OwnedWeapon, FocusNode>.identity();
+
+  FocusNode _tileNode(OwnedWeapon w) => _tileNodes.putIfAbsent(w, () => FocusNode(debugLabel: 'Waffe ${w.id}'));
+
+  void _syncPicking(RunState r) {
+    final picking = _picking;
+    // Kacheln verkaufter/verschmolzener Waffen aufräumen
+    final gone = _tileNodes.keys.where((w) => !r.allWeapons.any((o) => identical(o, w))).toList();
+    if (picking == _wasPicking && gone.isEmpty) return;
+    final entering = picking && !_wasPicking;
+    _wasPicking = picking;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      for (final w in gone) {
+        _tileNodes.remove(w)?.dispose();
+      }
+      if (!mounted) return;
+      // Übernimmt den Platz auch vom gerade schließenden Kreismenü (dieses gibt nur sich selbst frei)
+      if (picking) openModalMenu = _picker;
+      if (!picking && identical(openModalMenu, _picker)) openModalMenu = null;
+      if (entering) {
+        final first = r.allWeapons.where(_isTarget).map((w) => _tileNodes[w]).nonNulls.firstOrNull;
+        first?.requestFocus();
+      }
+    });
+  }
+
+  bool _isTarget(OwnedWeapon w) {
+    final r = game.run!, donor = _donor, swap = _swap;
+    if (donor != null) return r.canGiftTo(donor, w);
+    if (swap != null) return r.weapons.contains(w);
+    return false;
+  }
+
+  /// Beim Zielwählen gesperrt und gedimmt.
+  Widget _blockWhenPicking(Widget child, {bool block = true}) {
+    final b = block && _picking;
+    return ExcludeFocus(
+      excluding: b,
+      child: IgnorePointer(
+        ignoring: b,
+        child: AnimatedOpacity(opacity: b ? 0.35 : 1, duration: const Duration(milliseconds: 150), child: child),
+      ),
+    );
+  }
 
   /// Laufende Verschmelz-Animation (Zutaten, Ergebnis).
   (ActionId, ActionId, ActionId)? _fusion;
@@ -244,50 +330,102 @@ class _ShopOverlayState extends State<ShopOverlay> {
   // ---------------- Angebote ----------------
 
   /// Angebotskarte mit Schloss-Knopf darunter.
+  /// Angebot, dessen Kreismenü offen ist.
+  int? _offerMenu;
+
+  /// Angebotskarte; Antippen öffnet das Kreismenü (kaufen, als Gabe, zurückhalten).
   Widget _offer(RunState r, int i) {
     final o = r.offers[i];
+    if (_offerMenu == i && (o.sold || _picking)) _offerMenu = null;
     return Focus(
       canRequestFocus: false,
       skipTraversal: true,
       onFocusChange: (v) {
         if (v) _focusedOffer = i;
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (o.sold)
-            _offerCard(r, i)
-          else
-            Inspectable(
-              radius: 16,
-              info: (_) => o.isWeapon ? weaponInfo(r, o.id, o.tier, price: o.price) : itemInfo(r, o.id, price: o.price),
-              child: _offerCard(r, i),
+      child: o.sold
+          ? _offerCard(r, i)
+          : RadialMenu(
+              open: _offerMenu == i,
+              options: _offerMenu == i ? _offerOptions(r, i) : const [],
+              onClose: () => setState(() {
+                if (_offerMenu == i) _offerMenu = null;
+              }),
+              innerRadius: 34,
+              thickness: 56,
+              child: Stack(clipBehavior: Clip.none, children: [
+                Inspectable(
+                  radius: 16,
+                  info: (_) => o.isWeapon
+                      ? weaponInfo(r, o.id, o.tier, price: o.price, loadout: true)
+                      : itemInfo(r, o.id, price: o.price),
+                  child: _offerCard(r, i),
+                ),
+                // Zurückgehalten: Schloss-Abzeichen an der Karte
+                if (o.locked)
+                  Positioned(
+                    key: ValueKey('lock-badge-$i'),
+                    left: -6,
+                    top: -2,
+                    child: IgnorePointer(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: Palette.sun,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [BoxShadow(color: Palette.sun.withAlpha(120), blurRadius: 10)],
+                        ),
+                        child: GlyphText('🔒', style: bodyText(11, color: const Color(0xFF0A0F24), weight: 900)),
+                      ),
+                    ),
+                  ),
+              ]),
             ),
-          SizedBox(width: _cardW, height: _lockH, child: o.sold ? null : _lockButton(r, i)),
-        ],
-      ),
     );
   }
 
-  static const _lockH = 30.0;
-
-  Widget _lockButton(RunState r, int i) {
-    final locked = r.offers[i].locked;
-    return Pressable(
+  /// Wahlmöglichkeiten im Kreismenü eines Angebots; nicht mögliche bleiben grau mit Grund.
+  List<RadialOption> _offerOptions(RunState r, int i) {
+    final o = r.offers[i], poor = r.money < o.price;
+    final opts = <RadialOption>[];
+    if (o.isWeapon) {
+      final ok = r.canAddWeapon(o.id, o.tier), mergeNow = r.mergesOnBuy(o.id, o.tier);
+      opts.add(RadialOption(
+        price: o.price,
+        label: !ok ? 'Slots voll' : (poor ? 'zu teuer' : (mergeNow ? 'kaufen ⤴ ${tiers[o.tier + 1].label}' : 'kaufen')),
+        color: Palette.mint,
+        onPressed: ok && !poor ? () => _buy(i) : null,
+      ));
+      if (r.offerHasGiftTarget(i)) {
+        opts.add(RadialOption(
+          icon: '✦',
+          label: poor ? 'zu teuer' : 'als Gabe',
+          color: Palette.purple,
+          onPressed: poor
+              ? null
+              : () => setState(() {
+                    _swap = null;
+                    _sel = null;
+                    _giftOffer = i;
+                    _donor = OwnedWeapon(o.id, o.tier);
+                  }),
+        ));
+      }
+    } else {
+      opts.add(RadialOption(
+        price: o.price,
+        label: poor ? 'zu teuer' : 'kaufen',
+        color: Palette.mint,
+        onPressed: poor ? null : () => _buy(i),
+      ));
+    }
+    opts.add(RadialOption(
+      icon: o.locked ? '🔓' : '🔒',
+      label: o.locked ? 'freigeben' : 'zurückhalten',
+      color: Palette.sun,
       onPressed: () => setState(() => r.toggleLock(i)),
-      builder: (context, s) => Sticker(
-        state: s,
-        color: locked ? Palette.sun : Ui.card,
-        radius: 10,
-        depth: 2,
-        child: Center(
-          child: GlyphText(
-            locked ? '🔒 Zurückgehalten' : '🔓 Zurückhalten',
-            style: bodyText(11.5, color: locked ? Palette.sun : Ui.muted, weight: 900),
-          ),
-        ),
-      ),
-    );
+    ));
+    return opts;
   }
 
   Widget _offerCard(RunState r, int i) {
@@ -332,9 +470,9 @@ class _ShopOverlayState extends State<ShopOverlay> {
           ok ? PriceTag(o.price) : const Text('Slots voll'),
           color: ok && !poor ? Palette.sun : const Color(0xFF6C7590),
         ),
-        onPressed: poor || !ok ? null : () => _buy(i),
-        // Zu teuer oder kein Platz: nicht kaufbar, aber ansteuerbar, um es anzusehen
-        focusableWhenDisabled: !o.sold,
+        onPressed: () => setState(() => _offerMenu = i),
+        // Zu teuer oder kein Platz: grau, öffnet aber das Kreismenü (Grund, Zurückhalten, als Gabe)
+        dimmed: poor || !ok,
       );
     }
 
@@ -397,7 +535,8 @@ class _ShopOverlayState extends State<ShopOverlay> {
         picking ? const GlyphText('Platz wählen ↘') : PriceTag(o.price),
         color: poor ? const Color(0xFF6C7590) : Palette.sun,
       ),
-      onPressed: poor ? null : () => _buy(i),
+      onPressed: () => setState(() => _offerMenu = i),
+      dimmed: poor,
     );
   }
 
@@ -552,15 +691,17 @@ class _ShopOverlayState extends State<ShopOverlay> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        sectionTitle('Waffen ${r.weapons.length}/${r.maxWeapons}'),
+        sectionTitle('Waffen ${r.weapons.length}/${r.maxWeapons}'
+            '${r.weaponSlotCap > r.maxWeapons ? ' · ${r.weaponSlotCap - r.maxWeapons} gesperrt' : ''}'),
         _weaponRing(r),
+        _reserveRow(r),
         _weaponBar(r),
 
         sectionTitle('Items'),
         if (r.items.isEmpty)
           Text('Noch keine', style: mutedStyle)
         else
-          Wrap(
+          _blockWhenPicking(Wrap(
             spacing: 6,
             runSpacing: 6,
             children: [
@@ -575,7 +716,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
                   ),
                 ),
             ],
-          ),
+          )),
       ],
     );
   }
@@ -587,7 +728,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
       final n = r.classCount(cls);
       if (n == 0) continue;
       final lvl = setLevel(n);
-      final nextAt = n < 2 ? 2 : (n < 4 ? 4 : (n < 6 ? 6 : 0));
+      final nextAt = nextSetAt(n);
       rows.add(
         Inspectable(
           focusable: true,
@@ -606,19 +747,36 @@ class _ShopOverlayState extends State<ShopOverlay> {
     ];
   }
 
-  // ---------------- Waffenring ----------------
+  // ---------------- Waffenring und Reserve ----------------
 
-  /// Gewählte Waffe (Index), für die die Aktionsleiste gilt.
-  int? _selected;
+  /// Gewählte Waffe (aktiv oder Reserve), für die die Aktionsleiste gilt.
+  OwnedWeapon? _sel;
 
   static const _ringH = 270.0, _tile = 62.0;
 
-  /// Eigene Waffen schweben wie im Spiel im Kreis um den Vogel; freie Plätze gestrichelt.
+  bool _owned(RunState r, OwnedWeapon? w) => w != null && r.allWeapons.any((o) => identical(o, w));
+
+  /// Eigene Waffen schweben wie im Spiel im Kreis um den Vogel; freie Plätze leer,
+  /// noch gesperrte mit Schloss (Waffengurt oder Torwächter).
   Widget _weaponRing(RunState r) {
-    if (_selected != null && _selected! >= r.weapons.length) _selected = null;
+    if (!_owned(r, _sel)) _sel = null;
+    final gi = _giftOffer, donor = _donor;
+    if (gi != null) {
+      // Angebot inzwischen verkauft, neu gewürfelt oder zu teuer: Auswahl verwerfen
+      if (gi >= r.offers.length ||
+          donor == null ||
+          r.offers[gi].id != donor.id ||
+          !r.offerHasGiftTarget(gi) ||
+          r.money < r.offers[gi].price) {
+        _cancelGift();
+      }
+    } else if (!_owned(r, donor)) {
+      _donor = null;
+    }
+    if (!_owned(r, _swap)) _swap = null;
     return LayoutBuilder(builder: (context, box) {
       final w = box.maxWidth, cx = w / 2, cy = _ringH / 2 - 6;
-      final rx = min(w / 2 - 44, 200.0), ry = 92.0, n = r.maxWeapons;
+      final rx = min(w / 2 - 44, 200.0), ry = 92.0, n = r.weaponSlotCap;
       Offset at(int k) {
         final a = -pi / 2 + k / n * pi * 2;
         return Offset(cx + cos(a) * rx, cy + sin(a) * ry);
@@ -638,63 +796,154 @@ class _ShopOverlayState extends State<ShopOverlay> {
               left: at(k).dx - 40,
               top: at(k).dy - _tile / 2,
               width: 80,
-              child: k < r.weapons.length ? _ringTile(r, k) : _ringEmpty(),
+              child: k < r.weapons.length
+                  ? _weaponTile(r, r.weapons[k], key: ValueKey('weapon-tile-$k'))
+                  : _blockWhenPicking(k < r.maxWeapons ? _emptyTile('frei') : _lockedTile()),
             ),
         ]),
       );
     });
   }
 
-  Widget _ringEmpty() => Column(mainAxisSize: MainAxisSize.min, children: [
+  Widget _emptyTile(String label, {double size = _tile}) => Column(mainAxisSize: MainAxisSize.min, children: [
         Container(
-          width: _tile,
-          height: _tile,
+          width: size,
+          height: size,
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Ui.slot,
             border: Border.all(color: Ui.panelLine, width: 1.5),
           ),
-          child: Text('frei', style: bodyText(11, color: Ui.muted)),
+          child: Text(label, style: bodyText(11, color: Ui.muted)),
         ),
       ]);
 
-  void _tapTile(RunState r, int i) => setState(() {
-        final donor = _donor;
+  /// Noch gesperrter Platz: Schloss, Hinweis im Info-Panel.
+  Widget _lockedTile() => Inspectable(
+        focusable: true,
+        radius: 40,
+        info: (_) => Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text('Gesperrter Waffenplatz', style: displayStyle(15, Ui.text)),
+          const SizedBox(height: 4),
+          Text('Freischalten mit einem Waffengurt aus dem Shop oder durch einen besiegten Torwächter.',
+              style: bodyText(12.5, color: Ui.muted)),
+        ]),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: _tile,
+            height: _tile,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0x14050814),
+              border: Border.all(color: Ui.panelLine.withAlpha(90), width: 1.2),
+            ),
+            child: GlyphText('🔒', style: bodyText(18, color: Ui.muted)),
+          ),
+        ]),
+      );
+
+  /// Reserve: zwei kleine Plätze unter dem Ring.
+  Widget _reserveRow(RunState r) => Padding(
+        padding: const EdgeInsets.only(top: 2, bottom: 2),
+        child: Row(children: [
+          Text('RESERVE', style: displayStyle(11, Ui.muted).copyWith(letterSpacing: 1.5)),
+          const SizedBox(width: 10),
+          for (var k = 0; k < kReserveSlots; k++)
+            Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: SizedBox(
+                width: 64,
+                child: k < r.reserve.length
+                    ? _weaponTile(r, r.reserve[k], key: ValueKey('reserve-tile-$k'), size: 48)
+                    : _emptyTile('frei', size: 48),
+              ),
+            ),
+          Expanded(
+            child: Text('feuert nicht, kein Set-Bonus – Partner und Gaben-Spender',
+                style: bodyText(11, color: Ui.muted), maxLines: 2),
+          ),
+        ]),
+      );
+
+  void _tap(RunState r, OwnedWeapon w) => setState(() {
+        final donor = _donor, swap = _swap;
         if (donor != null) {
-          if (i == donor) {
+          final gi = _giftOffer;
+          if (identical(w, donor)) {
             _donor = null;
-          } else if (r.canGift(donor, i)) {
-            final target = r.weapons[i];
-            r.giveGift(donor, i);
+          } else if (gi != null) {
+            if (r.buyAsGift(gi, w)) {
+              _cancelGift();
+              _sel = null; // kein Kreismenü direkt danach
+            }
+          } else if (r.canGiftTo(donor, w)) {
+            r.giftTo(donor, w);
             _donor = null;
-            _selected = r.weapons.indexOf(target);
+            _sel = null;
           }
           return;
         }
-        _selected = _selected == i ? null : i;
+        if (swap != null) {
+          if (identical(w, swap)) {
+            _swap = null;
+          } else if (r.weapons.contains(w)) {
+            r.swapWeapons(swap, w);
+            _swap = null;
+            _sel = null;
+          }
+          return;
+        }
+        _sel = identical(_sel, w) ? null : w;
       });
 
-  Widget _ringTile(RunState r, int i) {
-    final w = r.weapons[i], t = tiers[w.tier];
-    final selected = _selected == i;
-    final partner = _donor == null && _selected != null && _selected! < r.weapons.length && r.mergePartner(_selected!) == i;
-    final target = _donor != null && r.canGift(_donor!, i);
-    final donor = _donor == i;
-    final accent = target ? Palette.purple : (partner ? Palette.mint : (selected || donor ? Palette.sun : t.color));
-    final marked = selected || partner || target || donor;
-    return Inspectable(
-      key: ValueKey('weapon-tile-$i'),
+  Widget _weaponTile(RunState r, OwnedWeapon w, {Key? key, double size = _tile}) {
+    final t = tiers[w.tier];
+    final sel = _sel, donor = _donor, swap = _swap;
+    final selected = identical(sel, w);
+    final partner = donor == null && swap == null && sel != null && identical(r.partnerFor(sel), w);
+    final target = donor != null && r.canGiftTo(donor, w);
+    final swapTarget = swap != null && r.weapons.contains(w);
+    final picking = identical(donor, w) || identical(swap, w);
+    final accent = target
+        ? Palette.purple
+        : (swapTarget ? Palette.cyan : (partner ? Palette.mint : (selected || picking ? Palette.sun : t.color)));
+    final marked = selected || partner || target || swapTarget || picking;
+    // Beim Zielwählen nur die Ziele ansteuerbar; die abgebende Waffe bleibt hell, ist aber gesperrt
+    final blocked = _picking && !target && !swapTarget;
+    final menuOpen = selected && donor == null && swap == null;
+    return ExcludeFocus(
+      excluding: blocked,
+      child: IgnorePointer(
+        ignoring: blocked,
+        child: AnimatedOpacity(
+          opacity: blocked && !picking ? 0.35 : 1,
+          duration: const Duration(milliseconds: 150),
+          child: Inspectable(
+      key: key,
       radius: 40,
-      info: (_) => target ? weaponGiftPreview(r, r.weapons[_donor!], w) : weaponInfo(r, w.id, w.tier, owned: w),
+      info: (_) => target
+          ? weaponGiftPreview(r, donor, w, price: _giftOffer == null ? null : r.offers[_giftOffer!].price)
+          : weaponInfo(r, w.id, w.tier, owned: w, loadout: true),
       child: Pressable(
-        onPressed: () => _tapTile(r, i),
+        focusNode: _tileNode(w),
+        onPressed: () => _tap(r, w),
         builder: (context, s) => Column(mainAxisSize: MainAxisSize.min, children: [
-          AnimatedContainer(
+          RadialMenu(
+            open: menuOpen,
+            options: selected ? _weaponOptions(r, w) : const [],
+            onClose: () => setState(() {
+              if (identical(_sel, w)) _sel = null;
+            }),
+            innerRadius: size / 2 + 10,
+            thickness: size < _tile ? 48 : 52,
+            child: AnimatedContainer(
             duration: const Duration(milliseconds: 120),
-            width: _tile,
-            height: _tile,
-            transform: Matrix4.translationValues(0, s.highlighted || marked ? -3 : 0, 0),
+            width: size,
+            height: size,
+            // Mit offenem Kreismenü nicht anheben, sonst sitzt der Ring versetzt
+            transform: Matrix4.translationValues(0, !menuOpen && (s.highlighted || marked) ? -3 : 0, 0),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: RadialGradient(colors: [
@@ -708,7 +957,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
               boxShadow: [BoxShadow(color: accent.withAlpha(s.highlighted || marked ? 130 : 50), blurRadius: marked ? 22 : 12)],
             ),
             child: Stack(clipBehavior: Clip.none, children: [
-              Center(child: Glyph(WeaponGlyph(w.id, tier: w.tier), size: 40)),
+              Center(child: Glyph(WeaponGlyph(w.id, tier: w.tier), size: size * 0.65)),
               // Stufe als kleines Abzeichen oben rechts
               Positioned(
                 right: -4,
@@ -724,7 +973,7 @@ class _ShopOverlayState extends State<ShopOverlay> {
                 ),
               ),
             ]),
-          ),
+          )),
           const SizedBox(height: 4),
           // Klassen als Punkte, Gaben-Plätze als Rauten (gefüllt = belegt)
           Row(mainAxisSize: MainAxisSize.min, children: [
@@ -733,6 +982,9 @@ class _ShopOverlayState extends State<ShopOverlay> {
             for (var g = 0; g < maxGifts(w.tier); g++) _diamond(g < w.gifts.length),
           ]),
         ]),
+      ),
+    ),
+        ),
       ),
     );
   }
@@ -757,92 +1009,100 @@ class _ShopOverlayState extends State<ShopOverlay> {
         ),
       );
 
-  /// Aktionsleiste für die gewählte Waffe (bzw. Hinweis beim Abgeben einer Gabe).
-  Widget _weaponBar(RunState r) {
-    final donor = _donor, sel = _selected;
-    if (donor != null && donor < r.weapons.length) {
-      final d = r.weapons[donor];
-      return Padding(
+  Widget _hintRow(String text, Color color, VoidCallback cancel, Widget info) => Padding(
         padding: const EdgeInsets.only(top: 4),
         child: Row(children: [
-          Expanded(
-            child: classText('Gabe „${weaponGifts[d.id]!.name}“ (${d.def.cls.label}): Wähle die Waffe, die sie erhält.',
-                bodyText(12.5, color: Palette.purple)),
-          ),
+          Expanded(child: classText(text, bodyText(12.5, color: color))),
           Inspectable(
             radius: 8,
-            info: (_) => _giftHint(d),
-            child: _slotButton('↺', 'abbrechen', base: Ui.slot, active: Palette.coral.withAlpha(90),
-                onPressed: () => setState(() => _donor = null)),
+            info: (_) => info,
+            child: _slotButton('↺', 'abbrechen', base: Ui.slot, active: Palette.coral.withAlpha(90), onPressed: () => setState(cancel)),
           ),
         ]),
       );
+
+  /// Hinweiszeile unter Ring und Reserve (bzw. Hinweis beim Abgeben einer Gabe oder Tauschen).
+  Widget _weaponBar(RunState r) {
+    final donor = _donor, swap = _swap, w = _sel;
+    if (donor != null) {
+      final price = _giftOffer == null ? null : r.offers[_giftOffer!].price;
+      return _hintRow(
+          '${price == null ? 'Gabe' : 'Gabe kaufen ($price)'} „${weaponGifts[donor.id]!.name}“ (${donor.def.cls.label}): '
+          'Wähle die Waffe, die sie erhält.',
+          Palette.purple,
+          _cancelGift,
+          _giftHint(donor, price: price));
     }
-    if (sel == null) {
+    if (swap != null) {
+      return _hintRow('${swap.def.name} einsetzen: Wähle die aktive Waffe, die dafür in die Reserve geht.', Palette.cyan,
+          () => _swap = null, weaponInfo(r, swap.id, swap.tier, owned: swap, loadout: true));
+    }
+    if (w == null) {
       return Padding(
         padding: const EdgeInsets.only(top: 4),
-        child: Text('Waffe antippen: verschmelzen, Gabe abgeben oder verkaufen.', style: mutedStyle),
+        child: Text('Waffe antippen: verschmelzen, Gabe abgeben, Reserve oder verkaufen.', style: mutedStyle),
       );
     }
-    final w = r.weapons[sel], t = tiers[w.tier];
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(children: [
+        Text('${w.def.name} ${tiers[w.tier].label}${r.reserve.contains(w) ? ' · Reserve' : ''}  ',
+            maxLines: 1, style: displayStyle(14, Ui.cardText)),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-            Text('${w.def.name} ${t.label}', maxLines: 1, overflow: TextOverflow.ellipsis, style: displayStyle(14, Ui.cardText)),
-            classText(w.classes.map((c) => c.label).join(' + '), bodyText(11.5, color: Ui.cardMuted), maxLines: 1),
-          ]),
+          child: classText(w.classes.map((c) => c.label).join(' + '), bodyText(11.5, color: Ui.cardMuted), maxLines: 1),
         ),
-        if (r.mergePartner(sel) >= 0)
-          Inspectable(
-            radius: 8,
-            info: (_) => weaponMergePreview(r, w),
-            child: _slotButton(
-              '⤴ ${tiers[w.tier + 1].label}',
-              'verschmelzen',
-              base: Palette.mint.withAlpha(40),
-              active: Palette.mint.withAlpha(110),
-              onPressed: () => setState(() {
-                r.merge(sel);
-                _selected = r.weapons.indexOf(w);
-              }),
-            ),
-          ),
-        if (r.hasGiftTarget(sel))
-          Inspectable(
-            radius: 8,
-            info: (_) => _giftHint(w),
-            child: _slotButton('✦', 'Gabe', base: Palette.purple.withAlpha(30), active: Palette.purple.withAlpha(110),
-                onPressed: () => setState(() => _donor = sel)),
-          ),
-        if (r.weapons.length > 1)
-          Inspectable(
-            radius: 8,
-            info: (_) => weaponInfo(r, w.id, w.tier, owned: w),
-            child: _slotButton(
-              '+${r.sellPrice(w)}',
-              'verkaufen',
-              base: Ui.slot,
-              active: Palette.sun.withAlpha(90),
-              onPressed: () => setState(() {
-                r.sell(sel);
-                _selected = null;
-              }),
-            ),
-          ),
       ]),
     );
   }
 
+  /// Wahlmöglichkeiten im Kreismenü einer eigenen Waffe.
+  List<RadialOption> _weaponOptions(RunState r, OwnedWeapon w) {
+    final inReserve = r.reserve.contains(w);
+    return [
+      if (r.partnerFor(w) != null)
+        RadialOption(
+          icon: '⤴ ${tiers[w.tier + 1].label}',
+          label: 'verschmelzen',
+          color: Palette.mint,
+          onPressed: () => setState(() => r.mergeWeapon(w)),
+        ),
+      if (r.hasGiftTargetFor(w))
+        RadialOption(
+          icon: '✦',
+          label: 'Gabe',
+          color: Palette.purple,
+          onPressed: () => setState(() => _donor = w),
+        ),
+      if (inReserve && !r.slotsFull)
+        RadialOption(icon: '↑', label: 'einsetzen', color: Palette.cyan, onPressed: () => setState(() => r.toActive(w)))
+      else if (inReserve && r.weapons.isNotEmpty)
+        RadialOption(icon: '↻', label: 'tauschen', color: Palette.cyan, onPressed: () => setState(() => _swap = w))
+      else if (!inReserve && !r.reserveFull && r.weapons.length > 1)
+        RadialOption(icon: '↓', label: 'Reserve', color: Palette.cyan, onPressed: () => setState(() => r.toReserve(w))),
+      if (inReserve || r.weapons.length > 1)
+        RadialOption(
+          price: r.sellPrice(w),
+          gain: true,
+          label: 'verkaufen',
+          color: Palette.sun,
+          onPressed: () => setState(() => r.sellWeapon(w)),
+        ),
+    ];
+  }
+
   /// Info zum Gabe-Knopf: was diese Waffe weitergibt.
-  Widget _giftHint(OwnedWeapon w) {
+  Widget _giftHint(OwnedWeapon w, {int? price}) {
     final g = weaponGifts[w.id]!;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-      Text('Gabe „${g.name}“ abgeben', style: displayStyle(15, Palette.purple)),
+      Text(price == null ? 'Gabe „${g.name}“ abgeben' : 'Nur die Gabe „${g.name}“ kaufen',
+          style: displayStyle(15, Palette.purple)),
       const SizedBox(height: 4),
       classText('${g.desc}, dazu Klasse ${w.def.cls.label}.', bodyText(12.5, color: Ui.text)),
-      Text('Danach die Waffe wählen, die sie erhält. ${w.def.name} verschwindet.', style: bodyText(12, color: Ui.muted)),
+      Text(
+          price == null
+              ? 'Danach die Waffe wählen, die sie erhält. ${w.def.name} verschwindet.'
+              : 'Danach die Waffe wählen, die sie erhält. Kostet $price, ${w.def.name} belegt keinen Platz.',
+          style: bodyText(12, color: Ui.muted)),
     ]);
   }
 
@@ -898,17 +1158,26 @@ class _ShopOverlayState extends State<ShopOverlay> {
     return Inspectable(focusable: true, radius: 8, info: (_) => statInfo(r, stat), child: row);
   }
 
+  /// Die wichtigsten Werte im Shop; alle mit Herkunft und Wirkung auf der Werte-Seite.
+  static const _keyStats = [Stat.maxHp, Stat.dmg, Stat.atk, Stat.crit, Stat.armor, Stat.luck];
+
   Widget _stats(RunState r) {
     String v(Stat s) => '${fmtNum(r.stat(s))}${s.unit.isEmpty ? '' : ' ${s.unit}'}';
-    final rows = <(String, String, Stat?)>[
-      for (final s in Stat.values) (s == Stat.regen ? 'Regen. / 5 s' : s.label, v(s), s),
-      ('Level', '${r.level}', null),
-    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         ..._sets(r),
-        sectionTitle('Werte'),
+        Row(children: [
+          Expanded(child: sectionTitle('Werte')),
+          const ShortcutHint(keyLabel: 'C', pad: GamepadButton.back),
+          GameButton(
+            label: 'Alle Werte',
+            icon: '▸',
+            size: 13,
+            color: Ui.card,
+            onPressed: () => setState(() => _statsOpen = true),
+          ),
+        ]),
         Container(
           padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
           decoration: BoxDecoration(
@@ -922,8 +1191,8 @@ class _ShopOverlayState extends State<ShopOverlay> {
               return Wrap(
                 spacing: 16,
                 children: [
-                  for (final (label, value, stat) in rows)
-                    SizedBox(width: colW, child: _statRow(r, label, value, stat)),
+                  for (final s in _keyStats) SizedBox(width: colW, child: _statRow(r, s.label, v(s), s)),
+                  SizedBox(width: colW, child: _statRow(r, 'Level', '${r.level}', null)),
                 ],
               );
             },
@@ -932,6 +1201,21 @@ class _ShopOverlayState extends State<ShopOverlay> {
       ],
     );
   }
+}
+
+/// Zielwählen im Shop als modales Menü: B/Esc brechen ab, Kurztasten ruhen, Info-Panels bleiben.
+class _Picker implements ModalMenu {
+  _Picker(this.onCancel);
+  final VoidCallback onCancel;
+
+  @override
+  void close() => onCancel();
+
+  @override
+  void navigate(TraversalDirection dir) => FocusManager.instance.primaryFocus?.focusInDirection(dir);
+
+  @override
+  bool get hidesInfo => false;
 }
 
 /// Feine Umlaufbahn der Waffen um den Vogel.
