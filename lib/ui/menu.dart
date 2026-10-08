@@ -501,7 +501,7 @@ class _PlayPageState extends State<_PlayPage> {
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
           if (c.startAction != null) Pill(c.startAction!.label, glyph: ActionGlyph(c.startAction!), color: const Color(0x33FFD23F)),
-          if (c.maxWeapons != 6) Pill('${c.maxWeapons} Waffenslots', icon: '🎒'),
+          if (c.maxWeapons != kMaxWeapons) Pill('${c.maxWeapons} Waffenslots', icon: '🎒'),
         ]),
         if (lock != null && !p.hasCharacter(lock.id)) ...[
           const SizedBox(height: 8),

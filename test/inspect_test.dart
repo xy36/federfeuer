@@ -5,6 +5,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:federfeuer/game/config.dart' show ActionId;
 import 'package:federfeuer/game/federfeuer_game.dart';
 import 'package:federfeuer/main.dart' show buildOverlayMap;
 import 'package:federfeuer/ui/inspect.dart';
@@ -33,6 +34,7 @@ void main() {
     game.startRun('pistol');
     final r = game.run!;
     r.money = 200;
+    r.addAction(ActionId.quake);
     r.addWeapon('shotgun', 1);
     r.items['gummiente'] = 1;
     r.items['helm'] = 2;
@@ -53,9 +55,26 @@ void main() {
     await mouse.moveTo(const Offset(5, 5));
     await t.pump(const Duration(milliseconds: 100));
     expect(find.byType(InfoCard), findsNothing);
-    // Tastatur: Fokus auf Aktion
+    // Angeklickt (fokussiert) und Maus weg: Panel zu, kein Rückfall auf das fokussierte Element
+    await t.ensureVisible(find.text('Rüstung').last);
+    await t.pump(const Duration(milliseconds: 100));
+    final armor = t.getCenter(find.text('Rüstung').last);
+    await mouse.moveTo(armor);
+    await t.pump(const Duration(milliseconds: 100));
+    await mouse.down(armor);
+    await mouse.up();
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.byType(InfoCard), findsOneWidget);
+    await mouse.moveTo(const Offset(5, 5));
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.byType(InfoCard), findsNothing, reason: 'Maus verlässt das Element');
+    // Fokus aus dem Programm nach Mausbenutzung: kein Panel
     await mouse.removePointer();
-    Focus.of(t.element(find.text('Sturzflug · 3 s'))).requestFocus();
+    Focus.of(t.element(find.textContaining('Felsbeben ·'))).requestFocus();
+    await t.pump(const Duration(milliseconds: 100));
+    expect(find.byType(InfoCard), findsNothing);
+    // Tastatur: Pfeiltaste zeigt das Panel des angesteuerten Elements
+    await t.sendKeyEvent(LogicalKeyboardKey.arrowUp);
     await t.pump(const Duration(milliseconds: 100));
     expect(find.byType(InfoCard), findsOneWidget);
     await t.sendKeyEvent(LogicalKeyboardKey.arrowDown);

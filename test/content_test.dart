@@ -99,12 +99,13 @@ void main() {
   });
 
   group('Set-Boni', () {
-    test('Schwellen bei 2, 4 und 6 Waffen', () {
-      expect([for (var n = 0; n <= 6; n++) setLevel(n)], [0, 0, 1, 1, 2, 2, 3]);
+    test('Schwellen bei 2, 3 und 4 Waffen', () {
+      expect([for (var n = 0; n <= 5; n++) setLevel(n)], [0, 0, 1, 2, 3, 3]);
+      expect([for (var n = 0; n <= 4; n++) nextSetAt(n)], [2, 2, 3, 4, 0]);
     });
 
     test('Licht-Set erhöht Krit, Stein-Set Rüstung', () {
-      final r = RunState('pistol');
+      final r = RunState('pistol')..slotsUnlocked = kMaxWeapons;
       final crit = r.stat(Stat.crit);
       r.addWeapon('rail', 0);
       expect(r.stat(Stat.crit), crit + kSetCrit[1]);
@@ -139,7 +140,7 @@ void main() {
       expect(hen.weapons, isEmpty);
       expect(hen.actions.single.id, ActionId.egg);
       expect(RunState(null).weapons.single.id, 'pistol');
-      expect(RunState(null).actions.single.id, ActionId.dash);
+      expect(RunState(null).actions, isEmpty, reason: 'Kampfspatz startet ohne Aktion');
     });
 
     test('Klassenbonus: Ruß macht mit Böse-Waffen 25 % mehr Schaden', () {
@@ -165,7 +166,7 @@ void main() {
     test('Strauß: zäh, schnell am Boden, Material fällt; frei mit Frack ab Welle 10', () {
       final r = RunState(null, characterId: 'strauss');
       expect(r.maxHp, (20 * 1.6).roundToDouble());
-      expect(r.actions.single.id, ActionId.kick);
+      expect(r.actions.single.id, ActionId.fireBomb);
       expect(r.dropFallSpeed, 70);
       final p = Progress();
       expect(p.checkUnlocks(RunState(null, characterId: 'frack')..wave = 9, won: false).map((c) => c.id), isNot(contains('strauss')));
@@ -182,40 +183,40 @@ void main() {
       expect(p.checkUnlocks(RunState(null, difficulty: 4), won: true).map((c) => c.id), contains('adler'));
     });
 
-    test('Glitzer: Shop 15 % günstiger, nur 4 Slots', () {
+    test('Glitzer: Shop 15 % günstiger, ein Waffenplatz weniger', () {
       final s = RunState(null), g = RunState(null, characterId: 'glitzer');
       expect(g.weaponPrice('rail', 0), (s.weaponPrice('rail', 0) / 1 * 0.85).round());
-      expect(g.maxWeapons, 4);
+      expect(g.weaponSlotCap, kMaxWeapons - 1);
     });
   });
 
   group('Items', () {
     test('Zweite Aktion kommt in Platz 2, gleiche Aktion wird Stufe II', () {
-      final r = _withItem(RunState(null), 'a_horn');
-      expect(r.actions.map((a) => a.id), [ActionId.dash, ActionId.horn]);
-      expect(r.actionBuy(ActionId.horn), ActionBuy.upgrade);
-      _withItem(r, 'a_horn');
+      final r = _withItem(_withItem(RunState(null), 'a_quake'), 'a_screech');
+      expect(r.actions.map((a) => a.id), [ActionId.quake, ActionId.screech]);
+      expect(r.actionBuy(ActionId.screech), ActionBuy.upgrade);
+      _withItem(r, 'a_screech');
       expect(r.actions[1].level, 1);
-      expect(r.actions[1].cooldown, closeTo(ActionId.horn.cooldown * kActionLv2Cooldown, 1e-9));
-      expect(r.itemAvailable(itemById['a_horn']!), isFalse, reason: 'Stufe II ist das Maximum');
-      expect(r.actionBuy(ActionId.clock), ActionBuy.replace);
-      r.addAction(ActionId.clock, replaceSlot: 1);
-      expect(r.actions.map((a) => a.id), [ActionId.dash, ActionId.clock]);
+      expect(r.actions[1].cooldown, closeTo(ActionId.screech.cooldown * kActionLv2Cooldown, 1e-9));
+      expect(r.itemAvailable(itemById['a_screech']!), isFalse, reason: 'Stufe II ist das Maximum');
+      expect(r.actionBuy(ActionId.flash), ActionBuy.replace);
+      r.addAction(ActionId.flash, replaceSlot: 1);
+      expect(r.actions.map((a) => a.id), [ActionId.quake, ActionId.flash]);
     });
 
     test('Passende Aktionen verschmelzen und geben einen Platz frei', () {
-      final r = RunState(null); // Sturzflug
+      final r = _withItem(RunState(null), 'a_downpour');
       expect(r.evolution, isNull);
-      _withItem(r, 'a_horn');
-      expect(r.evolution!.result, ActionId.sonicBoom);
+      _withItem(r, 'a_whirlwind');
+      expect(r.evolution!.result, ActionId.glacier);
       expect(r.evolve(), isTrue);
-      expect(r.actions.single.id, ActionId.sonicBoom);
+      expect(r.actions.single.id, ActionId.glacier);
       expect(r.actions.length, 1);
     });
 
-    test('Jede Aktion außer Evolutionen steckt in mindestens einem Rezept, Ergebnisse sind Evolutionen', () {
-      for (final a in ActionId.values.where((a) => !a.evolved)) {
-        expect(recipesWith(a), isNotEmpty, reason: a.label);
+    test('Rezepte: Ergebnisse sind Evolutionen, jede Evolution hat genau ein Rezept', () {
+      for (final a in ActionId.values.where((a) => a.evolved)) {
+        expect(actionRecipes.where((r) => r.result == a), hasLength(1), reason: a.label);
       }
       for (final rec in actionRecipes) {
         expect(rec.result.evolved, isTrue);
@@ -270,6 +271,7 @@ void main() {
     test('Frack: Welle 10 mit 3 Wasser-Waffen', () {
       final p = Progress();
       final r = RunState('water')
+        ..slotsUnlocked = kMaxWeapons
         ..addWeapon('bubbles', 0)
         ..wave = 10;
       expect(p.checkUnlocks(r, won: false).map((c) => c.id), isNot(contains('frack')));
@@ -337,11 +339,11 @@ void main() {
       for (final a in ActionId.values) {
         for (final level in [0, 1]) {
           game.waveTime = 999;
-          game.player.position.x = 400; // Sturzflug & Co. nicht bis ins Ziel
+          game.player.position.x = 400;
           game.addEnemy(EnemyType.crow, Vector2(p.x + 60, p.y));
           game.run!.actions
             ..clear()
-            ..add(OwnedAction(ActionId.dash))
+            ..add(OwnedAction(ActionId.egg))
             ..add(OwnedAction(a, level));
           game.actionCds[1] = 0;
           expect(game.phase, Phase.play, reason: '${a.label} $level');

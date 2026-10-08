@@ -25,19 +25,14 @@ class ActionConstellation extends StatefulWidget {
   /// Reihenfolge auf dem Kreis: Rezeptpartner möglichst nebeneinander.
   /// Jede Vogel-Aktion sitzt zwischen ihren beiden Rezeptpartnern.
   static const order = [
-    ActionId.dash,
-    ActionId.bellySlide,
+    ActionId.whirlwind, // zwischen Lichtblitz (am Kreis vorn) und Platzregen
+    ActionId.downpour,
     ActionId.bubbleShield,
-    ActionId.clock,
-    ActionId.steal,
-    ActionId.magnet,
     ActionId.egg,
-    ActionId.storm,
-    ActionId.screech, // zwischen Gewitterwolke und Lichtblitz
+    ActionId.quake,
+    ActionId.fireBomb,
+    ActionId.screech,
     ActionId.flash,
-    ActionId.drumroll,
-    ActionId.horn,
-    ActionId.kick, // zwischen Hupe und (am Kreis wieder vorn) Sturzflug
   ];
 
   @override

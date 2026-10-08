@@ -279,7 +279,7 @@ void main() {
     }
     // Glitzer hat nur 4 Slots, Henriette startet ohne Waffe
     final g = RunState(null, characterId: 'glitzer')..debugEquip(15, Random(1));
-    expect(g.weapons.length, 4);
+    expect(g.weapons.length, g.maxWeapons);
     final h = RunState(null, characterId: 'henriette')..debugEquip(10, Random(1));
     expect(h.weapons, isNotEmpty);
   });

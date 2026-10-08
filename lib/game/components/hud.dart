@@ -56,6 +56,61 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
     OutlineText.draw(c, 'WELLE ENDET', Offset(s.x / 2, s.y * 0.4 + 62), size: 13, color: _muted);
   }
 
+  static final _windRing = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..strokeWidth = 4;
+
+  /// Ankündigung einer Aktion oben in der Mitte: beim Aufladen Symbol mit sich füllendem
+  /// Ring und Name, beim Auslösen ploppt der Name groß auf und verblasst (wie der Countdown).
+  void _actionBanner(Canvas c, Vector2 s) {
+    final g = game, cx = s.x / 2, cy = s.y * 0.2;
+    final windup = g.announcing;
+    if (windup != null) {
+      final col = GlyphArt.colorOf(ActionGlyph(windup));
+      final f = 1 - clampD(g.announceT / g.announceTotal, 0, 1); // 0 → 1
+      Glow.draw(c, cx, cy, 46, col.withValues(alpha: 0.35));
+      c.save();
+      c.translate(cx, cy);
+      GlyphArt.draw(c, ActionGlyph(windup), 44, t: g.clock);
+      c.restore();
+      _windRing.color = col.withValues(alpha: 0.35);
+      c.drawCircle(Offset(cx, cy), 30, _windRing);
+      _windRing.color = Color.lerp(col, Colors.white, 0.35)!;
+      c.drawArc(Rect.fromCircle(center: Offset(cx, cy), radius: 30), -pi / 2, 2 * pi * f, false, _windRing);
+      OutlineText.draw(c, windup.label.toUpperCase(), Offset(cx, cy + 46), size: 16, color: col);
+      return;
+    }
+    final shout = g.shoutAction;
+    if (shout == null || g.shoutT <= 0) return;
+    final col = GlyphArt.colorOf(ActionGlyph(shout));
+    final frac = clampD(g.shoutT / kActionShoutTime, 0, 1); // 1 → 0
+    final pop = 1 + 0.4 * clampD((frac - 0.75) / 0.25, 0, 1);
+    final alpha = ((0.25 + 0.75 * frac) * 8).round() / 8;
+    c.save();
+    c.translate(cx, cy + 10);
+    c.scale(pop);
+    OutlineText.draw(c, '${shout.label.toUpperCase()}!', Offset.zero, size: 34, color: col.withValues(alpha: alpha));
+    c.restore();
+  }
+
+  static final _night = Paint();
+
+  /// Nachtschatten (verflucht): Bild außerhalb eines Kreises um den Vogel dunkel.
+  void _nightShade(Canvas c, Vector2 s, double k) {
+    final g = game;
+    final mirrored = g.chaos(ChaosEffect.mirror);
+    final px = (mirrored ? g.camX + g.viewW - g.player.x : g.player.x - g.camX) * g.zoom / k;
+    final py = (g.player.y + g.offY) * g.zoom / k;
+    final rad = kNightRadius * g.zoom / k;
+    _night.shader = RadialGradient(
+      radius: 1,
+      colors: const [Color(0x00000000), Color(0x00000000), Color(0xE6020308)],
+      stops: const [0, 0.55, 1],
+    ).createShader(Rect.fromCircle(center: Offset(px, py), radius: rad));
+    c.drawRect(Rect.fromLTWH(0, 0, s.x, s.y), _night);
+  }
+
   static final _chaosEdge = Paint()..style = PaintingStyle.stroke;
 
   /// Aktive Chaos-Zustände: farbiger Bildschirmrand und Name mit Restzeit unten in der Mitte.
@@ -153,7 +208,11 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
         _capsule(c, Rect.fromLTWH(cx - bw / 2, 122, bw, 9), gate.hp / gate.maxHp, _boss);
       }
     }
-    if (g.playing) _chaos(c, s);
+    if (g.playing) {
+      if (g.run?.has(ItemEffect.nightShade) == true) _nightShade(c, s, k);
+      _chaos(c, s);
+      _actionBanner(c, s);
+    }
 
     // Wetteranzeige unter Timer bzw. Boss-Leiste
     final wt = g.weather;

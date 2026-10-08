@@ -32,7 +32,7 @@ class Drop extends PositionComponent with HasGameReference<FederfeuerGame>, Tran
   /// Schon im Sammelradius erfasst und auf dem Weg zum Spieler.
   bool get pulled => _pulled;
 
-  /// Magnetpfiff / Klauen: fliegt sofort zum Spieler.
+  /// Wirbelsturm: fliegt sofort zum Spieler.
   void pull() => _pulled = true;
 
   @override

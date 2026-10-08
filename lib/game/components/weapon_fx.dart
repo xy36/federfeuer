@@ -9,7 +9,9 @@ import '../perf.dart';
 import '../run_state.dart';
 import 'draw.dart';
 import 'enemy.dart';
+import 'glyph_art.dart';
 import 'light.dart';
+import 'pickups.dart';
 import 'transient.dart';
 
 Enemy? _nearest(FederfeuerGame game, Vector2 from, double range) {
@@ -252,5 +254,155 @@ class Lightning extends PositionComponent with Transient, CombatEffect {
       ..color = Color.fromRGBO(255, 255, 255, k);
     c.drawPath(path, _paint);
     Glow.draw(c, 0, 0, 50, Color.fromRGBO(190, 220, 255, 0.7 * k));
+  }
+}
+
+/// Wirbelsturm: Tornado zieht zur nächsten Gegnergruppe, saugt Gegner (außer Boss und
+/// stationären) und Material ein und trifft alle 0,4 s alles darin (Wind-Treffer).
+/// Gewittersturm: zusätzlich alle 0,3 s ein Blitz in einen Gegner in der Nähe.
+class Tornado extends PositionComponent with HasGameReference<FederfeuerGame>, Transient {
+  Tornado(Vector2 pos, this.dmg, this.life, {this.lightning = false}) : super(position: pos, priority: 18);
+  final double dmg;
+  final bool lightning;
+  double life, _tick = 0, _bolt = 0, _t = 0;
+  static const radius = 70.0;
+
+  @override
+  void update(double dt) {
+    if (!game.playing) return;
+    life -= dt;
+    _t += dt;
+    if (life <= 0) {
+      removeFromParent();
+      return;
+    }
+    // Zur nächsten Gegnergruppe treiben
+    Enemy? near;
+    var best = double.infinity;
+    for (final e in game.enemies) {
+      if (e.dead) continue;
+      final d = (e.x - x).abs();
+      if (d < best) {
+        best = d;
+        near = e;
+      }
+    }
+    if (near != null) position.x += clampD(near.x - x, -1, 1) * 120 * dt;
+    position.x = clampD(x, 30, game.worldW - 30);
+    // Einsaugen
+    for (final e in game.enemies) {
+      if (e.dead || e.boss || e.stationary) continue;
+      final d = position - e.position, len = d.length;
+      if (len < radius * 2.4 && len > 8) e.position.addScaled(d / len, 260 * dt);
+    }
+    for (final dr in game.world.children.whereType<Drop>()) {
+      if (dr.position.distanceTo(position) < radius * 2.4) dr.pull();
+    }
+    _tick -= dt;
+    if (_tick <= 0) {
+      _tick = 0.4;
+      for (final e in [...game.enemies]) {
+        if (!e.dead && e.position.distanceTo(position) < radius + e.r) {
+          game.hurtEnemy(e, dmg, false, 0, classes: const [WeaponClass.wind]);
+        }
+      }
+    }
+    if (lightning) {
+      _bolt -= dt;
+      if (_bolt <= 0) {
+        _bolt = 0.3;
+        game.lightningAround(position, 220, 1, dmg * 1.8);
+      }
+    }
+  }
+
+  @override
+  void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.effects)) return;
+    final a = clampD(life / 0.5, 0, 1) * clampD(_t / 0.3, 0, 1);
+    final col = lightning ? const Color(0xFFBFD8FF) : const Color(0xFFBFF8E6);
+    // Trichter: übereinanderliegende, wirbelnde Ringe, unten schmal, oben breit
+    for (var k = 0; k < 7; k++) {
+      final y = 40 - k * 18.0, w = 16 + k * 9.0, sway = sin(_t * 5 + k * 0.7) * 8;
+      Glow.draw(c, sway, y, w * 1.3, col.withValues(alpha: 0.18 * a));
+      c.drawOval(
+          Rect.fromCenter(center: Offset(sway, y), width: w * 2, height: 10),
+          Paint()
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2
+            ..blendMode = BlendMode.plus
+            ..color = col.withValues(alpha: 0.6 * a));
+    }
+  }
+}
+
+/// Platzregen: dichter Regen über dem ganzen Bild für kurze Zeit (nur Darstellung).
+class Downpour extends Component with HasGameReference<FederfeuerGame>, Transient {
+  Downpour(this.left, this.width, this.life) : _max = life, super(priority: 49);
+  final double left, width, _max;
+  double life;
+  static final _paint = Paint()
+    ..strokeWidth = 2
+    ..strokeCap = StrokeCap.round
+    ..blendMode = BlendMode.plus;
+
+  @override
+  void update(double dt) {
+    life -= dt;
+    if (life <= 0) removeFromParent();
+  }
+
+  @override
+  void render(Canvas c) {
+    if (perfSkip.contains(RenderPart.effects)) return;
+    final a = clampD(life / _max, 0, 1);
+    _paint.color = Color.fromRGBO(140, 210, 255, 0.55 * a);
+    final fall = (_max - life) * 900;
+    for (var i = 0; i < 90; i++) {
+      final x = left + (i * 37.0) % width, y = kCeil + ((i * 53.0 + fall) % (kGround - kCeil));
+      c.drawLine(Offset(x, y), Offset(x - 4, y + 16), _paint);
+    }
+  }
+}
+
+/// Zielkreis einer angekündigten Kraft: pulsiert am Ziel (Glutbombe, Wirbelsturm) bzw. um den
+/// Vogel (Felsbeben) und zieht sich bis zum Auslösen zusammen.
+class ActionTelegraph extends Component with HasGameReference<FederfeuerGame> {
+  ActionTelegraph() : super(priority: 19);
+  static final _ring = Paint()
+    ..style = PaintingStyle.stroke
+    ..blendMode = BlendMode.plus;
+
+  @override
+  void render(Canvas c) {
+    final id = game.announcing;
+    if (id == null || perfSkip.contains(RenderPart.effects)) return;
+    final Vector2 at;
+    final double radius;
+    switch (id) {
+      case ActionId.fireBomb || ActionId.hellmaw || ActionId.whirlwind || ActionId.thunderstorm:
+        final t = game.announceAt;
+        if (t == null) return;
+        at = t;
+        radius = id == ActionId.whirlwind || id == ActionId.thunderstorm ? 70 : kFireBombRadius;
+      case ActionId.quake:
+        at = Vector2(game.player.x, kGround);
+        radius = kQuakeRadius;
+      default:
+        return;
+    }
+    final k = clampD(game.announceT / game.announceTotal, 0, 1); // 1 → 0 bis zum Auslösen
+    final col = GlyphArt.colorOf(ActionGlyph(id));
+    final pulse = 0.5 + 0.5 * sin(game.clock * 18);
+    final rr = radius * (0.6 + 0.4 * k);
+    Glow.draw(c, at.x, at.y, rr * 1.2, col.withValues(alpha: 0.12 + 0.1 * pulse));
+    _ring
+      ..strokeWidth = 8
+      ..color = col.withValues(alpha: 0.25 + 0.15 * pulse);
+    c.drawCircle(Offset(at.x, at.y), rr, _ring);
+    _ring
+      ..strokeWidth = 2.5
+      ..color = Color.lerp(col, Colors.white, 0.4)!.withValues(alpha: 0.7 + 0.3 * pulse);
+    c.drawCircle(Offset(at.x, at.y), rr, _ring);
   }
 }

@@ -40,40 +40,58 @@ Future<void> _run(WidgetTester t, FederfeuerGame game, double seconds) async {
 }
 
 void main() {
-  testWidgets('Hupe löst aus, wenn mehrere Gegner nah sind', (t) async {
-    final game = await _game(t, ActionId.horn);
+  testWidgets('Felsbeben löst aus, wenn mehrere Gegner nah sind', (t) async {
+    final game = await _game(t, ActionId.quake);
     await _run(t, game, 0.3);
-    expect(game.actionCds[0], 0, reason: 'ohne Gegner in der Nähe wartet sie');
+    expect(game.actionCds[0], 0, reason: 'ohne Gegner in der Nähe wartet es');
     game.addEnemy(EnemyType.rock, Vector2(680, 300));
     game.addEnemy(EnemyType.rock, Vector2(520, 300));
+    // Erst ankündigen (Aufladen sichtbar), dann auslösen
     await _run(t, game, 0.2);
+    expect(game.announcing, ActionId.quake);
+    expect(game.actionCds[0], 0, reason: 'noch am Aufladen');
+    await _run(t, game, kActionWindup);
     expect(game.actionCds[0], greaterThan(0));
+    expect(game.announcing, isNull);
+    expect(game.shoutAction, ActionId.quake, reason: 'Name wird eingeblendet');
   });
 
-  testWidgets('Sturzflug weicht einer Kugel aus – weg von ihr', (t) async {
-    final game = await _game(t, ActionId.dash);
-    game.player.face = 1;
+  testWidgets('Seifenblase schützt vor einer anfliegenden Kugel', (t) async {
+    final game = await _game(t, ActionId.bubbleShield);
     game.world.add(EnemyBullet(Vector2(640, 300), Vector2(-200, 0), 6, 1, const Color(0xFFFFFFFF)));
-    await _run(t, game, 0.1);
+    await _run(t, game, kShieldWindup + 0.1);
     expect(game.actionCds[0], greaterThan(0));
-    expect(game.player.face, -1);
+    expect(game.shieldT, greaterThan(0));
   });
 
-  testWidgets('Magnetpfiff wartet auf genug Material im Bild', (t) async {
-    final game = await _game(t, ActionId.magnet);
+  testWidgets('Wirbelsturm wartet auf eine Gruppe oder genug Material', (t) async {
+    final game = await _game(t, ActionId.whirlwind);
     await _run(t, game, 0.3);
     expect(game.actionCds[0], 0);
     game.dropMaterial(Vector2(800, 250), kAutoMaterial + 3);
-    await _run(t, game, 0.3);
+    await _run(t, game, kActionWindup + 0.3);
     expect(game.actionCds[0], greaterThan(0));
   });
 
-  testWidgets('Kampf-Aktionen lösen spätestens nach der Rückfallzeit aus', (t) async {
-    final game = await _game(t, ActionId.horn);
+  testWidgets('Kampf-Kräfte lösen spätestens nach der Rückfallzeit aus', (t) async {
+    final game = await _game(t, ActionId.quake);
     game.addEnemy(EnemyType.rock, Vector2(900, 200));
     await _run(t, game, 1);
     expect(game.actionCds[0], 0, reason: 'ein einzelner Gegner weit weg lohnt sich nicht sofort');
     await _run(t, game, kAutoFallback);
     expect(game.actionCds[0], greaterThan(0));
+  });
+
+  testWidgets('Platzregen macht alle Gegner im Bild nass, Glutbombe setzt in Brand', (t) async {
+    final game = await _game(t, ActionId.downpour);
+    game.addEnemy(EnemyType.rock, Vector2(800, 250));
+    final e = game.enemies.last;
+    game.useAction(0);
+    expect(e.wet, isTrue);
+    game.run!.actions[0] = OwnedAction(ActionId.fireBomb);
+    game.actionCds[0] = 0;
+    e.wetT = 0;
+    game.useAction(0);
+    expect(e.burning, isTrue);
   });
 }

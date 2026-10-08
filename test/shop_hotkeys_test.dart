@@ -6,6 +6,8 @@ import 'package:federfeuer/game/config.dart';
 import 'package:federfeuer/game/federfeuer_game.dart';
 import 'package:federfeuer/game/gamepad_input.dart';
 import 'package:federfeuer/main.dart' show buildOverlayMap;
+import 'package:federfeuer/ui/inspect.dart' show InfoCard;
+import 'package:federfeuer/ui/widgets.dart' show ChoiceCard;
 import 'package:gamepads/gamepads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -105,6 +107,45 @@ void main() {
     await t.sendKeyEvent(LogicalKeyboardKey.keyN);
     await t.pump();
     expect(game.phase, Phase.shop);
+    game.toMenu();
+    await t.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('Controller: B schließt das Info-Panel, Weiterbewegen zeigt es wieder', (t) async {
+    final game = await _shop(t);
+    void press(GamepadButton b) {
+      game.pad
+        ..handle(_button(b, 1))
+        ..handle(_button(b, 0));
+    }
+
+    // Erstes Angebot ansteuern, dann per Steuerkreuz zum nächsten
+    final card = find.byType(ChoiceCard).first;
+    Focus.of(t.element(find.descendant(of: card, matching: find.byType(Text)).first)).requestFocus();
+    await t.pump();
+    press(GamepadButton.dpadRight);
+    await t.pump();
+    expect(find.byType(InfoCard), findsOneWidget);
+    press(GamepadButton.b);
+    await t.pump();
+    expect(find.byType(InfoCard), findsNothing);
+    expect(game.phase, Phase.shop, reason: 'B verlässt den Shop nicht');
+    press(GamepadButton.dpadLeft);
+    await t.pump();
+    expect(find.byType(InfoCard), findsOneWidget);
+    expect(t.takeException(), isNull, reason: 'Hinweiszeile ohne Überlauf');
+    game.toMenu();
+    await t.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('Controller-Hinweiszeile im Shop passt auch auf kleine Bildschirme', (t) async {
+    final game = await _shop(t);
+    t.view.physicalSize = const Size(844, 390);
+    controllerActive.value = true;
+    await t.pump();
+    await t.pump();
+    expect(find.text('Info schließen'), findsOneWidget);
+    expect(t.takeException(), isNull);
     game.toMenu();
     await t.pump(const Duration(seconds: 1));
   });

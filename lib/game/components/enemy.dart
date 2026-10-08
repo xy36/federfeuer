@@ -245,9 +245,9 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     if (elite == EliteMod.healer) _healNearby(dt);
     flash -= dt;
     healGlow = max(0.0, healGlow - dt);
-    // Verlangsamung und Zeitlupe (Taschenuhr) wirken auf Bewegung und Angriffe
+    // Verlangsamung wirkt auf Bewegung und Angriffe
     final realDt = dt;
-    dt *= (slowT > 0 ? 1 - slowAmt : 1) * (game.timeSlowT > 0 ? 0.3 : 1);
+    dt *= slowT > 0 ? 1 - slowAmt : 1;
     // Eingefroren: auch die Animation steht still
     if (frozenT <= 0) t += dt;
     final p = game.player.position;

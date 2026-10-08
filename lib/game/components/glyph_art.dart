@@ -156,6 +156,7 @@ class GlyphArt {
         Rarity.rare => const Color(0xFF7FC8FF),
         Rarity.epic => const Color(0xFFD08CFF),
         Rarity.legendary => const Color(0xFFFF8A9A),
+        Rarity.cursed => const Color(0xFFFF6AB0),
       };
 
   static void draw(Canvas c, GlyphRef g, double size, {double t = 0}) {

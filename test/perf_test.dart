@@ -44,7 +44,7 @@ void main() {
     }
     expect(game.benchmarkRunning, isTrue);
     expect(game.enemies.length, greaterThanOrEqualTo(FederfeuerGame.benchmarkEnemies - 10));
-    expect(game.run!.weapons.length, 6);
+    expect(game.run!.weapons.length, game.run!.maxWeapons);
     expect(game.run!.hp, greaterThanOrEqualTo(hp), reason: 'unverwundbar; Level-ups dürfen HP erhöhen');
     expect(game.phase, Phase.play);
     expect(game.biome.name, 'forest');

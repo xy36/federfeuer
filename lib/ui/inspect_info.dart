@@ -58,7 +58,9 @@ String _s(double v) => '${fmtNum(v)} s';
 String _pct(double v) => '${(v * 100).round()} %';
 
 /// Waffe in Stufe [tier]; [owned] = Slot im Inventar (zeigt Verkaufspreis).
-Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? price, bool showSell = true}) {
+/// [loadout]: Reaktionen nur mit der aktuellen Ausrüstung des Runs (Shop, Pause) statt aller möglichen.
+Widget weaponInfo(RunState r, String id, int tier,
+    {OwnedWeapon? owned, int? price, bool showSell = true, bool loadout = false}) {
   final d = weaponDefs[id]!, t = tiers[tier], s = owned != null ? r.statsOf(owned) : r.weaponStats(id, tier);
   final classes = owned?.classes ?? [d.cls];
   final gift = weaponGifts[id]!;
@@ -114,13 +116,13 @@ Widget weaponInfo(RunState r, String id, int tier, {OwnedWeapon? owned, int? pri
       for (final g in owned.gifts)
         _text('• ${weaponGifts[g]!.name} (${weaponDefs[g]!.name}): ${weaponGifts[g]!.desc}', color: _good),
     ],
-    ..._reactionLines(classes),
+    ...(loadout ? _loadoutReactionLines(r, classes, owned: owned) : _reactionLines(classes)),
     _section('Gabe beim Verschmelzen'),
     _classText('${gift.name}: ${gift.desc}, dazu Klasse ${d.cls.label} – geht an eine andere Waffe, wenn du diese mit ihr verschmilzt.',
         color: Ui.muted),
     _section('Klasse ${d.cls.label}', color: d.cls.color),
     for (var i = 0; i < 3; i++)
-      _text('${[2, 4, 6][i]} Waffen: ${d.cls.bonusTexts[i]}',
+      _text('${kSetThresholds[i]} Waffen: ${d.cls.bonusTexts[i]}',
           color: lvl > i ? _good : (next > i ? Palette.sun : Ui.muted)),
     _classText(owned == null ? 'Du hast $have ${d.cls.label}-Waffen${next > lvl ? ' – Kauf erreicht den nächsten Bonus!' : ''}' : 'Du hast $have ${d.cls.label}-Waffen',
         color: Ui.muted),
@@ -198,7 +200,7 @@ Widget setInfo(RunState r, WeaponClass cls) {
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
     _head('◆', 'Set ${cls.label}', '$n ${cls.label}-Waffen', cls.color),
     _section('Boni'),
-    for (var i = 0; i < 3; i++) _text('${[2, 4, 6][i]} Waffen: ${cls.bonusTexts[i]}', color: lvl > i ? _good : Ui.muted),
+    for (var i = 0; i < 3; i++) _text('${kSetThresholds[i]} Waffen: ${cls.bonusTexts[i]}', color: lvl > i ? _good : Ui.muted),
     _section('Waffen dieser Klasse'),
     _text(weaponDefs.values.where((w) => w.cls == cls).map((w) => w.name).join(', '), color: Ui.muted),
   ]);
@@ -250,7 +252,7 @@ Widget characterInfo(Progress p, CharacterDef c) {
     _text([
       c.startWeapons.isEmpty ? 'keine Waffe' : c.startWeapons.map((id) => weaponDefs[id]!.name).join(' / '),
       if (c.startAction != null) c.startAction!.label,
-      if (c.maxWeapons != 6) '${c.maxWeapons} Waffenslots',
+      if (c.maxWeapons != kMaxWeapons) '${c.maxWeapons} Waffenslots',
     ].join(' · ')),
     _section(has ? 'Freigeschaltet' : 'Gesperrt'),
     _text(has ? 'Wählbar unter „Spielen“.' : '${c.unlock.text}${prog == null ? '' : ' (${prog.$1} / ${prog.$2})'}',
@@ -345,8 +347,52 @@ List<Widget> _reactionLines(List<WeaponClass> classes) {
   return lines.isEmpty ? const [] : [_section('Reaktionen'), ...lines];
 }
 
+/// Quellen der aktuellen Ausrüstung für Reaktionen: aktive Waffen (ohne [except]) und Aktionen mit Klasse.
+List<(String, List<WeaponClass>)> _loadoutSources(RunState r, {OwnedWeapon? except}) => [
+      for (final w in r.weapons)
+        if (!identical(w, except)) (w.def.name, w.classes),
+      for (final a in r.actions)
+        if (a.id.cls != null) ('${a.id.label} (Aktion)', [a.id.cls!]),
+    ];
+
+/// Nur Reaktionen, die diese Waffe mit der aktuellen Ausrüstung auslösen kann – mit dem Partner,
+/// der die zweite Klasse liefert. Bei Shop-Angeboten ([owned] null) sind neue Reaktionen markiert.
+List<Widget> _loadoutReactionLines(RunState r, List<WeaponClass> classes, {OwnedWeapon? owned}) {
+  final sources = _loadoutSources(r, except: owned);
+  bool provided(WeaponClass c) => sources.any((s) => s.$2.contains(c));
+  final lines = <Widget>[];
+  final missing = <WeaponClass>{};
+  for (final re in Reaction.values) {
+    if (!classes.contains(re.a) && !classes.contains(re.b)) continue;
+    final need = [re.a, re.b].where((c) => !classes.contains(c)).toList();
+    String who;
+    if (need.isEmpty) {
+      who = 'löst sie selbst aus';
+    } else {
+      final names = [for (final s in sources) if (s.$2.contains(need.first)) s.$1];
+      if (names.isEmpty) {
+        missing.add(need.first);
+        continue;
+      }
+      who = 'mit ${names.take(2).join(', ')}${names.length > 2 ? ' …' : ''}';
+    }
+    // Angebot: schafft der Kauf eine Reaktion, die die Ausrüstung noch nicht hat?
+    final isNew = owned == null && !(provided(re.a) && provided(re.b));
+    lines.add(_classText('• ${isNew ? 'NEU ' : ''}${re.label} ($who): ${re.short}',
+        color: isNew ? _good : Color.lerp(re.color, Colors.white, 0.3)!));
+  }
+  if (lines.isEmpty && missing.isEmpty) return const [];
+  return [
+    _section('Reaktionen'),
+    ...lines,
+    if (lines.isEmpty)
+      _classText('Keine mit deiner Ausrüstung – Partner wären: ${missing.map((c) => c.label).join(', ')}', color: Ui.muted),
+  ];
+}
+
 /// Vorschau: [donor] gibt seine Gabe an [target] ab und verschwindet.
-Widget weaponGiftPreview(RunState r, OwnedWeapon donor, OwnedWeapon target) {
+/// [price] gesetzt: die Spenderwaffe ist ein Shop-Angebot, das nur für die Gabe gekauft wird.
+Widget weaponGiftPreview(RunState r, OwnedWeapon donor, OwnedWeapon target, {int? price}) {
   final g = weaponGifts[donor.id]!, d = target.def, t = tiers[target.tier];
   final classes = {...target.classes, donor.def.cls};
   return Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
@@ -358,7 +404,10 @@ Widget weaponGiftPreview(RunState r, OwnedWeapon donor, OwnedWeapon target) {
       classText(classes.map((c) => c.label).join(' + '), bodyText(12.5, color: Ui.text, weight: 900)),
     ]),
     _line('Gaben', '${target.gifts.length + 1} / ${maxGifts(target.tier)}'),
-    _text('• ${donor.def.name} (Stufe ${tiers[donor.tier].label}) verschwindet, ihr Slot wird frei.'),
+    if (price == null)
+      _text('• ${donor.def.name} (Stufe ${tiers[donor.tier].label}) verschwindet, ihr Slot wird frei.')
+    else
+      _text('• Kostet $price – ${donor.def.name} belegt keinen Platz.'),
     if (donor.gifts.isNotEmpty) _text('• Ihre eigenen Gaben gehen verloren.', color: _bad),
   ]);
 }

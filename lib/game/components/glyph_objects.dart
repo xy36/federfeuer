@@ -193,13 +193,6 @@ class _Obj {
     shine(c, -2.5, -4, 1.4, 2.4, a: 0.7);
   }
 
-  static void horn(Canvas c, [Color col = const Color(0xFFF0B43A)]) {
-    part(c, poly([(-9, -1.4), (-1, -3), (3.5, -7), (3.5, 7), (-1, 3), (-9, 1.4)]), col);
-    part(c, oval(3.5, 0, 1.6, 7), Color.lerp(col, Colors.black, 0.35)!, rim: 0.6);
-    part(c, rrect(-10.5, -2.2, -8, 2.2, 0.8), const Color(0xFF3A2A1A), rim: 0);
-    shine(c, 0, -2.5, 1.2, 1.6, a: 0.55);
-  }
-
   static void soundArcs(Canvas c, double x, Color col, {int n = 2}) {
     for (var k = 0; k < n; k++) {
       beam(c, Path()..addArc(Rect.fromCircle(center: Offset(x, 0), radius: 3 + k * 3), -0.7, 1.4), col, 0.8);
@@ -221,30 +214,12 @@ class _Obj {
     shine(c, -3, -2.5, 1.6, 1, a: 0.5);
   }
 
-  static void swoosh(Canvas c, [Color col = const Color(0xFF7FE0FF)]) {
-    for (final (y, l) in [(-4.0, 7.0), (0.0, 9.0), (4.0, 6.0)]) {
-      beam(c, Path()..moveTo(-8, y)..lineTo(-8 + l, y), col, 1);
-    }
-    part(c, Path()..moveTo(-1, -6)..quadraticBezierTo(5, -6, 9, 0)..quadraticBezierTo(5, 6, -1, 6)..quadraticBezierTo(3, 0, -1, -6)..close(),
-        const Color(0xFFE6F8FF), dark: 0.3);
-  }
-
   static void magnetU(Canvas c, [Color col = const Color(0xFFF04548)]) {
     band(c, Path()..moveTo(-6, -7)..lineTo(-6, 1)..arcToPoint(const Offset(6, 1), radius: const Radius.circular(6), clockwise: false)..lineTo(6, -7),
         col, 5);
     part(c, rrect(-8.5, -10.5, -3.5, -6.5, 0.8), const Color(0xFFDDE3EE), rim: 0.5);
     part(c, rrect(3.5, -10.5, 8.5, -6.5, 0.8), const Color(0xFFDDE3EE), rim: 0.5);
     shine(c, -7.2, -1, 0.8, 3, a: 0.55);
-  }
-
-  static void drum(Canvas c) {
-    for (final s in [-1.0, 1.0]) {
-      band(c, Path()..moveTo(s * 9, -10)..lineTo(s * 2.5, -4), const Color(0xFFC89060), 1.5);
-      dot(c, s * 9, -10, 1.3, const Color(0xFFF2E2C0));
-    }
-    part(c, Path()..moveTo(-7.5, -2)..lineTo(-7.5, 5)..quadraticBezierTo(0, 9.5, 7.5, 5)..lineTo(7.5, -2)..close(), const Color(0xFFD8443A));
-    line(c, seg([(-7, 0), (-4, 5), (-1, 0.5), (2, 6), (5, 0.5), (7, 4)]), const Color(0xFFFFD86A), 0.7);
-    part(c, oval(0, -2, 7.5, 2.4), const Color(0xFFF4E6C8), rim: 0.6, dark: 0.15);
   }
 
   static void glove(Canvas c, Color col) {
@@ -258,35 +233,6 @@ class _Obj {
     part(c, rrect(-5.5, 6.5, 5.5, 9.5, 1.2), Color.lerp(col, Colors.white, 0.35)!, rim: 0);
   }
 
-  static void foot(Canvas c) {
-    band(c, Path()..moveTo(-6, -9)..lineTo(-4, 1), const Color(0xFFE0A07A), 2.6);
-    part(c, Path()..moveTo(-5.5, -1)..lineTo(3, 0)..quadraticBezierTo(4.5, 1, 3, 2.4)..lineTo(-4, 4)..quadraticBezierTo(-7, 3, -5.5, -1)..close(),
-        const Color(0xFFE8A884), rim: 0.6);
-    line(c, Path()..moveTo(-3, 1.2)..lineTo(2.5, 1.2), const Color(0x88804030), 0.7);
-  }
-
-  static void burst(Canvas c, double x, double y, double r, Color col) {
-    final p = Path();
-    for (var i = 0; i < 16; i++) {
-      final an = i * pi / 8, rr = i.isEven ? r : r * 0.45;
-      final q = Offset(x + cos(an) * rr, y + sin(an) * rr);
-      i == 0 ? p.moveTo(q.dx, q.dy) : p.lineTo(q.dx, q.dy);
-    }
-    part(c, p..close(), col, rim: 0, dark: 0.1);
-  }
-
-  static void sun(Canvas c, double t) {
-    glow(c, 0, 0, 13, const Color(0xFFFFB03A), 0.45);
-    final rays = Path();
-    for (var k = 0; k < 10; k++) {
-      final a = k * pi / 5 + t * 0.3;
-      rays.addPolygon([Offset(cos(a - 0.17) * 5.8, sin(a - 0.17) * 5.8), Offset(cos(a) * 9.5, sin(a) * 9.5), Offset(cos(a + 0.17) * 5.8, sin(a + 0.17) * 5.8)], true);
-    }
-    part(c, rays, const Color(0xFFFFB43A), rim: 0, dark: 0.2);
-    part(c, circle(0, 0, 6), const Color(0xFFFFD84A), rim: 0.6, light: 0.6, dark: 0.25);
-    shine(c, -2, -2.4, 1.6, 1.1, a: 0.6);
-  }
-
   static void eagleHead(Canvas c) {
     part(c, Path()..moveTo(-8, 9)..quadraticBezierTo(-9, 0, -4, -3)..lineTo(2, 2)..quadraticBezierTo(0, 7, 2, 9)..close(), const Color(0xFF8A5A30));
     part(c, Path()..moveTo(-6, 4)..cubicTo(-9, -4, -5, -9, 0, -9)..cubicTo(4, -9, 6, -6, 6, -3.5)..lineTo(1, 1)..quadraticBezierTo(-2, 3, -6, 4)..close(),
@@ -296,23 +242,6 @@ class _Obj {
     dot(c, 1.5, -5.2, 1.1, const Color(0xFF2A1A0E));
     dot(c, 1.8, -5.5, 0.35, Colors.white);
     line(c, Path()..moveTo(-1, -6.8)..lineTo(3.5, -6.4), const Color(0xAA6A5030), 0.8);
-  }
-
-  static void penguin(Canvas c) {
-    part(c, oval(-1, 0, 8, 4.2), const Color(0xFF2E3550), light: 0.35);
-    part(c, oval(-1, 1.8, 6.5, 2.2), const Color(0xFFF2F4F8), rim: 0, dark: 0.15);
-    part(c, circle(6.5, -1.5, 3.4), const Color(0xFF2E3550), light: 0.35);
-    part(c, poly([(9.4, -2.2), (12, -1), (9.4, 0)]), const Color(0xFFFF9A3A), rim: 0);
-    dot(c, 7.4, -2.4, 0.8, Colors.white);
-  }
-
-  static void rocket(Canvas c) {
-    part(c, poly([(-1.8, 5), (0, 10), (1.8, 5)]), const Color(0xFFFFA03A), rim: 0, light: 0.6, dark: 0.1);
-    for (final s in [-1.0, 1.0]) {
-      part(c, poly([(s * 3, 1), (s * 6, 6.5), (s * 3, 5)]), const Color(0xFFE84A4A), rim: 0.5);
-    }
-    part(c, Path()..moveTo(0, -9)..cubicTo(4.2, -6, 4, 3, 3, 5.5)..lineTo(-3, 5.5)..cubicTo(-4, 3, -4.2, -6, 0, -9)..close(), const Color(0xFFEFF2F8), dark: 0.35);
-    part(c, circle(0, -2, 1.9), const Color(0xFF6FD0FF), rim: 0.5);
   }
 
   static void spark(Canvas c, double x, double y, double r, Color col) {
@@ -450,6 +379,65 @@ class _Obj {
       case 'klee':
         glow(c, 0, 0, 14, const Color(0xFF50E070));
         _clover(c, 1);
+      // ---- Verflucht: dunkler Schimmer als gemeinsames Zeichen
+      case 'bleifeder':
+        _curse(c);
+        at(c, 0, 0, 1, () => feather(c, const Color(0xFF8A90A0)), rot: 0.6);
+        dot(c, 5, 7, 2.6, const Color(0xFF5A6070));
+      case 'gierschlund':
+        _curse(c);
+        part(c, oval(0, 1, 10, 7.5), const Color(0xFF7A1A3A), light: 0.4);
+        part(c, oval(0, 2, 7, 4), const Color(0xFF1A0610), rim: 0, light: 0, dark: 0);
+        for (var k = -2; k <= 2; k++) {
+          part(c, poly([(k * 2.8 - 1.2, -2), (k * 2.8 + 1.2, -2), (k * 2.8, 1.2)]), const Color(0xFFF4F0E8), rim: 0, dark: 0.1);
+        }
+      case 'glaskoerper':
+        _curse(c);
+        crystal(c, 0, 0, 1.1, const Color(0xFFBFEFFF));
+        line(c, Path()..moveTo(-3, -6)..lineTo(1, 0)..lineTo(-1, 5), const Color(0xCCFFFFFF), 0.8);
+      case 'wirrkopf':
+        _curse(c);
+        part(c, circle(0, 0, 9), const Color(0xFF5A2A6A), light: 0.4);
+        final sp = Path();
+        for (var k = 0; k <= 16; k++) {
+          final rr = 0.5 + k * 0.45, an = k * 0.85 + t * 3;
+          final pt = Offset(cos(an) * rr, sin(an) * rr);
+          k == 0 ? sp.moveTo(pt.dx, pt.dy) : sp.lineTo(pt.dx, pt.dy);
+        }
+        beam(c, sp, const Color(0xFFE6B8FF), 1.1);
+      case 'brennfedern':
+        _curse(c);
+        glow(c, 0, 0, 12, const Color(0xFFFF7A2A), 0.5);
+        at(c, 0, 0, 1, () => feather(c, const Color(0xFFFF9A4A)), rot: 0.6);
+        dot(c, -4, -7, 1.6, const Color(0xFFFFE6A0));
+        dot(c, 5, -4, 1.2, const Color(0xFFFFE6A0));
+      case 'dickbauch':
+        _curse(c);
+        part(c, circle(0, 2, 9.5), const Color(0xFFE8D8C0), light: 0.55);
+        part(c, circle(5, -8, 4), const Color(0xFFE8D8C0), dark: 0.2);
+        dot(c, 6, -8.5, 0.9, const Color(0xFF1A1020));
+        shine(c, -4, -2, 1.6, 2.6);
+      case 'fluchmagnet':
+        _curse(c);
+        at(c, 0, 1, 0.8, () => magnetU(c));
+        part(c, GlyphArt._star(5, 2.2, 5, rot: t * 0.6), const Color(0xFFFFC94A), rim: 0.4);
+      case 'einsamerwolf':
+        _curse(c);
+        part(c, circle(0, 0, 9), const Color(0xFFDDE4F0), light: 0.5);
+        part(c, circle(4, -2, 8), const Color(0xFF1A1428), rim: 0, light: 0, dark: 0);
+        for (final x in [-6.0, -3.5, -1.0]) {
+          beam(c, Path()..moveTo(x, -4)..lineTo(x - 1.5, 5), const Color(0xFFE0408A), 0.9);
+        }
+      case 'sturmkind':
+        _curse(c);
+        at(c, 0, -3, 0.9, () => cloud(c));
+        at(c, 1, 5, 0.6, () => bolt(c));
+      case 'nachtschatten':
+        _curse(c);
+        part(c, oval(0, 0, 10, 5.5), const Color(0xFF1A1428), rim: 0.5);
+        part(c, circle(0, 0, 3.6), const Color(0xFFE0408A), rim: 0, light: 0.5);
+        dot(c, 0, 0, 1.4, const Color(0xFF05020A));
+        spark(c, 7, -6, 2.4, const Color(0xFFFFE6F0));
       case 'wirrkraut':
         // Krauses Kraut mit violettem Wirbel
         glow(c, 0, 0, 14, const Color(0xFFC77DFF), 0.35);
@@ -736,19 +724,14 @@ class _Obj {
   // ---------------- Aktionen ----------------
 
   static Color actionColor(ActionId a) => switch (a) {
-        ActionId.dash => const Color(0xFF7FE0FF),
-        ActionId.horn => const Color(0xFFFFC24A),
-        ActionId.bubbleShield => const Color(0xFFB8A0FF),
+        ActionId.fireBomb => const Color(0xFFFF8A3D),
+        ActionId.downpour => const Color(0xFF6CC8FF),
+        ActionId.whirlwind => const Color(0xFFBFF8E6),
         ActionId.flash => const Color(0xFFFFF27A),
-        ActionId.storm => const Color(0xFF9FB4FF),
-        ActionId.magnet => const Color(0xFFFF6A6A),
-        ActionId.clock => const Color(0xFFE8C88A),
-        ActionId.bellySlide => const Color(0xFF8AD8FF),
-        ActionId.drumroll => const Color(0xFFFF9A5A),
-        ActionId.steal => const Color(0xFFB0F08A),
+        ActionId.screech => const Color(0xFFD08CFF),
+        ActionId.quake => const Color(0xFFC9B8A0),
+        ActionId.bubbleShield => const Color(0xFFB8A0FF),
         ActionId.egg => const Color(0xFFFFE6B8),
-        ActionId.kick => const Color(0xFFFF8A4A),
-        ActionId.screech => const Color(0xFFFFD46A),
         _ => _gold,
       };
 
@@ -764,11 +747,33 @@ class _Obj {
   static void _actionInner(Canvas c, ActionId a, double t) {
     final col = actionColor(a);
     switch (a) {
-      case ActionId.dash:
-        swoosh(c, col);
-      case ActionId.horn:
-        at(c, -1.5, 0, 1, () => horn(c));
-        soundArcs(c, 3, col);
+      case ActionId.fireBomb:
+        // Bombe mit glimmender Lunte
+        part(c, circle(-1, 2, 7.5), const Color(0xFF3A2A30), light: 0.5, dark: 0.4);
+        band(c, Path()..moveTo(3, -4)..quadraticBezierTo(6, -8, 9, -7), const Color(0xFFC9A070), 1.3);
+        glow(c, 9, -7, 6, col, 0.8);
+        spark(c, 9, -7, 3.2, const Color(0xFFFFE6A0));
+        shine(c, -4, -1, 1.4, 2);
+      case ActionId.downpour:
+        // Wolke mit dichten Regenstreifen
+        at(c, 0, -4, 0.9, () => cloud(c));
+        for (final x in [-6.0, -2.0, 2.0, 6.0]) {
+          beam(c, Path()..moveTo(x, 2)..lineTo(x - 2, 9), col, 0.9);
+        }
+      case ActionId.whirlwind:
+        // Trichter aus übereinanderliegenden Wirbeln
+        for (var k = 0; k < 4; k++) {
+          final w = 10.0 - k * 2.2, y = -7.0 + k * 4.2;
+          beam(c, Path()..addOval(Rect.fromCenter(center: Offset(k.isEven ? -0.5 : 0.8, y), width: w * 2, height: 3.4)), col, 0.9);
+        }
+        dot(c, 1, 9.5, 1.4, col);
+      case ActionId.quake:
+        // Fels mit Riss und aufspritzendem Staub
+        part(c, poly([(-9, 8), (-7, -2), (-2, -6), (5, -5), (9, 1), (8, 8)]), col, light: 0.5, dark: 0.45);
+        line(c, Path()..moveTo(-1, -5)..lineTo(1, -1)..lineTo(-1, 3)..lineTo(1, 8), const Color(0xFF3A2A20), 1.1);
+        for (final (x, y) in [(-11.0, 6.0), (11.0, 5.0), (-10.0, 1.0)]) {
+          dot(c, x, y, 1.1, const Color(0xFFE8D8C0));
+        }
       case ActionId.bubbleShield:
         bubble(c, t, r: 9);
       case ActionId.flash:
@@ -778,218 +783,35 @@ class _Obj {
         }
         glow(c, 0, 0, 9, col, 0.6);
         spark(c, 0, 0, 6.5, const Color(0xFFFFF8D0));
-      case ActionId.storm:
-        at(c, 0.5, 5, 0.65, () => bolt(c));
-        at(c, 0, -2.5, 1, () => cloud(c));
-      case ActionId.magnet:
-        at(c, -3, -2, 0.6, () => magnetU(c), rot: -0.5);
-        part(c, Path()..addRRect(RRect.fromLTRBR(-1, -1, 9, 6, const Radius.circular(3.5))), const Color(0xFFD8DEE8));
-        part(c, rrect(-9, 0, 0, 3, 1), const Color(0xFFC0C8D6), rim: 0.5);
-        dot(c, 4, 1.5, 1.3, const Color(0xFF3A4058));
-        for (final y in [-6.0, -3.5]) {
-          beam(c, Path()..moveTo(6, y)..lineTo(9.5, y - 1.5), col, 0.7);
-        }
-      case ActionId.clock:
-        clock(c, t);
-      case ActionId.bellySlide:
-        beam(c, Path()..moveTo(-10, 5.5)..lineTo(10, 5.5), const Color(0xFF8AD8FF), 0.9);
-        for (final y in [-3.0, 1.0]) {
-          beam(c, Path()..moveTo(-11, y)..lineTo(-8, y), col, 0.7);
-        }
-        at(c, -1, 0.5, 1, () => penguin(c));
-      case ActionId.drumroll:
-        drum(c);
-      case ActionId.steal:
-        crystal(c, 0, 4, 0.85, const Color(0xFF6AE88A));
-        band(c, Path()..moveTo(0, -11)..lineTo(0, -5), const Color(0xFFE8A050), 2.6);
-        for (final s in [-1.0, 1.0]) {
-          band(c, Path()..moveTo(0, -5)..quadraticBezierTo(s * 8, -3, s * 5, 5), const Color(0xFFE8A050), 2);
-          dot(c, s * 5, 5, 1.1, const Color(0xFF2A1A0E));
-        }
-        part(c, circle(0, -5, 2.2), const Color(0xFFE8A050), rim: 0.5);
       case ActionId.egg:
         egg(c);
-      case ActionId.kick:
-        burst(c, 6, -2, 4.5, const Color(0xFFFFE04A));
-        foot(c);
       case ActionId.screech:
         at(c, -2, 0.5, 0.9, () => eagleHead(c));
         soundArcs(c, 7, col);
       // ---- Evolutionen
-      case ActionId.sonicBoom:
-        at(c, -2, 0, 0.75, () => swoosh(c));
-        for (final r in [4.0, 7.0, 10.0]) {
-          beam(c, Path()..addArc(Rect.fromCircle(center: const Offset(3, 0), radius: r), -0.9, 1.8), const Color(0xFF7FE0FF), 0.8);
+      // ---- Evolutionen
+      case ActionId.glacier:
+        // Eiskristall
+        for (var k = 0; k < 6; k++) {
+          final an = k * pi / 3;
+          beam(c, Path()..moveTo(0, 0)..lineTo(cos(an) * 10, sin(an) * 10), const Color(0xFFBFE8FF), 1.2);
+          beam(c, Path()..moveTo(cos(an) * 6, sin(an) * 6)..lineTo(cos(an + 0.5) * 8, sin(an + 0.5) * 8), const Color(0xFFBFE8FF), 0.8);
         }
-      case ActionId.bubbleRocket:
-        at(c, 0, 0, 0.8, () => rocket(c), rot: pi / 4);
-        bubble(c, t, r: 9.5, a: 0.42);
-      case ActionId.sunStorm:
-        sun(c, t);
-        at(c, 3.5, 3.5, 0.55, () => bolt(c));
-      case ActionId.snapshot:
-        part(c, rrect(-4, -8, 2, -4, 1), const Color(0xFF2E3448), rim: 0);
-        part(c, rrect(-9.5, -5, 9.5, 7, 2), const Color(0xFF3E4660));
-        part(c, circle(0, 1, 4.8), const Color(0xFF1E2234), rim: 0.6);
-        part(c, circle(0, 1, 3.2), const Color(0xFF6FC8FF), rim: 0, light: 0.6);
-        shine(c, -1, 0, 1, 0.7, a: 0.8);
-        part(c, rrect(5, -3.5, 8, -1.5, 0.5), const Color(0xFFFFFFFF), rim: 0);
-        glow(c, 7, -8, 6, Colors.white, 0.5);
-        spark(c, 7, -8, 3, const Color(0xFFFFFFFF));
-      case ActionId.timeBubble:
-        at(c, 0, -0.5, 0.65, () => clock(c, t));
-        bubble(c, t, r: 9.5, a: 0.42);
-      case ActionId.vacuum:
-        final p = Path();
-        for (var k = 0; k <= 40; k++) {
-          final a = k * 0.32 + t * 2, r = 10 - k * 0.22;
-          final q = Offset(cos(a) * r, sin(a) * r);
-          k == 0 ? p.moveTo(q.dx, q.dy) : p.lineTo(q.dx, q.dy);
-        }
-        beam(c, p, const Color(0xFFA0C8FF), 1);
-        for (final (x, y) in [(-7.0, 6.0), (7.5, -5.0)]) {
-          crystal(c, x, y, 0.3, const Color(0xFF6AE88A));
-        }
-        glow(c, 0, 0, 5, const Color(0xFFFFFFFF), 0.5);
-      case ActionId.goldenHour:
-        c.save();
-        c.clipRect(const Rect.fromLTRB(-12, -12, 12, 3));
-        at(c, 0, 3, 1, () => sun(c, t));
-        c.restore();
-        beam(c, Path()..moveTo(-10, 3)..lineTo(10, 3), const Color(0xFFFF9A3A), 1);
-        coin(c, -4, 7, 2.3);
-        coin(c, 3, 7.5, 2);
-      case ActionId.thunderHorn:
-        at(c, -1, 1, 0.9, () => horn(c));
-        at(c, 5.5, -5, 0.5, () => bolt(c));
-      case ActionId.stormEgg:
-        egg(c, spots: false);
-        line(c, seg([(-6, 0), (-3, -2), (-1, 1), (2, -2), (4, 1), (6.2, -1)]), const Color(0xFF6A5A40), 0.7);
-        at(c, 4, 4, 0.5, () => bolt(c));
-      case ActionId.torpedo:
-        for (final (x, y, r) in [(-10.0, -3.0, 1.2), (-11.5, 1.0, 0.8), (-9.0, 3.0, 1.0)]) {
-          _rim
-            ..strokeWidth = 0.5
-            ..color = const Color(0xCCBFE8FF);
-          c.drawCircle(Offset(x, y), r, _rim);
-        }
-        part(c, poly([(-8, -1), (-10, -5), (-5, -1)]), const Color(0xFF3E5A88), rim: 0);
-        part(c, poly([(-8, 1), (-10, 5), (-5, 1)]), const Color(0xFF3E5A88), rim: 0);
-        part(c, Path()..moveTo(-8, -3.2)..lineTo(4, -3.2)..quadraticBezierTo(10, -3, 10, 0)..quadraticBezierTo(10, 3, 4, 3.2)..lineTo(-8, 3.2)..close(), const Color(0xFF6A88B8));
-        part(c, rrect(3, -3.2, 4.5, 3.2, 0), const Color(0xFFFFC23A), rim: 0);
-        shine(c, 2, -1.8, 4, 0.7, a: 0.45);
-      case ActionId.drumSolo:
-        at(c, 0, 2.5, 0.75, () => drum(c));
-        for (final r in [3.0, 6.0, 9.0]) {
-          beam(c, Path()..addArc(Rect.fromCircle(center: const Offset(0, -2), radius: r), -pi * 0.85, pi * 0.7), const Color(0xFFFF9A5A), 0.7);
-        }
-      case ActionId.magpieHoard:
-        glow(c, 0, 0, 10, const Color(0xFF6AE0FF), 0.4);
-        part(c, poly([(-8, -3), (-4, -8), (4, -8), (8, -3), (0, 9)]), const Color(0xFF6AE0FF), light: 0.6);
-        line(c, seg([(-8, -3), (8, -3)]), Colors.white.withValues(alpha: 0.5), 0.5);
-        line(c, seg([(-4, -8), (-2.5, -3), (0, 9), (2.5, -3), (4, -8)]), Colors.white.withValues(alpha: 0.4), 0.5);
-        spark(c, 6.5, -8, 2.5, Colors.white);
-      case ActionId.comet:
-        part(c, Path()..moveTo(2.5, -8.5)..quadraticBezierTo(-4, 1, -10, 10)..quadraticBezierTo(0, 4, 8.5, -2.5)..close(), const Color(0xAA7FD8FF), rim: 0, light: 0.6, dark: 0.1);
-        beam(c, Path()..moveTo(4, -5)..quadraticBezierTo(-2, 2, -7, 7), Colors.white, 0.6);
-        glow(c, 5, -5, 7, const Color(0xFFFFF0A0), 0.6);
-        part(c, circle(5, -5, 3.6), const Color(0xFFFFF4C0), rim: 0, dark: 0.15);
-      case ActionId.timeJump:
-        part(c, rrect(-7, -10, 7, -8, 1), const Color(0xFFA06A3A), rim: 0);
-        part(c, rrect(-7, 8, 7, 10, 1), const Color(0xFFA06A3A), rim: 0);
-        final glass = Path()..moveTo(-5.5, -8)..lineTo(5.5, -8)..quadraticBezierTo(5, -3, 0.8, 0)..quadraticBezierTo(5, 3, 5.5, 8)..lineTo(-5.5, 8)..quadraticBezierTo(-5, 3, -0.8, 0)..quadraticBezierTo(-5, -3, -5.5, -8)..close();
-        part(c, poly([(-3.5, -4.5), (3.5, -4.5), (0, -0.5)]), const Color(0xFFFFC23A), rim: 0);
-        part(c, Path()..moveTo(-5, 8)..quadraticBezierTo(0, 2.5, 5, 8)..close(), const Color(0xFFFFC23A), rim: 0);
-        line(c, Path()..moveTo(0, -0.5)..lineTo(0, 6), const Color(0xFFFFD86A), 0.6);
-        part(c, glass, const Color(0x44CFEFFF), rim: 0.8, dark: 0);
-      case ActionId.bounceBubble:
-        part(c, circle(0, 0, 5), const Color(0xFFFFB04A));
-        line(c, Path()..moveTo(-5, 0)..quadraticBezierTo(0, -2, 5, 0)..moveTo(0, -5)..quadraticBezierTo(-2, 0, 0, 5), const Color(0xFFFFF0D0), 0.7);
-        bubble(c, t, r: 9.5, a: 0.42);
-      case ActionId.fanfare:
-        at(c, -1, 1, 0.9, () => horn(c, const Color(0xFFFFD04A)), rot: -0.35);
-        for (final (x, y, col) in [
-          (6.0, -7.0, const Color(0xFFFF6A9A)),
-          (9.0, -2.0, const Color(0xFF6AD0FF)),
-          (2.0, -9.0, const Color(0xFF8AF08A)),
-          (8.0, 4.0, const Color(0xFFFFE04A)),
-          (-3.0, -8.0, const Color(0xFFC08AFF)),
-        ]) {
-          at(c, x, y, 1, () => part(c, rrect(-1.2, -0.6, 1.2, 0.6, 0.2), col, rim: 0), rot: x * 0.7);
-        }
-      case ActionId.stormBubble:
-        at(c, 0, 0, 0.75, () => bolt(c));
-        bubble(c, t, r: 9.5, a: 0.42);
-      case ActionId.bubbleTrap:
-        for (final (x, y, r) in [(-6.5, -6.0, 2.6), (7.0, -6.5, 2.0)]) {
-          at(c, x, y, 1, () => bubble(c, t, r: r, a: 0.35));
-        }
-        part(c, oval(0, 2.5, 4.2, 3.4), const Color(0xFF221A30), rim: 0, light: 0.2);
-        for (final s in [-1.0, 1.0]) {
-          dot(c, s * 1.6, 1.8, 0.8, const Color(0xFFC77DFF));
-        }
-        at(c, 0, 1.5, 1, () => bubble(c, t, r: 7.5, a: 0.3));
-      case ActionId.electroMagnet:
-        at(c, 0, 2, 0.95, () => magnetU(c));
-        at(c, 0, -6, 0.45, () => bolt(c, const Color(0xFF9FE0FF)));
-      case ActionId.endlessStorm:
-        for (var k = 0; k < 5; k++) {
-          final y = -7 + k * 3.6, w = 9 - k * 1.7, x = sin(t * 3 + k) * 0.8 + k * 0.4;
-          band(c, Path()..addArc(Rect.fromCenter(center: Offset(x, y), width: w * 2, height: 3.2), 0, pi * 2), const Color(0xFF8A9AC8), 1.6);
-        }
-        at(c, 6.5, -6, 0.4, () => bolt(c));
-      case ActionId.goldenEgg:
-        glow(c, 0, 0, 11, _gold, 0.45);
-        egg(c, col: const Color(0xFFFFC83A), spots: false);
-        spark(c, 6.5, -6, 2.6, Colors.white);
-        spark(c, -6.5, 5, 1.8, Colors.white);
-      case ActionId.sledRide:
-        band(c, Path()..moveTo(-9, 6)..lineTo(6, 6)..quadraticBezierTo(10, 6, 9, 2), const Color(0xFFD0D8E4), 1.4);
-        for (final x in [-5.0, 2.0]) {
-          line(c, Path()..moveTo(x, 6)..lineTo(x, 3), const Color(0xFFD0D8E4), 1);
-        }
-        part(c, rrect(-8, 0, 6, 3.5, 1), const Color(0xFFB0703A));
+        spark(c, 0, 0, 3.5, const Color(0xFFF0FAFF));
+      case ActionId.hellmaw:
+        // Vulkan mit violettem Feuer
+        part(c, poly([(-10, 9), (-3, -3), (3, -3), (10, 9)]), const Color(0xFF3A2030), light: 0.4, dark: 0.4);
+        glow(c, 0, -4, 9, const Color(0xFFFF4AB4), 0.7);
+        part(c, Path()..moveTo(-3, -3)..quadraticBezierTo(-4, -9, 0, -11)..quadraticBezierTo(4, -9, 3, -3)..close(),
+            const Color(0xFFFF6A3A), rim: 0, light: 0.6);
+        dot(c, 0, -6, 1.4, const Color(0xFFFFE6A0));
+      case ActionId.thunderstorm:
+        // Tornado mit Blitz
         for (var k = 0; k < 3; k++) {
-          final a = k * pi / 3;
-          beam(c, Path()..moveTo(cos(a) * 4.5, -5.5 + sin(a) * 4.5)..lineTo(-cos(a) * 4.5, -5.5 - sin(a) * 4.5), const Color(0xFFBFEFFF), 0.8);
+          final w = 9.0 - k * 2.5;
+          beam(c, Path()..addOval(Rect.fromCenter(center: Offset(-2, -5.0 + k * 4.5), width: w * 2, height: 3.2)), const Color(0xFFBFF8E6), 0.9);
         }
-      case ActionId.strobe:
-        _fill.shader = const LinearGradient(colors: [Color(0xCCFFF4C0), Color(0x00FFF4C0)]).createShader(const Rect.fromLTRB(1, -9, 12, 9));
-        c.drawPath(poly([(2, -3), (12, -9), (12, 9), (2, 3)]), _fill..blendMode = BlendMode.plus);
-        _fill
-          ..shader = null
-          ..blendMode = BlendMode.srcOver;
-        part(c, rrect(-10, -2, -1, 2, 1), const Color(0xFF4A5470));
-        part(c, poly([(-2, -2.5), (3, -4.5), (3, 4.5), (-2, 2.5)]), const Color(0xFF6A7898));
-        part(c, oval(3, 0, 0.9, 4.2), const Color(0xFFFFF4C0), rim: 0, dark: 0);
-      case ActionId.pickpocket:
-        glove(c, const Color(0xFF6A5AA8));
-        coin(c, 6.5, 6.5, 2.6);
-      case ActionId.sprintKick:
-        for (final y in [-6.0, -2.0, 2.0]) {
-          beam(c, Path()..moveTo(-11, y)..lineTo(-7, y), const Color(0xFFFF9A5A), 0.8);
-        }
-        at(c, 1, 0, 1, () => foot(c));
-        burst(c, 7, 2, 3, const Color(0xFFFFE04A));
-      case ActionId.dustCloud:
-        at(c, 0, 1, 1, () => cloud(c, const Color(0xFFB89A70)));
-        beam(c, Path()..moveTo(-8, 7)..quadraticBezierTo(0, 10, 8, 7), const Color(0xFFD8C090), 0.7);
-        for (final (x, y) in [(-6.0, -6.0), (6.5, -6.5)]) {
-          spark(c, x, y, 2, const Color(0xFFFFE07A));
-        }
-      case ActionId.sunEagle:
-        at(c, 3, -3, 0.75, () => sun(c, t));
-        at(c, -2, 1.5, 0.85, () => eagleHead(c));
-      case ActionId.thunderbird:
-        glow(c, 0, 0, 10, const Color(0xFF5AB8FF), 0.45);
-        for (final s in [-1.0, 1.0]) {
-          part(c, Path()..moveTo(s * 1.5, -1)..quadraticBezierTo(s * 6, -9, s * 11, -7)..lineTo(s * 8, -4)..lineTo(s * 10, -2)..lineTo(s * 6, 0)..quadraticBezierTo(s * 4, 2, s * 1.5, 2)..close(),
-              const Color(0xFF5AB8FF), rim: 0.6);
-        }
-        part(c, oval(0, 1, 2.6, 5), const Color(0xFF3A7ACF));
-        part(c, circle(0, -4.5, 2.4), const Color(0xFF3A7ACF));
-        part(c, poly([(-0.8, -3.5), (0, -1.5), (0.8, -3.5)]), const Color(0xFFFFC23A), rim: 0);
-        at(c, 0, 3, 0.4, () => bolt(c));
+        at(c, 5, 2, 0.6, () => bolt(c));
     }
   }
 
@@ -1083,6 +905,12 @@ class _Obj {
         }
         dot(c, 0, 1, 0.9, const Color(0xFFFFF4C8));
     }
+  }
+
+  /// Gemeinsames Zeichen verfluchter Items: dunkel-magentafarbener Schimmer.
+  static void _curse(Canvas c) {
+    glow(c, 0, 0, 15, const Color(0xFFE0408A), 0.35);
+    glow(c, 0, 0, 11, const Color(0xFF3A0A20), 0.5);
   }
 
   /// Vierblättriges Kleeblatt (Kleeblatt-Item und Wert Glück).

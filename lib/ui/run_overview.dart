@@ -25,6 +25,12 @@ class RunOverview extends StatelessWidget {
           sectionTitle('Waffen ${r.weapons.length}/${r.maxWeapons}'),
           if (r.weapons.isEmpty) Text('Keine', style: mutedStyle),
           Wrap(spacing: 8, runSpacing: 6, children: [for (final w in r.weapons) _weapon(w)]),
+          if (r.reserve.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text('Reserve', style: bodyText(11.5, color: Ui.muted)),
+            const SizedBox(height: 4),
+            Wrap(spacing: 8, runSpacing: 6, children: [for (final w in r.reserve) _weapon(w)]),
+          ],
           sectionTitle('Items'),
           if (r.items.isEmpty) Text('Noch keine', style: mutedStyle),
           Wrap(spacing: 6, runSpacing: 6, children: [
@@ -92,7 +98,7 @@ class RunOverview extends StatelessWidget {
     final t = tiers[w.tier];
     return Inspectable(
       focusable: true,
-      info: (_) => weaponInfo(r, w.id, w.tier, owned: w, showSell: false),
+      info: (_) => weaponInfo(r, w.id, w.tier, owned: w, showSell: false, loadout: true),
       child: Container(
         width: 200,
         height: 42,
@@ -130,7 +136,7 @@ class RunOverview extends StatelessWidget {
             child: Pill(
               setLevel(r.classCount(cls)) > 0
                   ? '${cls.label} ${r.classCount(cls)}: ${cls.bonusTexts[setLevel(r.classCount(cls)) - 1]}'
-                  : '${cls.label} ${r.classCount(cls)}/${r.classCount(cls) < 2 ? 2 : (r.classCount(cls) < 4 ? 4 : 6)}',
+                  : '${cls.label} ${r.classCount(cls)}/${nextSetAt(r.classCount(cls))}',
               color: cls.color.withAlpha(setLevel(r.classCount(cls)) > 0 ? 80 : 30),
             ),
           ),
