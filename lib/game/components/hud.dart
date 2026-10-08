@@ -196,7 +196,7 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
         String p(InputAction a) => b.firstPad(a).let(padLabel) ?? '–';
         OutlineText.draw(
           c,
-          '${p(InputAction.fly)} halten: fliegen  ·  ${p(InputAction.action1)} / ${p(InputAction.action2)}: Aktionen  ·  ${p(InputAction.pause)}: Pause',
+          '${p(InputAction.fly)} halten: fliegen  ·  Aktionen automatisch (${p(InputAction.action1)} / ${p(InputAction.action2)}: sofort)  ·  ${p(InputAction.pause)}: Pause',
           Offset(cx, s.y * 0.42 + big * 0.95 + small * 1.4),
           size: small * 0.8,
           color: Palette.sun,

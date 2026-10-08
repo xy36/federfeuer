@@ -1254,6 +1254,118 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   final _bounceCd = <Enemy, double>{};
   final _slideHit = <Enemy>{};
 
+  /// Seit wann Platz [i] bereit ist (für den Rückfall nach [kAutoFallback]).
+  final _readyFor = List<double>.filled(kActionSlots, 0);
+
+  /// Aktionen automatisch auslösen, sobald sie bereit sind und es sich lohnt.
+  void _autoActions(double dt) {
+    final r = run;
+    if (r == null || !playing) return;
+    for (var i = 0; i < r.actions.length; i++) {
+      if (!actionReady(i)) {
+        _readyFor[i] = 0;
+        continue;
+      }
+      _readyFor[i] += dt;
+      final id = r.actions[i].id;
+      if (_autoWorth(id) || (_readyFor[i] > kAutoFallback && _isCombat(id) && _enemiesInView() > 0)) {
+        _aimFor(id);
+        useAction(i);
+        _readyFor[i] = 0;
+      }
+    }
+  }
+
+  static const _sprints = {
+    ActionId.dash, ActionId.sonicBoom, ActionId.bubbleRocket, ActionId.comet, ActionId.timeJump, //
+    ActionId.sprintKick, ActionId.bellySlide, ActionId.torpedo, ActionId.sledRide,
+  };
+  static const _shields = {ActionId.bubbleShield, ActionId.timeBubble, ActionId.bounceBubble, ActionId.stormBubble};
+  static const _nearby = {
+    ActionId.horn, ActionId.fanfare, ActionId.drumroll, ActionId.drumSolo, ActionId.dustCloud, //
+    ActionId.thunderHorn, ActionId.kick,
+  };
+  static const _screen = {ActionId.flash, ActionId.sunStorm, ActionId.strobe, ActionId.clock, ActionId.snapshot, ActionId.screech};
+  static const _storms = {ActionId.storm, ActionId.endlessStorm};
+  static const _pulls = {ActionId.magnet, ActionId.steal, ActionId.goldenHour, ActionId.magpieHoard, ActionId.pickpocket};
+  static const _grabs = {ActionId.vacuum, ActionId.bubbleTrap, ActionId.electroMagnet};
+  static const _eggs = {ActionId.egg, ActionId.stormEgg, ActionId.goldenEgg};
+
+  /// Kampf-Aktionen dürfen nach [kAutoFallback] auch ohne guten Anlass auslösen.
+  bool _isCombat(ActionId id) => !_pulls.contains(id) && !_sprints.contains(id) && !_shields.contains(id);
+
+  /// Lohnt sich die Aktion gerade?
+  bool _autoWorth(ActionId id) {
+    final r = run!;
+    final low = r.hp < r.maxHp * kAutoLowHp;
+    if (_sprints.contains(id)) return _threat(kAutoThreat) != null;
+    if (_shields.contains(id)) return _threat(kAutoShieldThreat) != null || (low && _enemiesNear(200) > 0);
+    if (_nearby.contains(id)) return _enemiesNear(kAutoNearRadius) >= kAutoNearCount || _threat(kAutoThreat * 1.3) != null;
+    if (_screen.contains(id)) return _enemiesInView() >= kAutoViewCount || _bossInView() || (low && _enemiesInView() > 0);
+    if (_storms.contains(id)) return _enemiesNear(kAutoStormRadius) >= kAutoStormCount || _bossInView();
+    if (_pulls.contains(id)) {
+      final m = _materialInView();
+      return m >= kAutoMaterial || (!isBossWave(r.wave) && waveTime < 4 && m > 0);
+    }
+    if (_grabs.contains(id)) return _enemiesNear(kAutoPullRadius) >= kAutoPullCount || _materialInView() >= kAutoMaterial;
+    if (_eggs.contains(id)) return _enemiesNear(kAutoEggRadius) > 0;
+    return _enemiesInView() > 0;
+  }
+
+  /// Richtung vor dem Auslösen: Sprints weg von der Gefahr, Tritt und Ei zum nächsten Gegner.
+  void _aimFor(ActionId id) {
+    final p = player.position;
+    if (_sprints.contains(id)) {
+      final t = _threat(kAutoThreat * 2);
+      if (t != null && (t.x - p.x).abs() > 1) player.face = t.x > p.x ? -1 : 1;
+    } else if (id == ActionId.kick || _eggs.contains(id)) {
+      final e = _nearestEnemy();
+      if (e != null && (e.x - p.x).abs() > 1) player.face = e.x > p.x ? 1 : -1;
+    }
+  }
+
+  /// Nächste Gefahr im Umkreis [radius] um den Vogel (Gegnerkugel oder angreifender Gegner).
+  Vector2? _threat(double radius) {
+    final p = player.position;
+    for (final b in world.children.whereType<EnemyBullet>()) {
+      if (b.position.distanceTo(p) < radius + player.r) return b.position;
+    }
+    for (final e in enemies) {
+      if (e.dead || e.disabled || e.dmg <= 0) continue;
+      if (e.position.distanceTo(p) < radius + e.r + player.r) return e.position;
+    }
+    return null;
+  }
+
+  int _enemiesNear(double radius) {
+    final p = player.position;
+    return enemies.where((e) => !e.dead && e.position.distanceTo(p) < radius + e.r).length;
+  }
+
+  int _enemiesInView() => enemies.where((e) => !e.dead && _inView(e.x)).length;
+
+  bool _bossInView() => enemies.any((e) => !e.dead && e.boss && _inView(e.x));
+
+  Enemy? _nearestEnemy() {
+    Enemy? best;
+    var bd = double.infinity;
+    for (final e in enemies) {
+      if (e.dead) continue;
+      final d = e.position.distanceToSquared(player.position);
+      if (d < bd) {
+        bd = d;
+        best = e;
+      }
+    }
+    return best;
+  }
+
+  /// Wert des herumliegenden Materials im Bild (noch nicht eingesammelt).
+  int _materialInView() => world.children
+      .whereType<Drop>()
+      .where((d) => d.material && !d.taken && !d.pulled && _inView(d.x))
+      .fold(0, (a, d) => a + d.value);
+
   bool actionReady(int slot) {
     final r = run;
     return r != null && slot < r.actions.length && actionCds[slot] <= 0;
@@ -1543,6 +1655,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
   /// Laufende Aktionen und Item-Timer pro Frame.
   void _tickActions(double dt) {
+    _autoActions(dt);
     for (var i = 0; i < actionCds.length; i++) {
       final was = actionCds[i];
       actionCds[i] = max(0.0, was - dt);
