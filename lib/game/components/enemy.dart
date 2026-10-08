@@ -29,8 +29,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       {this.elite, this.mini = false, this.child = false, this.spawnedBy})
       : super(position: pos, priority: 5) {
     final d = enemyDefs[type]!;
-    // Wellenskalierung gilt laut GDD nicht für den Boss.
-    final boss = type == EnemyType.boss;
+    // Wellenskalierung gilt laut GDD nicht für den Endboss.
+    final boss = kFinalBosses.contains(type);
     sizeK = elite != null ? kEliteScale : (mini ? kSplitScale : 1);
     r = d.radius * sizeK;
     // Schwierigkeitsstufe wirkt auch auf den Boss.
@@ -39,7 +39,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     final regular = !boss && !child && !_gatekeeperType(type);
     toughness = regular ? enemyToughness(wave) : 1;
     materialFactor = regular ? enemyMaterialFactor(wave) : 1;
-    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * 0.38)) * diff.hp * hpMul * toughness;
+    final growth = _gatekeeperType(type) ? kGateHpGrowth : 0.38;
+    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * growth)) * diff.hp * hpMul * toughness;
     hp = maxHp;
     dmg = ((boss ? d.dmg : d.dmg * (1 + (wave - 1) * 0.15)) * diff.dmg * (regular ? enemyDmgBonus(wave) : 1))
         .roundToDouble();
@@ -71,8 +72,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
 
   /// Material-Faktor (siehe [enemyMaterialFactor]); 1 für Boss, Torwächter, Kinder.
   late final double materialFactor;
-  static bool _gatekeeperType(EnemyType t) =>
-      t == EnemyType.strawKing || t == EnemyType.bell || t == EnemyType.spiderMother;
+  static bool _gatekeeperType(EnemyType t) => kGatekeepers.contains(t);
   double _healT = 0;
   late final bool fly;
   late double hp;
@@ -129,14 +129,21 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
   double _dotAcc = 0;
 
   /// Boss oder Torwächter: immun gegen Einfangen und Rückstoß, Betäubung wirkt nur kurz.
-  bool get boss => type == EnemyType.boss || gatekeeper;
-  bool get gatekeeper => type == EnemyType.strawKing || type == EnemyType.bell || type == EnemyType.spiderMother;
+  bool get boss => finalBoss || gatekeeper;
+  bool get gatekeeper => kGatekeepers.contains(type);
+  bool get finalBoss => kFinalBosses.contains(type);
 
-  /// Phase des Geierkönigs (1–3, wechselt bei 66 % und 33 % HP).
+  /// Dornenwurm unter der Erde: Treffer prallen ab, kein Berührungsschaden.
+  bool get burrowed => type == EnemyType.thornWorm && (state == 0 || state == 1);
+
+  /// Phase des Endbosses (1–3, wechselt bei 66 % und 33 % HP).
   int bossPhase = 1;
 
   /// Radius des Glockenschlags.
   static const double bellRadius = 230;
+
+  /// Zeiten der neuen Torwächter: Stampf-Warnung, Verblassen, Wurm (Warnung, oben, Abtauchen).
+  static const double golemStompWarn = 0.9, lanternFade = 0.6, wormWarn = 0.8, wormUp = 2.6, wormSink = 0.6;
   bool get disabled => stunT > 0 || trapT > 0 || frozenT > 0 || confusedT > 0 || chickenT > 0;
   bool get wet => wetT > 0;
   bool get frozen => frozenT > 0;
@@ -321,7 +328,12 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.wirrling:
         _worldAi(dt, p, dx, dy, d);
         if (dead) return;
-      case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
+      case EnemyType.strawKing ||
+            EnemyType.bell ||
+            EnemyType.spiderMother ||
+            EnemyType.moorGolem ||
+            EnemyType.lanternMan ||
+            EnemyType.thornWorm:
         _gateAi(dt, p, dx, dy, d);
       case EnemyType.crowNest ||
             EnemyType.waspNest ||
@@ -335,6 +347,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         if (dead) return;
       case EnemyType.boss:
         _bossAi(dt, p, dx, dy);
+      case EnemyType.ashPhoenix:
+        _phoenixAi(dt, p, dx, dy);
     }
 
     }
@@ -355,7 +369,7 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       vel.y = max(0.0, vel.y);
     }
     // Berührungsschaden (das Irrlicht schadet nur durch seine Explosion)
-    if (!disabled && dmg > 0 && type != EnemyType.wisp && position.distanceTo(p) < r + game.player.r - 3) {
+    if (!disabled && dmg > 0 && type != EnemyType.wisp && !burrowed && position.distanceTo(p) < r + game.player.r - 3) {
       game.hurtPlayer(dmg, source: this);
     }
   }
@@ -437,7 +451,12 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.avalanche ||
             EnemyType.wirrling:
         _worldRender(c, k, pulse);
-      case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
+      case EnemyType.strawKing ||
+            EnemyType.bell ||
+            EnemyType.spiderMother ||
+            EnemyType.moorGolem ||
+            EnemyType.lanternMan ||
+            EnemyType.thornWorm:
         _gateRender(c, k, pulse);
       case EnemyType.crowNest ||
             EnemyType.waspNest ||
@@ -460,6 +479,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         EnemyArt.rock(c, EnemyLook(t: t, pulse: pulse, warn: warn, hit: flash > 0, state: state, aim: aim), r);
       case EnemyType.boss:
         BossArt.vultureKing(c, _bossLook(hit, pulse));
+      case EnemyType.ashPhoenix:
+        BossArt.ashPhoenix(c, _bossLook(hit, pulse), r);
     }
     }
     c.restore();
@@ -657,8 +678,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
       back.add(x, y, r * 1.8, el.color.withAlpha(90));
       front.add(x, y - r - 18, 16, el.color.withAlpha(150));
     } else {
-      back.add(x, y, r * (type == EnemyType.boss ? 3.0 : 1.9),
-          _aura.withAlpha((type == EnemyType.boss ? 90 + 40 * pulse : 70).round()));
+      back.add(x, y, r * (finalBoss ? 3.0 : 1.9),
+          _aura.withAlpha((finalBoss ? 90 + 40 * pulse : 70).round()));
     }
     if (healGlow > 0) front.add(x, y, r * 1.8, Color.fromRGBO(140, 245, 176, healGlow));
     // Fäulnis-Stil: violetter Schimmer im Inneren des dunklen Körpers
@@ -677,7 +698,12 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
             EnemyType.avalanche ||
             EnemyType.wirrling:
         _worldGlows(f, eye, front, pulse);
-      case EnemyType.strawKing || EnemyType.bell || EnemyType.spiderMother:
+      case EnemyType.strawKing ||
+            EnemyType.bell ||
+            EnemyType.spiderMother ||
+            EnemyType.moorGolem ||
+            EnemyType.lanternMan ||
+            EnemyType.thornWorm:
         _gateGlows(f, front, pulse);
       case EnemyType.crowNest ||
             EnemyType.waspNest ||
@@ -706,6 +732,8 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
         f(48, -64, 26, _crown.withAlpha((80 + 60 * pulse).round()));
         f(47, -40, 9, _crown.withAlpha(220));
         if (warn > 0) front.add(x, y, r * (1.5 + warn), Color.fromRGBO(255, 230, 250, 0.2 + 0.5 * warn));
+      case EnemyType.ashPhoenix:
+        _phoenixGlows(f, front, pulse);
     }
   }
 }

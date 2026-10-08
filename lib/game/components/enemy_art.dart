@@ -837,8 +837,16 @@ class EnemyArt {
         BossArt.bell(c, b, r);
       case EnemyType.spiderMother:
         BossArt.spiderMother(c, b, r);
+      case EnemyType.moorGolem:
+        BossArt.moorGolem(c, b, r);
+      case EnemyType.lanternMan:
+        BossArt.lanternMan(c, b, r);
+      case EnemyType.thornWorm:
+        BossArt.thornWorm(c, b, r);
       case EnemyType.boss:
         BossArt.vultureKing(c, b);
+      case EnemyType.ashPhoenix:
+        BossArt.ashPhoenix(c, b, r);
     }
   }
 }

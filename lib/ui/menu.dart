@@ -396,7 +396,7 @@ class _PlayPageState extends State<_PlayPage> {
               style: mutedStyle),
         ),
       const SizedBox(height: 10),
-      Text('Flieg durch $kMaxWave Wellen bis zum Gipfel und besiege den Geierkönig. '
+      Text('Flieg durch $kMaxWave Wellen bis zum Gipfel und besiege den Endboss. '
           'Deine Waffen zielen selbst – du kümmerst dich ums Ausweichen.',
           style: bodyText(13, color: Ui.muted)),
     ]);
@@ -849,7 +849,7 @@ class _DebugPageState extends State<_DebugPage> {
         const SizedBox(height: 8),
         Wrap(spacing: 6, runSpacing: 6, children: [
           for (var w = 1; w <= kMaxWave; w++)
-            _waveChip(w, gate: gatekeeperForWave(w) != null, boss: isBossWave(w)),
+            _waveChip(w, gate: isGateWave(w), boss: isBossWave(w)),
         ]),
         _ToggleRow(
           label: 'Passende Ausrüstung',

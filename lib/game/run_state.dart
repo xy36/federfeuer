@@ -121,10 +121,21 @@ class RunState {
     stats[Stat.maxHp] = max(1.0, (stats[Stat.maxHp]! * c.maxHpMul).roundToDouble());
     statBase.addAll(stats);
     hp = maxHp;
+    // Torwächter und Endboss dieses Runs auslosen (Torwächter ohne Wiederholung)
+    final pool = [...kGatekeepers]..shuffle(_rng);
+    for (var i = 0; i < kGateWaves.length; i++) {
+      gatekeepers[kGateWaves[i]] = pool[i % pool.length];
+    }
+    finalBoss = kFinalBosses[_rng.nextInt(kFinalBosses.length)];
   }
 
   final CharacterDef character;
   final Random _rng;
+
+  /// Torwächter je Welle (4, 8, 12) und Endboss dieses Runs, beim Start ausgelost.
+  final gatekeepers = <int, EnemyType>{};
+  late EnemyType finalBoss;
+  EnemyType? gatekeeperFor(int wave) => gatekeepers[wave];
 
   /// Schwierigkeitsstufe 1–[kDifficultyCount].
   final int difficulty;

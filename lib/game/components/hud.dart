@@ -172,10 +172,10 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
     // Welle / Timer / Boss
     final cx = s.x / 2;
     if (isBossWave(r.wave)) {
-      OutlineText.draw(c, 'DER GEIERKÖNIG', Offset(cx, 22), size: 15, color: _boss);
+      OutlineText.draw(c, r.finalBoss.label.toUpperCase(), Offset(cx, 22), size: 15, color: _boss);
       Enemy? boss;
       for (final e in g.enemies) {
-        if (e.type == EnemyType.boss && !e.dead) boss = e;
+        if (e.finalBoss && !e.dead) boss = e;
       }
       if (boss != null) {
         final bw = min(320.0, s.x * 0.5);
@@ -188,16 +188,26 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
       }
     } else {
       OutlineText.draw(c, 'WELLE ${r.wave}', Offset(cx, 18), size: 12, color: _muted);
-      // Schlussphase: Timer orange ab 10 s, rot ab 5 s, pulsiert immer stärker
-      final left = g.waveTime, warn = left < kWaveWarnTime, low = left < kWaveCountdown;
-      final pulse = warn ? 0.5 + 0.5 * sin(g.clock * (low ? 10 : 6)) : 0.0;
-      c.save();
-      c.translate(cx, 46);
-      c.scale(1 + (low ? 0.16 : 0.08) * pulse);
-      OutlineText.draw(c, '${max(0, left.ceil())}', Offset.zero,
-          size: 30, color: low ? _hp : (warn ? _warn : const Color(0xFFFFE6A0)), display: false);
-      c.restore();
-      if (g.playing && left > 0 && left <= kWaveCountdown) _countdown(c, s, left);
+      if (g.gateWave) {
+        // Torwächter-Welle: kein Zeitlimit, Ziel ist der Sieg über ihn
+        final gk = r.gatekeeperFor(r.wave)!;
+        final won = g.gateEndT > 0;
+        OutlineText.draw(c, won ? 'BESIEGT' : 'KEIN ZEITLIMIT', Offset(cx, 38),
+            size: 16, color: won ? Palette.mint : const Color(0xFFFFE6A0), display: false);
+        if (!won) OutlineText.draw(c, 'Besiege ${gk.label}', Offset(cx, 56), size: 11, color: _boss, display: false);
+        if (g.playing && won) _countdown(c, s, g.gateEndT);
+      } else {
+        // Schlussphase: Timer orange ab 10 s, rot ab 5 s, pulsiert immer stärker
+        final left = g.waveTime, warn = left < kWaveWarnTime, low = left < kWaveCountdown;
+        final pulse = warn ? 0.5 + 0.5 * sin(g.clock * (low ? 10 : 6)) : 0.0;
+        c.save();
+        c.translate(cx, 46);
+        c.scale(1 + (low ? 0.16 : 0.08) * pulse);
+        OutlineText.draw(c, '${max(0, left.ceil())}', Offset.zero,
+            size: 30, color: low ? _hp : (warn ? _warn : const Color(0xFFFFE6A0)), display: false);
+        c.restore();
+        if (g.playing && left > 0 && left <= kWaveCountdown) _countdown(c, s, left);
+      }
       final goal = g.goalX;
       if (goal != null) _drawProgress(c, cx, 72, min(220.0, s.x * 0.34), g.player.x / goal);
       // Torwächter: Name und HP-Kapsel unter der Strecke
@@ -225,8 +235,9 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
     if (g.phase == Phase.cleared) {
       OutlineText.draw(c, 'WELLE ${r.wave} GESCHAFFT', Offset(cx, s.y * 0.42), size: big, color: Palette.sun);
       final bonus = r.goalBonus;
-      OutlineText.draw(c, bonus != null ? 'Ziel erreicht · +$bonus Zeitbonus' : 'Zeit abgelaufen',
-          Offset(cx, s.y * 0.42 + big * 0.95), size: small, color: bonus != null ? Palette.mint : _xp, display: false);
+      final text = g.gateWave ? 'Torwächter besiegt' : (bonus != null ? 'Ziel erreicht · +$bonus Zeitbonus' : 'Zeit abgelaufen');
+      OutlineText.draw(c, text, Offset(cx, s.y * 0.42 + big * 0.95),
+          size: small, color: bonus != null || g.gateWave ? Palette.mint : _xp, display: false);
     }
 
     // Torwächter erscheint: großer Name in der Bildmitte
@@ -244,7 +255,7 @@ class Hud extends Component with HasGameReference<FederfeuerGame> {
         OutlineText.draw(c, g.biomeDef.name.toUpperCase(), Offset(cx, s.y * 0.42 - big * 0.95),
             size: small, color: g.biomeDef.rim);
       }
-      OutlineText.draw(c, isBossWave(r.wave) ? 'DER GEIERKÖNIG KOMMT' : 'WELLE ${r.wave}', Offset(cx, s.y * 0.42),
+      OutlineText.draw(c, isBossWave(r.wave) ? '${r.finalBoss.label.toUpperCase()} KOMMT' : 'WELLE ${r.wave}', Offset(cx, s.y * 0.42),
           size: big, color: Palette.sun);
       if (!g.weather.isClear) {
         OutlineText.draw(c, g.weather.label, Offset(cx, s.y * 0.42 + big * 0.95), size: small, color: _xp, display: false);

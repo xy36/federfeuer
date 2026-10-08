@@ -137,8 +137,9 @@ class SpawnMarker extends PositionComponent with HasGameReference<FederfeuerGame
   @override
   void render(Canvas c) {
     // Fäulnis-Riss: pulsierender dunkler Kern mit violett-rotem Leuchten, der sich öffnet
-    final s = type == EnemyType.boss ? 34.0 : 13.0;
-    final open = 1 - clampD(t / (type == EnemyType.boss ? 2 : 0.9), 0, 1);
+    final big = kFinalBosses.contains(type);
+    final s = big ? 34.0 : 13.0;
+    final open = 1 - clampD(t / (big ? 2 : 0.9), 0, 1);
     final a = 0.55 + 0.45 * sin(t * 18);
     Glow.draw(c, 0, 0, s * (2.4 + open), Color.fromRGBO(255, 77, 140, 0.55 * a));
     Glow.draw(c, 0, 0, s * 1.4, Color.fromRGBO(180, 76, 255, 0.6));

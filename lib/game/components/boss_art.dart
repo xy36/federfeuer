@@ -16,7 +16,11 @@ class BossLook {
     this.phase = 1,
     this.hp = 1,
     this.state = 0,
+    this.rise = 1,
   });
+
+  /// Dornenwurm: wie weit er aus dem Boden ragt (0 = nur der Erdhügel).
+  final double rise;
   final double t, pulse, warn, hp;
   final bool hit;
   final int phase, state;
@@ -670,5 +674,381 @@ class BossArt {
     // Gifttropfen von den Klauen
     final ph = (t * 0.7) % 1;
     c.drawCircle(Offset(ceph.right + 6, ceph.center.dy + 12 + ph * 24), 1.6, _fill(const Color(0xFF9CFF5A).withValues(alpha: 1 - ph)));
+  }
+
+  // ============================================================== Moorgolem
+
+  /// Schwerer Golem aus Moorstein und Schlamm: Moos auf den Schultern, Glutrisse, ein
+  /// glühendes Auge im kleinen Kopf; hebt beim Ausholen ([BossLook.warn]) beide Fäuste.
+  static void moorGolem(Canvas c, BossLook l, double r) {
+    final t = l.t, warn = l.warn;
+    final bob = sin(t * 2) * 1.5 * (1 - warn);
+    final mud = _k(l, const Color(0xFF1A140F)), stone = _k(l, const Color(0xFF2A2420));
+
+    // Stämmige Beine bis zum Boden (Unterkante bei y = r)
+    for (final lx in [-r * 0.42, r * 0.3]) {
+      final leg = RRect.fromRectAndRadius(Rect.fromLTRB(lx - r * 0.2, r * 0.25, lx + r * 0.2, r), const Radius.circular(6));
+      c.drawRRect(leg, _fill(mud));
+      c.drawOval(Rect.fromCenter(center: Offset(lx, r - 2), width: r * 0.5, height: 8), _fill(stone));
+    }
+
+    c.save();
+    c.translate(0, bob);
+    // Rumpf: unregelmäßiger Felsklotz
+    final body = Path()
+      ..moveTo(-r * 0.95, r * 0.3)
+      ..quadraticBezierTo(-r * 1.1, -r * 0.3, -r * 0.7, -r * 0.7)
+      ..quadraticBezierTo(-r * 0.3, -r * 0.98, r * 0.15, -r * 0.88)
+      ..quadraticBezierTo(r * 0.75, -r * 0.8, r * 0.95, -r * 0.25)
+      ..quadraticBezierTo(r * 1.05, r * 0.2, r * 0.7, r * 0.42)
+      ..quadraticBezierTo(0, r * 0.55, -r * 0.95, r * 0.3)
+      ..close();
+    c.drawPath(
+        body,
+        l.hit
+            ? _fill(_k(l, RotArt.ink))
+            : (Paint()
+              ..shader = ui.Gradient.radial(Offset(-r * 0.2, -r * 0.3), r * 1.3,
+                  [const Color(0xFF2E2620), const Color(0xFF16110D), const Color(0xFF0A0706)], const [0, 0.6, 1])));
+    // Gesteinsplatten
+    for (final (x, y, w, h) in [(-0.5, -0.45, 0.42, 0.3), (0.2, -0.55, 0.36, 0.26), (-0.15, 0.05, 0.5, 0.26), (0.5, -0.05, 0.3, 0.3)]) {
+      c.drawRRect(
+          RRect.fromRectAndRadius(Rect.fromLTWH(r * x, r * y, r * w, r * h), const Radius.circular(5)),
+          _fill(_k(l, const Color(0xFF231C17))));
+    }
+    // Glutrisse zwischen den Platten, beim Ausholen gleißend
+    RotArt.veins(
+        c,
+        Path()
+          ..moveTo(-r * 0.6, -r * 0.1)
+          ..lineTo(-r * 0.3, -r * 0.12)
+          ..lineTo(-r * 0.15, -r * 0.35)
+          ..lineTo(r * 0.15, -r * 0.25)
+          ..lineTo(r * 0.45, -r * 0.3)
+          ..moveTo(-r * 0.3, -r * 0.12)
+          ..lineTo(-r * 0.2, r * 0.3)
+          ..moveTo(r * 0.15, -r * 0.25)
+          ..lineTo(r * 0.3, r * 0.15),
+        min(1.0, l.pulse * 0.5 + warn),
+        color: _ember,
+        width: 1 + 1.4 * warn);
+    // Moos und Schilf auf den Schultern
+    for (final sx in [-r * 0.6, r * 0.55]) {
+      c.drawOval(Rect.fromCenter(center: Offset(sx, -r * 0.72), width: r * 0.6, height: r * 0.22), _fill(_k(l, const Color(0xFF1E2A12))));
+      _line
+        ..strokeWidth = 1.3
+        ..color = _k(l, const Color(0xFF3A4A20));
+      for (var i = 0; i < 4; i++) {
+        final x = sx - r * 0.2 + i * r * 0.13;
+        c.drawLine(Offset(x, -r * 0.75), Offset(x + sin(t * 1.5 + i) * 3, -r * 0.98 - (i.isEven ? 6 : 0)), _line);
+      }
+    }
+    // Kleiner Kopf vorn oben mit glühendem Auge
+    final head = Offset(r * 0.32, -r * 0.62);
+    c.drawCircle(head, r * 0.26, _fill(_k(l, const Color(0xFF1C1612))));
+    final eyeOpen = 2.2 + 2 * warn;
+    c.drawOval(Rect.fromCenter(center: head + Offset(r * 0.06, r * 0.08), width: 11, height: eyeOpen), _fill(const Color(0xFFFFC07A)));
+    // Fäuste: beim Ausholen gehoben
+    for (final (fx, far) in [(-r * 1.05, true), (r * 0.95, false)]) {
+      final fy = r * 0.25 - warn * r * 0.75;
+      _line
+        ..strokeWidth = r * 0.24
+        ..color = far ? _k(l, const Color(0xFF120E0B)) : mud;
+      c.drawLine(Offset(fx * 0.7, -r * 0.45), Offset(fx, fy), _line);
+      c.drawCircle(Offset(fx, fy), r * 0.27, _fill(far ? _k(l, const Color(0xFF15100C)) : stone));
+      if (warn > 0.4) Glow.draw(c, fx, fy, r * 0.5, _ember.withValues(alpha: (warn - 0.4) * 0.8));
+    }
+    // Schlamm tropft vom Bauch
+    _drips(c, [-r * 0.5, -r * 0.1, r * 0.35], r * 0.42, t, color: const Color(0xFF6A8A3A), len: 10);
+    RotArt.rim(c, body, Rect.fromLTRB(-r * 1.2, -r * 1.1, r * 1.2, -r * 0.3), alpha: 0.5);
+    c.restore();
+  }
+
+  // ============================================================== Laternenmann
+
+  /// Hagere Gestalt im zerfetzten Kapuzenmantel, schwebend, mit einer Laterne an krummem Stab.
+  static void lanternMan(Canvas c, BossLook l, double r) {
+    final t = l.t, warn = l.warn;
+    final sway = sin(t * 1.2) * 0.05;
+    c.save();
+    c.rotate(sway);
+    // Mantel mit zerfetztem Saum, der im Wind flattert
+    final hem = <Offset>[];
+    for (var i = 0; i <= 8; i++) {
+      final x = -r * 0.75 + i * r * 1.5 / 8;
+      hem.add(Offset(x + sin(t * 3 + i) * 2, r * 1.25 + (i.isEven ? 0 : -r * 0.3) + sin(t * 2.4 + i * 1.3) * 3));
+    }
+    final cloak = Path()..moveTo(-r * 0.42, -r * 0.7);
+    cloak.quadraticBezierTo(-r * 0.8, r * 0.2, hem.first.dx, hem.first.dy);
+    for (final h in hem.skip(1)) {
+      cloak.lineTo(h.dx, h.dy);
+    }
+    cloak
+      ..quadraticBezierTo(r * 0.8, r * 0.2, r * 0.42, -r * 0.7)
+      ..close();
+    c.drawPath(cloak, l.hit ? _fill(_k(l, RotArt.ink)) : RotArt.cachedFill('lantern_cloak', r * 1.4, center: Offset(0, -r * 0.2)));
+    // Falten
+    _line
+      ..strokeWidth = 1
+      ..color = const Color(0xFF241433);
+    for (final x in [-r * 0.3, 0.0, r * 0.28]) {
+      c.drawLine(Offset(x * 0.6, -r * 0.4), Offset(x, r * 1.0), _line);
+    }
+    // Kapuze mit hohlem Gesicht und zwei blassen Augen
+    final hood = Path()
+      ..moveTo(-r * 0.45, -r * 0.55)
+      ..quadraticBezierTo(-r * 0.5, -r * 1.25, r * 0.05, -r * 1.35)
+      ..quadraticBezierTo(r * 0.55, -r * 1.2, r * 0.48, -r * 0.55)
+      ..close();
+    c.drawPath(hood, _fill(_k(l, const Color(0xFF0E0816))));
+    c.drawOval(Rect.fromCenter(center: Offset(r * 0.12, -r * 0.82), width: r * 0.62, height: r * 0.55), _fill(const Color(0xFF020104)));
+    for (final ex in [r * 0.02, r * 0.24]) {
+      c.drawOval(Rect.fromCenter(center: Offset(ex, -r * 0.84), width: 4, height: 2.6 + 1.5 * warn), _fill(const Color(0xFFDFFFD0)));
+    }
+    RotArt.rim(c, hood, Rect.fromLTRB(-r, -r * 1.5, r, -r * 0.9), alpha: 0.55);
+    // Langer Arm mit krummem Stab nach vorn
+    _line
+      ..strokeWidth = 4
+      ..color = _k(l, const Color(0xFF0E0816));
+    c.drawLine(Offset(r * 0.3, -r * 0.4), Offset(r * 0.75, -r * 0.2), _line);
+    _line
+      ..strokeWidth = 2.4
+      ..color = _k(l, const Color(0xFF2A1E14));
+    final staff = Path()
+      ..moveTo(r * 0.55, r * 0.6)
+      ..quadraticBezierTo(r * 0.7, -r * 0.3, r * 0.95, -r * 0.45)
+      ..quadraticBezierTo(r * 1.05, -r * 0.5, r * 1.0, -r * 0.25);
+    c.drawPath(staff, _line);
+    c.restore();
+    // Laterne hängt am Stab und schwingt nach (ungedreht, damit sie lotrecht hängt)
+    final swing = sin(t * 2.2) * 0.25;
+    final hook = Offset(r * 1.0, -r * 0.25);
+    final lp = hook + Offset(sin(swing) * r * 0.35, cos(swing) * r * 0.55);
+    _line
+      ..strokeWidth = 1
+      ..color = const Color(0xFF4A3A2A);
+    c.drawLine(hook, lp - const Offset(0, 8), _line);
+    final glow = 0.75 + 0.25 * sin(t * 7) + 0.3 * warn;
+    Glow.draw(c, lp.dx, lp.dy, 22 + 8 * warn, Color.fromRGBO(255, 230, 160, min(1.0, 0.55 * glow)));
+    final cage = RRect.fromRectAndRadius(Rect.fromCenter(center: lp, width: 12, height: 15), const Radius.circular(3));
+    c.drawRRect(cage, _fill(Color.fromRGBO(255, 214, 120, min(1.0, 0.45 + 0.3 * glow))));
+    c.drawCircle(lp, 3.2, _fill(const Color(0xFFFFF6DC)));
+    c.drawRRect(
+        cage,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4
+          ..color = const Color(0xFF2A1E14));
+    for (final bx in [-2.5, 2.5]) {
+      c.drawLine(lp + Offset(bx, -7), lp + Offset(bx, 7), Paint()..color = const Color(0xFF2A1E14)..strokeWidth = 1);
+    }
+    c.drawRect(Rect.fromCenter(center: lp - const Offset(0, 9), width: 8, height: 3), _fill(const Color(0xFF2A1E14)));
+    // Irrlicht-Schwaden unter dem Saum
+    RotArt.smoke(c, Offset(0, r * 1.1), t, n: 4, len: 24, seed: 0.4);
+  }
+
+  // ============================================================== Dornenwurm
+
+  /// Riesiger Wurm aus Dornenringen. Unter der Erde nur ein wandernder Erdhügel; beim
+  /// Hervorbrechen ([BossLook.rise] → 1) steigt der Körper aus dem Boden, das Maul voller Zähne.
+  static void thornWorm(Canvas c, BossLook l, double r) {
+    final t = l.t, rise = l.rise;
+    final ground = r; // Bodenlinie in lokalen Koordinaten
+    // Körper (über dem Boden beschnitten)
+    if (rise > 0) {
+      c.save();
+      c.clipRect(Rect.fromLTRB(-r * 3, -r * 4, r * 3, ground));
+      c.translate(0, (1 - rise) * r * 2.6);
+      const n = 7;
+      Offset seg(double k) =>
+          Offset(sin(k * pi * 0.9 + t * 1.5) * r * 0.32 + k * r * 0.45, ground - k * r * 2.1);
+      // Von unten nach oben, damit obere Ringe die unteren überdecken
+      for (var i = 0; i < n; i++) {
+        final k = i / (n - 1);
+        final at = seg(k);
+        final rr = r * (0.66 - k * 0.16);
+        c.drawCircle(at, rr, l.hit ? _fill(_k(l, RotArt.ink)) : RotArt.cachedFill('worm_seg', rr, core: const Color(0xFF2A1C34)));
+        // Ringband mit Dornen
+        _line
+          ..strokeWidth = 1.6
+          ..color = _k(l, const Color(0xFF3E2E4A));
+        c.drawArc(Rect.fromCircle(center: at, radius: rr * 0.82), pi * 0.1, pi * 0.8, false, _line);
+        for (final side in [-1.0, 1.0]) {
+          final base = at + Offset(side * rr * 0.9, -rr * 0.15);
+          final thorn = Path()
+            ..moveTo(base.dx, base.dy - 5)
+            ..lineTo(base.dx + side * rr * 0.55, base.dy - rr * 0.35)
+            ..lineTo(base.dx, base.dy + 5)
+            ..close();
+          c.drawPath(thorn, _fill(_k(l, const Color(0xFF5A6234))));
+        }
+        RotArt.veins(c, Path()..addArc(Rect.fromCircle(center: at, radius: rr * 0.55), -pi * 0.85, pi * 0.5), l.pulse,
+            color: const Color(0xFFC8D070), width: 1);
+      }
+      // Kopf mit rundem Zahnmaul nach oben-vorn
+      final head = Offset(sin(pi * 0.9 * 1.08 + t * 1.5) * r * 0.32 + r * 0.55, ground - r * 2.35);
+      c.drawCircle(head, r * 0.58, _fill(_k(l, const Color(0xFF160E1E))));
+      final maw = head + Offset(r * 0.26, -r * 0.1);
+      c.drawCircle(maw, r * 0.32, _fill(const Color(0xFF050208)));
+      Glow.draw(c, maw.dx, maw.dy, r * 0.5, Color.fromRGBO(200, 208, 112, 0.35 + 0.2 * l.pulse));
+      for (var i = 0; i < 10; i++) {
+        final a = i / 10 * pi * 2 + t * 0.5;
+        final p0 = maw + Offset(cos(a), sin(a)) * r * 0.3;
+        final tooth = Path()
+          ..moveTo(p0.dx + cos(a + 0.25) * 3, p0.dy + sin(a + 0.25) * 3)
+          ..lineTo(maw.dx + cos(a) * r * 0.16, maw.dy + sin(a) * r * 0.16)
+          ..lineTo(p0.dx + cos(a - 0.25) * 3, p0.dy + sin(a - 0.25) * 3)
+          ..close();
+        c.drawPath(tooth, _fill(const Color(0xFFE8E0C8)));
+      }
+      RotArt.rim(c, Path()..addOval(Rect.fromCircle(center: head, radius: r * 0.58)),
+          Rect.fromLTRB(head.dx - r, head.dy - r, head.dx + r, head.dy - r * 0.1), alpha: 0.6);
+      c.restore();
+    }
+    // Erdhügel mit Brocken (unter der Erde größer und bebend)
+    final under = rise <= 0;
+    final shakeX = under ? sin(t * 30) * 1.2 : 0.0;
+    final w = r * (under ? 2.4 : 2.8), h = r * (under ? 0.55 : 0.35);
+    final mound = Path()
+      ..moveTo(-w / 2 + shakeX, ground)
+      ..quadraticBezierTo(-w * 0.25 + shakeX, ground - h * 1.3, shakeX, ground - h)
+      ..quadraticBezierTo(w * 0.25 + shakeX, ground - h * 1.25, w / 2 + shakeX, ground)
+      ..close();
+    c.drawPath(mound, _fill(_k(l, const Color(0xFF241A12))));
+    for (var i = 0; i < 6; i++) {
+      final x = -w * 0.35 + i * w * 0.14 + shakeX;
+      final y = ground - h * (0.35 + 0.4 * ((i * 37) % 5) / 5);
+      c.drawCircle(Offset(x, y), 2.5 + (i % 3), _fill(_k(l, const Color(0xFF3A2C20))));
+    }
+    if (under) {
+      // Erdkrumen spritzen
+      for (var i = 0; i < 3; i++) {
+        final ph = (t * 2 + i / 3) % 1;
+        c.drawCircle(Offset(-w * 0.3 + i * w * 0.3, ground - h - ph * 14), 2 * (1 - ph), _fill(const Color(0xFF5A4632)));
+      }
+    }
+    RotArt.rim(c, mound, Rect.fromLTRB(-w, ground - h * 1.5, w, ground - h * 0.4), color: const Color(0xFFC8D070), alpha: 0.35);
+  }
+
+  // ============================================================== Aschephönix
+
+  /// Phönix aus Asche und Glut: dunkler, rissiger Körper, Schwingen mit glühenden Kanten,
+  /// lodernder Flammenschweif und Flammenkamm; in Phase 3 brennt alles heller.
+  static void ashPhoenix(Canvas c, BossLook l, double r) {
+    final t = l.t, warn = l.warn;
+    final heat = (0.6 + 0.2 * l.phase + 0.2 * warn).clamp(0.0, 1.4);
+    final fl = sin(t * 3);
+
+    // Flammenschweif nach hinten
+    for (var i = 0; i < 5; i++) {
+      final k = i / 4 - 0.5;
+      final wave = sin(t * 4 + i) * r * 0.15;
+      final tail = Path()
+        ..moveTo(-r * 0.5, r * 0.1)
+        ..cubicTo(-r * 1.1, r * (0.2 + k * 0.6) + wave, -r * 1.6, r * (0.5 + k * 1.2) - wave, -r * 2.2, r * (0.3 + k * 1.4) + wave)
+        ..cubicTo(-r * 1.5, r * (0.3 + k * 0.9), -r * 1.0, r * (0.15 + k * 0.4), -r * 0.4, r * 0.25)
+        ..close();
+      c.drawPath(
+          tail,
+          Paint()
+            ..blendMode = BlendMode.plus
+            ..shader = ui.Gradient.linear(Offset(-r * 0.4, 0), Offset(-r * 2.2, 0), [
+              Color.fromRGBO(255, 200, 110, min(1.0, 0.55 * heat)),
+              Color.fromRGBO(255, 90, 40, min(1.0, 0.35 * heat)),
+              const Color.fromRGBO(120, 30, 60, 0),
+            ], const [0, 0.5, 1]));
+    }
+
+    /// Schwinge als Fächer aus Federn mit glühenden Kanten (hinten dunkler).
+    void wing(bool far) {
+      final up = fl * 0.45 + (far ? 0.2 : 0);
+      c.save();
+      c.translate(-r * 0.05, -r * 0.2);
+      c.rotate(-0.15 - up * 0.5);
+      final len = r * (far ? 1.45 : 1.75);
+      for (var i = 0; i < 8; i++) {
+        final a = -pi / 2 - 1.05 + i * 0.2;
+        final fl2 = len * (0.6 + 0.4 * sin((i + 0.5) / 8 * pi));
+        final tip = Offset(cos(a), sin(a)) * fl2;
+        final feather = Path()
+          ..moveTo(0, 0)
+          ..quadraticBezierTo(cos(a - 0.14) * fl2 * 0.62, sin(a - 0.14) * fl2 * 0.62, tip.dx, tip.dy)
+          ..quadraticBezierTo(cos(a + 0.14) * fl2 * 0.62, sin(a + 0.14) * fl2 * 0.62, 0, 0)
+          ..close();
+        c.drawPath(feather, _fill(_k(l, far ? const Color(0xFF0C0608) : const Color(0xFF1A0C0E))));
+        _add
+          ..strokeWidth = far ? 1.1 : 1.6
+          ..color = Color.fromRGBO(255, 138 + i * 8, 61, min(1.0, (far ? 0.35 : 0.65) * heat));
+        c.drawPath(feather, _add);
+        Glow.draw(c, tip.dx, tip.dy, far ? 8 : 12, Color.fromRGBO(255, 170, 80, min(1.0, (far ? 0.25 : 0.5) * heat)));
+      }
+      c.restore();
+    }
+
+    wing(true);
+    // Körper: rissige Asche mit Glutkern
+    final body = Path()
+      ..moveTo(r * 0.55, -r * 0.35)
+      ..quadraticBezierTo(r * 0.5, r * 0.4, -r * 0.15, r * 0.45)
+      ..quadraticBezierTo(-r * 0.7, r * 0.35, -r * 0.6, -r * 0.05)
+      ..quadraticBezierTo(-r * 0.3, -r * 0.5, r * 0.55, -r * 0.35)
+      ..close();
+    c.drawPath(
+        body,
+        l.hit
+            ? _fill(_k(l, RotArt.ink))
+            : (Paint()
+              ..shader = ui.Gradient.radial(const Offset(0, 0), r * 0.7,
+                  [Color.lerp(const Color(0xFF3A1810), const Color(0xFF6A2A10), (heat - 0.6).clamp(0.0, 1.0))!, const Color(0xFF120808)])));
+    RotArt.veins(
+        c,
+        Path()
+          ..moveTo(-r * 0.45, 0)
+          ..lineTo(-r * 0.15, r * 0.08)
+          ..lineTo(r * 0.05, -r * 0.12)
+          ..lineTo(r * 0.3, -r * 0.05)
+          ..moveTo(-r * 0.15, r * 0.08)
+          ..lineTo(-r * 0.05, r * 0.32)
+          ..moveTo(r * 0.05, -r * 0.12)
+          ..lineTo(r * 0.12, -r * 0.3),
+        min(1.0, l.pulse * 0.5 + 0.3 * heat),
+        color: _ember,
+        width: 1.2 + 0.6 * warn);
+    // Hals und Kopf mit Hakenschnabel und Flammenkamm
+    final head = Offset(r * 0.62, -r * 0.6);
+    _line
+      ..strokeWidth = r * 0.22
+      ..color = _k(l, const Color(0xFF1A0C0C));
+    c.drawLine(Offset(r * 0.35, -r * 0.25), head, _line);
+    c.drawCircle(head, r * 0.22, _fill(_k(l, const Color(0xFF1E0E0C))));
+    final beak = Path()
+      ..moveTo(head.dx + r * 0.15, head.dy - r * 0.08)
+      ..quadraticBezierTo(head.dx + r * 0.5, head.dy - r * 0.02, head.dx + r * 0.42, head.dy + r * 0.16)
+      ..lineTo(head.dx + r * 0.16, head.dy + r * 0.08)
+      ..close();
+    c.drawPath(beak, _fill(_k(l, const Color(0xFF3A2A20))));
+    for (var i = 0; i < 4; i++) {
+      final a = -pi * 0.85 + i * 0.28 + sin(t * 6 + i) * 0.08;
+      final base = head + Offset(cos(a), sin(a)) * r * 0.18;
+      final tip = head + Offset(cos(a), sin(a)) * r * (0.55 + 0.1 * sin(t * 8 + i));
+      c.drawLine(
+          base,
+          tip,
+          Paint()
+            ..strokeWidth = 3.5 - i * 0.4
+            ..strokeCap = StrokeCap.round
+            ..blendMode = BlendMode.plus
+            ..color = Color.fromRGBO(255, 150 + i * 20, 70, min(1.0, 0.6 * heat)));
+    }
+    c.drawOval(Rect.fromCenter(center: head + Offset(r * 0.06, -r * 0.03), width: 7, height: 3 + 2 * warn), _fill(const Color(0xFFFFF0C0)));
+    RotArt.rim(c, body, Rect.fromLTRB(-r, -r, r, -r * 0.1), color: _ember, alpha: 0.5);
+    wing(false);
+    // Aschefunken steigen auf
+    for (var i = 0; i < 6; i++) {
+      final ph = (t * 0.6 + i / 6) % 1;
+      final x = -r * 0.6 + i * r * 0.25 + sin(t * 2 + i) * 6;
+      c.drawCircle(Offset(x, r * 0.4 - ph * r * 1.6), 1.6 * (1 - ph) + 0.4,
+          _fill(Color.fromRGBO(255, 170, 90, (1 - ph) * min(1.0, 0.8 * heat))));
+    }
   }
 }

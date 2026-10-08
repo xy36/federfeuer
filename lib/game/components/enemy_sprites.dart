@@ -295,6 +295,8 @@ class EnemyBodyPass extends Component with HasGameReference<FederfeuerGame> {
     EnemyType.sporeShroom: [EnemyType.spore],
     EnemyType.beetleQueen: [EnemyType.avalanche],
     EnemyType.spiderMother: [EnemyType.spider],
+    EnemyType.lanternMan: [EnemyType.wisp],
+    EnemyType.ashPhoenix: [EnemyType.beetle],
   };
 
   @override
