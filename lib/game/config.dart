@@ -107,7 +107,8 @@ const int kEarlySpawnWaves = 4, kEarlySpawnBonus = 1;
 const double kSpawnIntervalBase = 3.0, kSpawnIntervalStep = 0.1, kSpawnIntervalMin = 1.6;
 double spawnInterval(int wave) => max(kSpawnIntervalMin, kSpawnIntervalBase - kSpawnIntervalStep * wave);
 
-/// Gruppengröße: 1 + ⌊Welle / [kGroupWaveStep]⌋, mit [kGroupExtraChance] einer mehr.
+/// Gruppengröße: 1 + Welle / [kGroupWaveStep] (zufällig gerundet, wächst gleichmäßig statt in
+/// Sprüngen), mit [kGroupExtraChance] einer mehr.
 const double kGroupWaveStep = 5, kGroupExtraChance = 0.4;
 
 /// Höchstens so viele lebende Gegner, darüber keine neuen Spawns.
@@ -118,14 +119,13 @@ const double kToughnessPerWave = 0.25;
 double enemyToughness(int wave) => 1 + kToughnessPerWave * (wave - 1);
 
 /// Material-Faktor regulärer Gegner je Welle (1–14; die Bosswelle nutzt den letzten Wert).
-/// Abgeleitet aus dem Einkommen pro Welle: Wellen 1–6 wie vor „wenige, aber zähe Gegner“,
-/// danach gleichmäßig weniger bis 80 % in Welle 14 (spät gab es zu viel Geld). Der Faktor
-/// springt, weil die Gruppengröße in Stufen wächst; das Einkommen pro Welle steigt gleichmäßig.
-const kMaterialByWave = [1.3, 1.35, 1.95, 1.45, 2.05, 2.15, 2.25, 3.0, 3.15, 2.95, 2.7, 2.5, 2.65, 2.45];
+/// Abgeleitet aus dem Einkommen pro Welle: bis Welle 8 wie bisher (bei gleichmäßig wachsender
+/// Gruppengröße umgerechnet), ab Welle 9 20 % weniger – spät gab es zu viel Geld.
+const kMaterialByWave = [1.2, 1.16, 1.56, 1.09, 2.05, 1.98, 1.93, 2.4, 2.0, 2.36, 2.04, 1.79, 1.8, 1.59];
 double enemyMaterialFactor(int wave) => kMaterialByWave[(wave - 1).clamp(0, kMaterialByWave.length - 1)];
 
 /// Zusätzlicher Schaden regulärer Gegner je Welle (wenige Gegner sollen trotzdem wehtun).
-const double kEnemyDmgPerWave = 0.04;
+const double kEnemyDmgPerWave = 0.05;
 double enemyDmgBonus(int wave) => 1 + kEnemyDmgPerWave * (wave - 1);
 
 /// Glück je Punkt: Seltenheit im Shop (Selten/Episch/Legendär), seltene Level-up-Option,
@@ -652,7 +652,7 @@ const Map<String, WeaponDef> weaponDefs = {
       color: Color(0xFFFF9F1C), radius: 6, length: 18),
   'shotgun': WeaponDef(
       id: 'shotgun', name: 'Funkenfächer', icon: '🎇', desc: 'Fünf Funken im Fächer, setzen in Brand.', cls: WeaponClass.ember,
-      dmg: 5, cooldown: 1.15, range: 210, speed: 640, count: 5, spread: 0.6, burn: 2, price: 20,
+      dmg: 5, cooldown: 1.15, range: 210, speed: 640, count: 5, spread: 0.6, burn: 2, price: 24,
       color: Color(0xFFFFB37A), radius: 3.5, length: 17),
   'popcorn': WeaponDef(
       id: 'popcorn', name: 'Popcornmaschine', icon: '🍿', desc: 'Maiskörner ploppen nach 1 s laut auf und explodieren.',
@@ -662,7 +662,7 @@ const Map<String, WeaponDef> weaponDefs = {
   // ---- Wind
   'smg': WeaponDef(
       id: 'smg', name: 'Böenschwarm', icon: '🌬️', desc: 'Sehr schnell, wenig Schaden.', cls: WeaponClass.wind,
-      dmg: 3, cooldown: 0.18, range: 270, speed: 760, spread: 0.22, price: 18,
+      dmg: 2.6, cooldown: 0.18, range: 270, speed: 760, spread: 0.22, price: 22,
       color: Color(0xFFD9FFF2), radius: 3, length: 15),
   'feather': WeaponDef(
       id: 'feather', name: 'Federwirbel', icon: '🌀', desc: 'Federklingen kreisen um dich (Nahkampf).',
@@ -683,7 +683,7 @@ const Map<String, WeaponDef> weaponDefs = {
   'crowcall': WeaponDef(
       id: 'crowcall', name: 'Krähenruf', icon: '🐦‍⬛', desc: 'Ruft Geisterkrähen, die selbst Gegner jagen.',
       cls: WeaponClass.dark, kind: WeaponKind.summon,
-      dmg: 6, cooldown: 2.5, range: 420, speed: 260, count: 3, curse: 2, price: 26,
+      dmg: 7.5, cooldown: 2.5, range: 420, speed: 260, count: 3, curse: 2, price: 26,
       color: Color(0xFFC07BFF), radius: 8, length: 12),
   'lantern': WeaponDef(
       id: 'lantern', name: 'Paktlaterne', icon: '🏮', desc: 'Sehr stark – kostet aber 1 HP pro Schuss.', cls: WeaponClass.dark,
@@ -692,17 +692,17 @@ const Map<String, WeaponDef> weaponDefs = {
   // ---- Wasser
   'water': WeaponDef(
       id: 'water', name: 'Wasserpistole', icon: '🔫', desc: 'Strahl, der verlangsamt und zurückschiebt.', cls: WeaponClass.water,
-      dmg: 2, cooldown: 0.12, range: 230, speed: 650, spread: 0.06, slow: 0.35, slowTime: 1.2, knock: 7, price: 16,
+      dmg: 1.6, cooldown: 0.12, range: 230, speed: 650, spread: 0.06, slow: 0.35, slowTime: 1.2, knock: 7, price: 20,
       color: Color(0xFFA8E6FF), radius: 3, length: 14),
   'bubbles': WeaponDef(
       id: 'bubbles', name: 'Seifenblasen', icon: '🫧', desc: 'Fangen Gegner ein – sie treiben hilflos nach oben.',
       cls: WeaponClass.water,
-      dmg: 3, cooldown: 1.4, range: 300, speed: 220, count: 2, spread: 0.3, trap: 1.8, knock: 0, price: 22,
+      dmg: 5, cooldown: 1.4, range: 300, speed: 220, count: 2, spread: 0.3, trap: 1.8, knock: 0, price: 22,
       color: Color(0xFFE6F8FF), radius: 7, length: 10),
   'raincloud': WeaponDef(
       id: 'raincloud', name: 'Regenwolke', icon: '🌧️', desc: 'Setzt sich über Gegner und regnet verlangsamenden Schaden.',
       cls: WeaponClass.water, kind: WeaponKind.cloud,
-      dmg: 3, cooldown: 3.0, range: 380, speed: 0, slow: 0.4, slowTime: 0.6, price: 26,
+      dmg: 4, cooldown: 3.0, range: 380, speed: 0, slow: 0.4, slowTime: 0.6, price: 26,
       color: Color(0xFF9FD4FF), radius: 46, length: 12),
   // ---- Stein
   'pebble': WeaponDef(
@@ -1412,12 +1412,13 @@ const Map<EnemyType, EnemyDef> enemyDefs = {
   EnemyType.spiderMother: EnemyDef(hp: 260, speed: 70, dmg: 6, radius: 40, flying: true, drop: 0, wind: 0),
   EnemyType.moorGolem: EnemyDef(hp: 270, speed: 22, dmg: 5, radius: 44, flying: false, drop: 0, wind: 0),
   EnemyType.lanternMan: EnemyDef(hp: 220, speed: 45, dmg: 5, radius: 32, flying: true, drop: 0, wind: 0),
-  EnemyType.thornWorm: EnemyDef(hp: 240, speed: 210, dmg: 5, radius: 36, flying: false, drop: 0, wind: 0),
+  // Dornenwurm nur gut die Hälfte der Zeit treffbar, darum weniger HP
+  EnemyType.thornWorm: EnemyDef(hp: 150, speed: 210, dmg: 5, radius: 36, flying: false, drop: 0, wind: 0),
   // Endbosse: keine Wellenskalierung
   EnemyType.boss: EnemyDef(
-      hp: 4500, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
+      hp: 20000, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
   EnemyType.ashPhoenix: EnemyDef(
-      hp: 4300, speed: 60, dmg: 6, radius: 48, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
+      hp: 19000, speed: 60, dmg: 6, radius: 48, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
 };
 
 /// Elitegegner: Modifikator mit Farbe und Zeichen über dem Kopf.
@@ -1491,8 +1492,9 @@ const kGatekeepers = [
 /// Endbosse: Jeder Run zieht zufällig einen.
 const kFinalBosses = [EnemyType.boss, EnemyType.ashPhoenix];
 
-/// HP-Wachstum der Torwächter je Welle (Grund-HP × (1 + Wachstum × (w − 1))).
-const double kGateHpGrowth = 0.42;
+/// HP-Wachstum der Torwächter je Welle: Grund-HP × (1 + Wachstum × (w − 1)) × Zähigkeit k(w)
+/// wie bei normalen Gegnern – so bleibt der Kampf über den Run ähnlich lang.
+const double kGateHpGrowth = 0.3;
 
 /// Torwächter erscheint, sobald der Spieler so nah am Ziel ist; er steht so weit davor.
 const double kGateTriggerDist = 1000, kGateOffset = 260;
@@ -1525,10 +1527,10 @@ class DifficultyDef {
 
 const difficultyDefs = [
   DifficultyDef(1, 'Küken', 1.0, 1.0, 1.0),
-  DifficultyDef(2, 'Spatz', 1.15, 1.1, 1.1),
-  DifficultyDef(3, 'Falke', 1.3, 1.25, 1.2, dropFallSpeed: 12),
-  DifficultyDef(4, 'Adler', 1.5, 1.4, 1.3, dropFallSpeed: 35),
-  DifficultyDef(5, 'Phönix', 1.75, 1.6, 1.4, dropFallSpeed: 70),
+  DifficultyDef(2, 'Spatz', 1.2, 1.15, 1.1),
+  DifficultyDef(3, 'Falke', 1.4, 1.3, 1.2, dropFallSpeed: 12),
+  DifficultyDef(4, 'Adler', 1.75, 1.55, 1.35, dropFallSpeed: 35),
+  DifficultyDef(5, 'Phönix', 2.1, 1.8, 1.5, dropFallSpeed: 70),
 ];
 
 const int kDifficultyCount = 5;

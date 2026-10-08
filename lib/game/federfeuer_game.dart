@@ -785,8 +785,10 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final pool = spawnPool(w);
     final total = pool.fold(0.0, (a, b) => a + b.$2);
 
+    final g = w / kGroupWaveStep;
     var n = 1 +
-        (w / kGroupWaveStep).floor() +
+        g.floor() +
+        (rng.nextDouble() < g - g.floor() ? 1 : 0) +
         (rng.nextDouble() < kGroupExtraChance ? 1 : 0) +
         (w <= kEarlySpawnWaves ? kEarlySpawnBonus : 0);
     final cx = isBossWave(w) ? _bossWaveSpawnX() : _spawnXNearPlayer();

@@ -39,8 +39,10 @@ class Enemy extends PositionComponent with HasGameReference<FederfeuerGame>, Tra
     final regular = !boss && !child && !_gatekeeperType(type);
     toughness = regular ? enemyToughness(wave) : 1;
     materialFactor = regular ? enemyMaterialFactor(wave) : 1;
-    final growth = _gatekeeperType(type) ? kGateHpGrowth : 0.38;
-    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * growth)) * diff.hp * hpMul * toughness;
+    // Torwächter wachsen zusätzlich mit der Zähigkeit (sonst werden sie über den Run immer leichter)
+    final gate = _gatekeeperType(type);
+    final growth = gate ? kGateHpGrowth : 0.38;
+    maxHp = (boss ? d.hp : d.hp * (1 + (wave - 1) * growth)) * diff.hp * hpMul * toughness * (gate ? enemyToughness(wave) : 1);
     hp = maxHp;
     dmg = ((boss ? d.dmg : d.dmg * (1 + (wave - 1) * 0.15)) * diff.dmg * (regular ? enemyDmgBonus(wave) : 1))
         .roundToDouble();

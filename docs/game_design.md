@@ -130,17 +130,17 @@ Jede Waffe gehört zu einer von sechs Klassen. Wer mehrere Waffen derselben Klas
 | Licht | Sonnenstrahl | Schuss | 22 | 1,7 | 470 | 1500 | durchschlägt alle Gegner | 28 |
 | Licht | Diskokugel | rundum | 5 × 6 | 0,9 | 300 | 680 | 6 Strahlen gleichmäßig rundherum, die Kugel dreht sich weiter – zielt nie | 24 |
 | Glut | Glutkern | Schuss | 15 | 1,6 | 390 | 420 | Explosion, Radius 75 | 30 |
-| Glut | Funkenfächer | Schuss | 5 × 5 | 1,15 | 210 | 640 | 5 Funken im 0,6-rad-Fächer, Brand 2 s | 20 |
+| Glut | Funkenfächer | Schuss | 5 × 5 | 1,15 | 210 | 640 | 5 Funken im 0,6-rad-Fächer, Brand 2 s | 24 |
 | Glut | Popcornmaschine | Wurf | 9 × 2 | 1,0 | 320 | 380 | Körner landen im Bogen und explodieren nach 1 s („PLOPP!“), Radius 50 | 24 |
-| Wind | Böenschwarm | Schuss | 3 | 0,18 | 270 | 760 | Streuung 0,22 rad | 18 |
+| Wind | Böenschwarm | Schuss | 2,6 | 0,18 | 270 | 760 | Streuung 0,22 rad | 22 |
 | Wind | Federwirbel | Nahkampf | 6 | 0,4 je Gegner | Kreis 58 | 4,2 rad/s | 3 Federklingen kreisen um den Vogel; jede trifft denselben Gegner höchstens alle 0,4 s | 22 |
 | Wind | Pusteblume | Schuss | 2 × 3 | 0,6 | 260 | 150 | Schirmchen schweben leicht aufwärts, kleben 3 s am Gegner und schaden weiter (Trefferschaden pro Sekunde), kein Rückstoß | 20 |
 | Böse | Dornenranke | Nahkampf | 12 | 0,9 | 125 | – | Hieb im 1,7-rad-Bogen trifft alles darin; 15 % Chance je Treffer auf +1 HP, Fluch 2 s, Rückstoß 18 | 22 |
-| Böse | Krähenruf | Begleiter | 6 | 2,5 | Suche 420 | 260 | ruft bis zu 3 Geisterkrähen (je 8 s), die selbst Gegner jagen; Fluch 2 s | 26 |
+| Böse | Krähenruf | Begleiter | 7,5 | 2,5 | Suche 420 | 260 | ruft bis zu 3 Geisterkrähen (je 8 s), die selbst Gegner jagen; Fluch 2 s | 26 |
 | Böse | Paktlaterne | Schuss | 26 | 1,0 | 360 | 900 | kostet 1 HP pro Schuss (nie den letzten), Fluch 3 s | 26 |
-| Wasser | Wasserpistole | Schuss | 2 | 0,12 | 230 | 650 | verlangsamt um 35 % für 1,2 s, Rückstoß 7 | 16 |
-| Wasser | Seifenblasen | Schuss | 3 × 2 | 1,4 | 300 | 220 | fangen Gegner 1,8 s ein, kein Rückstoß | 22 |
-| Wasser | Regenwolke | Wolke | 3 | 3,0 | 380 | – | Wolke (Breite 46) folgt dem Ziel 3 s und trifft alle 0,5 s alles darunter; verlangsamt um 40 % | 26 |
+| Wasser | Wasserpistole | Schuss | 1,6 | 0,12 | 230 | 650 | verlangsamt um 35 % für 1,2 s, Rückstoß 7 | 20 |
+| Wasser | Seifenblasen | Schuss | 5 × 2 | 1,4 | 300 | 220 | fangen Gegner 1,8 s ein, kein Rückstoß | 22 |
+| Wasser | Regenwolke | Wolke | 4 | 3,0 | 380 | – | Wolke (Breite 46) folgt dem Ziel 3 s und trifft alle 0,5 s alles darunter; verlangsamt um 40 % | 26 |
 | Stein | Kieselschleuder | Schuss | 11 | 1,0 | 320 | 620 | Rückstoß 40 | 18 |
 | Stein | Gartenzwergwerfer | Wurf | 14 | 1,5 | 340 | 430 | Explosion beim Aufprall, Radius 45, betäubt 1 s | 26 |
 | Stein | Bowlingkugel | Rollen | 20 | 2,2 | 620 | 430 | fällt zu Boden und rollt Richtung Ziel, durchschlägt alles, Rückstoß 25 | 28 |
@@ -252,8 +252,8 @@ Fäulnis-Kreaturen mit klar unterscheidbarem Verhalten, gern mit Augenzwinkern. 
 | Irrlicht | Wald / 10 | 9 | – | 5 | 12 | 1 | Springt alle 2,2 s neben den Spieler; nach drei Sprüngen oder in seiner Nähe 0,8 s Warnung, dann Explosion (Radius 75, ohne Material) |
 | Felsadler | Gebirge / 13 | 30 | 120 | 5 | 20 | 2 | Kreist oben über dem Spieler, hält alle 2,5–3,5 s inne (0,7 s Warnung) und stürzt sich auf dessen Position (560) |
 | Lawinenkäfer | Gebirge / 13 | 40 | 70 | 6 | 18 | 2 | Läuft heran, rollt sich in Reichweite (380) ein (0,6 s Warnung) und rast 1,6 s über den Boden (430) |
-| Geierkönig (Endboss) | Gipfel / 15 | 4500 | 55 | 6 | 52 | – | siehe „Endbosse“ |
-| Aschephönix (Endboss) | Gipfel / 15 | 4300 | 60 | 6 | 48 | – | siehe „Endbosse“ |
+| Geierkönig (Endboss) | Gipfel / 15 | 20000 | 55 | 6 | 52 | – | siehe „Endbosse“ |
+| Aschephönix (Endboss) | Gipfel / 15 | 19000 | 60 | 6 | 48 | – | siehe „Endbosse“ |
 
 Stationäre Gegner (Vogelscheuche, Wetterhahn) lassen sich nicht verschieben und nicht einfangen; der Wind treibt sie nicht ab.
 
@@ -265,13 +265,13 @@ Skalierung pro Welle w (gilt nicht für den Boss):
 - Schaden × (1 + 0,15 · (w − 1)), gerundet
 - Tempo × (1 + 0,02 · w)
 
-**Wenige, aber zähe Gegner:** Statt immer mehr Gegner gleichzeitig werden reguläre Gegner mit jeder Welle zäher. Zähigkeit k(w) = 1 + 0,25 · (w − 1): HP × k(w); Material × Faktor je Welle (siehe Tabelle; zufällig gerundet – 1,3 ergibt in 30 % der Fälle 2, sonst 1 –, fällt als wenige wertvolle Kristalle); Schaden zusätzlich × (1 + 0,04 · (w − 1)). Ausgenommen sind Boss, Torwächter und Spawner-Kinder.
+**Wenige, aber zähe Gegner:** Statt immer mehr Gegner gleichzeitig werden reguläre Gegner mit jeder Welle zäher. Zähigkeit k(w) = 1 + 0,25 · (w − 1): HP × k(w); Material × Faktor je Welle (siehe Tabelle; zufällig gerundet – 1,3 ergibt in 30 % der Fälle 2, sonst 1 –, fällt als wenige wertvolle Kristalle); Schaden zusätzlich × (1 + 0,05 · (w − 1)). Ausgenommen sind Boss, Torwächter und Spawner-Kinder.
 
-Der Material-Faktor ist aus dem Einkommen pro Welle abgeleitet (XP entsteht aus Material): Wellen 1–6 bringen so viel wie vor der Umstellung auf wenige, zähe Gegner, danach sinkt das Einkommen gleichmäßig bis auf 80 % in Welle 14, weil spät sonst zu viel Geld übrig blieb. Der Faktor springt, weil die Gruppengröße in Stufen wächst; das Einkommen pro Welle steigt gleichmäßig (rechnerisch, wenn alle Gegner besiegt werden: Welle 1: 22, 4: 43, 8: 190, 14: 521).
+Der Material-Faktor ist aus dem Einkommen pro Welle abgeleitet (XP entsteht aus Material): Bis Welle 8 bringt jede Welle so viel wie zuvor (umgerechnet auf die gleichmäßig wachsende Gruppengröße), ab Welle 9 20 % weniger, weil spät sonst zu viel Geld übrig blieb. Das Einkommen pro Welle steigt gleichmäßig (rechnerisch, wenn alle Gegner besiegt werden: Welle 1: 18, 4: 45, 8: 252, 9: 264, 14: 631).
 
 | Welle | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 (und Boss) |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Material × | 1,3 | 1,35 | 1,95 | 1,45 | 2,05 | 2,15 | 2,25 | 3,0 | 3,15 | 2,95 | 2,7 | 2,5 | 2,65 | 2,45 |
+| Material × | 1,2 | 1,16 | 1,56 | 1,09 | 2,05 | 1,98 | 1,93 | 2,4 | 2,0 | 2,36 | 2,04 | 1,79 | 1,8 | 1,59 |
  
 Gegner stoßen sich gegenseitig ab, damit sie sich nicht stapeln (Boss, Torwächter und stationäre Gegner bleiben stehen). Treffer werfen sie leicht zurück und lassen sie kurz weiß aufblitzen.
 
@@ -314,7 +314,7 @@ Ab Welle 5 kann ein regulär erscheinender Gegner (nicht Boss oder Torwächter) 
 
 ### Torwächter
 
-Am Ende jeder Welt außer dem Gipfel (Welle 4, 8, 12) bewacht ein Torwächter das Ziel. **Torwächter-Pool:** Zu Beginn jedes Runs werden aus sechs Torwächtern drei verschiedene ausgelost und den Wellen 4, 8 und 12 zugeteilt – jeder kann in jeder dieser Wellen kommen. Darum haben alle ähnliche Grund-HP und wachsen gemeinsam mit der Welle: HP = Grund-HP × (1 + 0,42 · (w − 1)) × Stufe (z. B. 240 Grund-HP: rund 540 in Welle 4, 950 in Welle 8, 1350 in Welle 12); Schaden wie bei normalen Gegnern. Er erscheint, sobald der Spieler 1000 vor dem Ziel ist, 260 davor (mit Beben, Funken und großem Namen „TORWÄCHTER …“ nach dem Wellenbanner). Solange er lebt, ist das Ziel versperrt (violette Gitterstäbe, „VERSPERRT“): Der Spieler wird zurückgeschoben und bekommt den Hinweis „Besiege zuerst …“. **Torwächter-Wellen haben kein Zeitlimit:** Die Welle endet nur durch den Sieg über ihn – nicht durch Zeitablauf und nicht durch das Ziel. Statt des Timers zeigt das HUD „KEIN ZEITLIMIT“ und „Besiege …“, sobald er erscheint darunter seinen Namen und eine HP-Kapsel unter der Zielstrecke. Damit sich die Welle nicht endlos zum Farmen nutzen lässt, läuft die Zeit einer normalen Welle unsichtbar mit: Nur so lange kommen normale Gegner (bis 3 s vor ihrem Ende, wie in jeder Welle), danach nur noch der Torwächter. Besiegt („TORWÄCHTER BESIEGT!“) lässt er 15 Material und ein Geschenk fallen und schaltet einen Waffenplatz frei („NEUER WAFFENPLATZ!“), solange noch einer fehlt. Danach läuft die Welle noch 3 s aus (HUD „BESIEGT“ mit Countdown in der Bildmitte, keine neuen Gegner): Alles Material und das Geschenk fliegen von selbst zum Spieler und zählen auch, wenn sie bis zum Ende noch unterwegs sind. Ein Zeitbonus fällt nicht an; die Einblendung am Ende lautet „Torwächter besiegt“. Torwächter sind wie der Boss immun gegen Einfangen und Rückstoß, Betäubung wirkt nur 30 %; sie skalieren mit der Welle wie normale Gegner und bleiben im Umkreis von 220 um ihren Platz.
+Am Ende jeder Welt außer dem Gipfel (Welle 4, 8, 12) bewacht ein Torwächter das Ziel. **Torwächter-Pool:** Zu Beginn jedes Runs werden aus sechs Torwächtern drei verschiedene ausgelost und den Wellen 4, 8 und 12 zugeteilt – jeder kann in jeder dieser Wellen kommen. Darum haben alle ähnliche wirksame Grund-HP (der Dornenwurm, nur gut die Hälfte der Zeit treffbar, entsprechend weniger) und wachsen wie normale Gegner mit der Zähigkeit: HP = Grund-HP × (1 + 0,3 · (w − 1)) × k(w) × Stufe (z. B. 240 Grund-HP: rund 800 in Welle 4, 2050 in Welle 8, 3870 in Welle 12). So dauert der Kampf mit einer typischen Ausrüstung in allen drei Wellen ähnlich lang (rechnerisch 12–18 s reiner Schaden auf Küken); Schaden wie bei normalen Gegnern. Er erscheint, sobald der Spieler 1000 vor dem Ziel ist, 260 davor (mit Beben, Funken und großem Namen „TORWÄCHTER …“ nach dem Wellenbanner). Solange er lebt, ist das Ziel versperrt (violette Gitterstäbe, „VERSPERRT“): Der Spieler wird zurückgeschoben und bekommt den Hinweis „Besiege zuerst …“. **Torwächter-Wellen haben kein Zeitlimit:** Die Welle endet nur durch den Sieg über ihn – nicht durch Zeitablauf und nicht durch das Ziel. Statt des Timers zeigt das HUD „KEIN ZEITLIMIT“ und „Besiege …“, sobald er erscheint darunter seinen Namen und eine HP-Kapsel unter der Zielstrecke. Damit sich die Welle nicht endlos zum Farmen nutzen lässt, läuft die Zeit einer normalen Welle unsichtbar mit: Nur so lange kommen normale Gegner (bis 3 s vor ihrem Ende, wie in jeder Welle), danach nur noch der Torwächter. Besiegt („TORWÄCHTER BESIEGT!“) lässt er 15 Material und ein Geschenk fallen und schaltet einen Waffenplatz frei („NEUER WAFFENPLATZ!“), solange noch einer fehlt. Danach läuft die Welle noch 3 s aus (HUD „BESIEGT“ mit Countdown in der Bildmitte, keine neuen Gegner): Alles Material und das Geschenk fliegen von selbst zum Spieler und zählen auch, wenn sie bis zum Ende noch unterwegs sind. Ein Zeitbonus fällt nicht an; die Einblendung am Ende lautet „Torwächter besiegt“. Torwächter sind wie der Boss immun gegen Einfangen und Rückstoß, Betäubung wirkt nur 30 %; sie skalieren mit der Welle wie normale Gegner und bleiben im Umkreis von 220 um ihren Platz.
 
 | Torwächter | Grund-HP | Tempo | Schaden | Radius | Angriffe |
 | --- | --- | --- | --- | --- | --- |
@@ -323,13 +323,13 @@ Am Ende jeder Welt außer dem Gipfel (Welle 4, 8, 12) bewacht ein Torwächter da
 | Die Spinnenmutter | 260 | 70 | 6 | 40 | Hängt oben: Fächer aus drei Netzen alle 2,6 s, ruft alle 7 s zwei Spinnen; alle 9 s 0,8 s Warnung, dann lässt sie sich bis zum Boden fallen und klettert zurück |
 | Der Moorgolem | 270 | 22 | 5 | 44 | Schwerer Golem aus Moorstein mit Glutrissen: wirft alle 2,8 s einen Felsbrocken im Bogen; alle 5,5 s Stampfer – 0,9 s Warnung (hebt die glühenden Fäuste), dann laufen zwei Bodenwellen nach links und rechts am Boden entlang (Tempo 340, Höhe 46, Reichweite 900, Schaden × 1,2) – drüberfliegen |
 | Der Laternenmann | 220 | 45 | 5 | 32 | Schwebende Kapuzengestalt mit Laterne: drei langsame Irrlicht-Kugeln alle 2,4 s, ruft alle 10 s zwei Irrlichter; alle 7 s Lichtstrahl – 1 s feine Warnlinie, dann brennt er 1,6 s und dreht langsam (0,45 rad/s) zum Spieler (Treffer höchstens alle 0,5 s); alle 9 s verblasst er (0,6 s) und taucht 120–220 entfernt wieder auf, mit einem Ring aus 6 Kugeln |
-| Der Dornenwurm | 240 | 210 | 5 | 36 | Gräbt sich als Erdhügel zum Spieler (in seinem Revier; Treffer prallen ab, kein Berührungsschaden); 0,8 s Risse im Boden, dann bricht er hervor: Schaden × 1,5 für alles nah am Boden (bis 170 hoch, ± Radius + 34), Fächer aus 7 Dornen; 2,6 s oben (verwundbar) mit gezielten Dornen alle 0,9 s, taucht ab und gräbt erneut |
+| Der Dornenwurm | 150 | 210 | 5 | 36 | Gräbt sich als Erdhügel zum Spieler (in seinem Revier; Treffer prallen ab, kein Berührungsschaden); 0,8 s Risse im Boden, dann bricht er hervor: Schaden × 1,5 für alles nah am Boden (bis 170 hoch, ± Radius + 34), Fächer aus 7 Dornen; 2,6 s oben (verwundbar) mit gezielten Dornen alle 0,9 s, taucht ab und gräbt erneut |
 
 ### Endbosse
 
-In Welle 15 wartet einer von zwei Endbossen, je Run ausgelost. Beide haben drei Phasen (Wechsel bei 66 % und 33 % HP, jeweils mit Beben, Funken und Text), skalieren nicht mit der Welle (nur mit der Stufe) und sind immun gegen Elite, Einfangen und Rückstoß. HUD, Wellenbanner („… KOMMT“) und Siegesbildschirm („… ist gefallen.“) nennen den ausgelosten Boss; die Boss-Leiste zeigt die Phasengrenzen und „PHASE n“.
+In Welle 15 wartet einer von zwei Endbossen, je Run ausgelost. Ihre HP sind auf einen langen Endkampf ausgelegt: mit typischer Endausrüstung rechnerisch rund 50 s reiner Schaden auf Küken, 85 s auf Adler und über 100 s auf Phönix. Beide haben drei Phasen (Wechsel bei 66 % und 33 % HP, jeweils mit Beben, Funken und Text), skalieren nicht mit der Welle (nur mit der Stufe) und sind immun gegen Elite, Einfangen und Rückstoß. HUD, Wellenbanner („… KOMMT“) und Siegesbildschirm („… ist gefallen.“) nennen den ausgelosten Boss; die Boss-Leiste zeigt die Phasengrenzen und „PHASE n“.
 
-**Der Geierkönig** (4500 HP, Tempo 55, Schaden 6, Radius 52; „DER GEIERKÖNIG TOBT!“ / „LETZTE KRAFT!“):
+**Der Geierkönig** (20000 HP, Tempo 55, Schaden 6, Radius 52; „DER GEIERKÖNIG TOBT!“ / „LETZTE KRAFT!“):
 
 | Phase | Angriffe |
 | --- | --- |
@@ -337,7 +337,7 @@ In Welle 15 wartet einer von zwei Endbossen, je Run ausgelost. Beide haben drei 
 | 2 | dazu Federregen alle 5 s: 6 rosa Warnlinien über das Bild verteilt, nach 0,8 s fallen dort Federn von der Decke (Tempo 330) |
 | 3 | Fächer aus 9 Kugeln alle 1,1 s, Krähen alle 4 s, Federregen alle 4 s mit 8 Linien; dazu alle 7 s Sturzflug: 0,9 s Warnung (helles Leuchten), dann quer durchs Bild auf Höhe des Spielers (680) |
 
-**Der Aschephönix** (4300 HP, Tempo 60, Schaden 6, Radius 48; „DER PHÖNIX LODERT!“ / „AUS DER ASCHE!“) – Phönix aus Asche und Glut mit Federfächer-Schwingen, Flammenschweif und Flammenkamm, der in späteren Phasen heller brennt:
+**Der Aschephönix** (19000 HP, Tempo 60, Schaden 6, Radius 48; „DER PHÖNIX LODERT!“ / „AUS DER ASCHE!“) – Phönix aus Asche und Glut mit Federfächer-Schwingen, Flammenschweif und Flammenkamm, der in späteren Phasen heller brennt:
 
 | Phase | Angriffe |
 | --- | --- |
@@ -354,7 +354,7 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
 - **Ende:** Erreicht der Spieler das Ziel, ist die Welle sofort bestanden und er bekommt ⌊Restzeit / 2⌋ Material als Zeitbonus. Läuft vorher der Timer ab, ist die Welle ebenfalls bestanden, aber ohne Bonus. Ausnahme Torwächter-Wellen (4, 8, 12): kein Zeitlimit, sie enden 3 s nach dem Sieg über den Torwächter (siehe „Torwächter“).
 - **Steigende Schwierigkeit:** Gegnerwerte (siehe Skalierung und Zähigkeit), Gruppengröße und der Anteil von Spuckern und Brocken wachsen mit jeder Welle weiter. Das Spawn-Intervall erreicht ab Welle 14 seine Untergrenze von 1,6 s.
 - **Spawn-Intervall:** max(1,6; 3,0 − 0,1 · w) s, zufällig ±30 %; in der Bosswelle × 1,7.
-- **Gruppengröße:** 1 + ⌊w / 5⌋, mit 40 % Chance einer mehr; in den Wellen 1–4 je Gruppe 1 Gegner zusätzlich (sonst reicht das Material früh für keine Käufe). Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
+- **Gruppengröße:** 1 + w / 5 (zufällig gerundet – wächst gleichmäßig statt in Sprüngen alle 5 Wellen), mit 40 % Chance einer mehr; in den Wellen 1–4 je Gruppe 1 Gegner zusätzlich (sonst reicht das Material früh für keine Käufe). Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
 - **Warnung:** Ein pulsierender Fäulnis-Riss (dunkler Kern, violett-rotes Leuchten, der sich bis zum Erscheinen schließt) markiert jeden Spawn 0,9 s vorher (Boss: 2 s, größer).
 - **Obergrenze:** keine neuen Spawns ab 40 lebenden Gegnern.
 - **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle, nie Boss oder Torwächter).
@@ -369,10 +369,10 @@ Es gibt fünf Stufen. Zu Beginn ist nur Küken spielbar; wer eine Stufe gewinnt,
 | Stufe | Name | Gegner-HP | Gegner-Schaden | Spawnrate | Schlechtwetter (Grundchance) | Drops |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 | Küken | × 1,0 | × 1,0 | × 1,0 | 20 % | schweben |
-| 2 | Spatz | × 1,15 | × 1,1 | × 1,1 | 35 % | schweben |
-| 3 | Falke | × 1,3 | × 1,25 | × 1,2 | 50 % | sinken sehr langsam (12) |
-| 4 | Adler | × 1,5 | × 1,4 | × 1,3 | 65 % | sinken (35) |
-| 5 | Phönix | × 1,75 | × 1,6 | × 1,4 | 80 % | fallen zu Boden (70) |
+| 2 | Spatz | × 1,2 | × 1,15 | × 1,1 | 35 % | schweben |
+| 3 | Falke | × 1,4 | × 1,3 | × 1,2 | 50 % | sinken sehr langsam (12) |
+| 4 | Adler | × 1,75 | × 1,55 | × 1,35 | 65 % | sinken (35) |
+| 5 | Phönix | × 2,1 | × 1,8 | × 1,5 | 80 % | fallen zu Boden (70) |
 
 - **HP und Schaden** werden nach der Wellenskalierung multipliziert und gelten auch für den Boss (Schaden gerundet).
 - **Spawnrate:** Das Spawn-Intervall wird durch den Faktor geteilt.
@@ -746,7 +746,8 @@ Phase 2 – Inhalte:
 - [x] Charaktere: zehn Vögel mit Stärke, Nachteil, Flugverhalten und Freischaltaufgaben
 - [x] Waffen: sechs Klassen mit Set-Boni, 18 Waffen inkl. Nahkampf, Brand, Verlangsamen, Betäuben
 - [x] Gegner pro Welt, Elitegegner, Torwächter am Ende der Welten, Geierkönig mit drei Phasen
-- [ ] Balancing der neuen Gegner nach Spieltests
+- [x] Rechnerischer Balance-Check (Schaden vs. Gegner-HP, Torwächter, Endbosse, Wirtschaft, Waffen): Endbosse ×4,4 HP, Torwächter wachsen mit der Zähigkeit, Dornenwurm 150 Grund-HP, gleichmäßige Gruppengröße, spät 20 % weniger Material, Waffen angeglichen; insgesamt schwerer, vor allem Adler und Phönix
+- [ ] Balancing der neuen Gegner nach Spieltests (als Nächstes: Bot-Simulation ganzer Runs)
 - [x] Weniger, aber zähere Gegner (Spawn-Takt, Gruppengröße, Obergrenze 40, Zähigkeit für HP und Material)
 - [x] Neue Werte Glück, Ausweichen und Aktionstempo statt Schub/Gleiten im Level-up; Material wächst langsamer als die Gegner-HP
 - [ ] Waffen im Shop gegen Geld aufwerten (falls spät weiter Geld übrig bleibt)

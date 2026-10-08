@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -36,12 +38,20 @@ Future<void> _run(WidgetTester t, FederfeuerGame game, double seconds, {void Fun
 
 void main() {
   test('Torwächter wachsen gemeinsam mit der Welle; Endbosse ohne Wellenskalierung', () {
-    // Alle Torwächter haben ähnliche Grund-HP, damit jeder in Welle 4 wie 12 passt
-    final hps = [for (final g in kGatekeepers) enemyDefs[g]!.hp];
+    // Alle Torwächter haben ähnliche wirksame Grund-HP (HP je treffbarer Zeit), damit jeder in
+    // Welle 4 wie 12 passt; der Dornenwurm ist nur gut die Hälfte der Zeit treffbar.
+    const wormUptime = (Enemy.wormUp + Enemy.wormSink) / (1.5 + Enemy.wormWarn + Enemy.wormUp + Enemy.wormSink);
+    final hps = [
+      for (final g in kGatekeepers) enemyDefs[g]!.hp / (g == EnemyType.thornWorm ? wormUptime : 1),
+    ];
     expect(hps.reduce((a, b) => a > b ? a : b) / hps.reduce((a, b) => a < b ? a : b), lessThan(1.3));
     for (final b in kFinalBosses) {
-      expect(enemyDefs[b]!.hp, greaterThan(4000));
+      expect(enemyDefs[b]!.hp, greaterThan(15000), reason: 'langer Endkampf');
     }
+    // Torwächter wachsen mit der Zähigkeit: Welle 12 deutlich mehr als nur linear
+    final w4 = Enemy(EnemyType.bell, Vector2.zero(), 4, difficultyDefs[0], Random(1)).maxHp;
+    final w12 = Enemy(EnemyType.bell, Vector2.zero(), 12, difficultyDefs[0], Random(1)).maxHp;
+    expect(w12 / w4, greaterThan(4));
   });
 
   testWidgets('Moorgolem: Stampfen schickt Bodenwellen – tief getroffen, hoch sicher', (t) async {
