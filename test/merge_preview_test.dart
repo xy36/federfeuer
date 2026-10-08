@@ -29,7 +29,9 @@ void main() {
     game.startRun('pistol');
     final r = game.run!;
     r.addWeapon('pistol', 0);
-    r.addAction(ActionId.horn);
+    r
+      ..addAction(ActionId.downpour)
+      ..addAction(ActionId.whirlwind);
     r.actions[1].level = 1;
     r.offers = [];
     game.phase = Phase.shop;

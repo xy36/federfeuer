@@ -30,7 +30,9 @@ void main() {
   testWidgets('Verschmelzen zeigt die Animation; sie endet von selbst oder per Klick', (t) async {
     final game = await _game(t);
     game.startRun('pistol');
-    final r = game.run!..addAction(ActionId.horn);
+    final r = game.run!
+      ..addAction(ActionId.downpour)
+      ..addAction(ActionId.whirlwind);
     r.offers = [];
     game.phase = Phase.shop;
     game.overlays.add('shop');
@@ -38,7 +40,7 @@ void main() {
     await t.tap(find.textContaining('Verschmelzen'));
     await t.pump(const Duration(milliseconds: 50));
     expect(find.byType(FusionAnimation), findsOneWidget);
-    expect(r.actions.single.id, ActionId.sonicBoom, reason: 'Verschmelzen passiert sofort');
+    expect(r.actions.single.id, ActionId.glacier, reason: 'Verschmelzen passiert sofort');
     await t.pump(FusionAnimation.duration + const Duration(milliseconds: 100));
     await t.pump(const Duration(milliseconds: 50));
     expect(find.byType(FusionAnimation), findsNothing);
@@ -47,7 +49,7 @@ void main() {
     r
       ..actions.clear()
       ..addAction(ActionId.flash)
-      ..addAction(ActionId.storm);
+      ..addAction(ActionId.whirlwind);
     game.overlays.remove('shop');
     await t.pump();
     game.overlays.add('shop');
@@ -57,8 +59,8 @@ void main() {
     await t.tapAt(const Offset(640, 360));
     await t.pump(const Duration(milliseconds: 50));
     expect(find.byType(FusionAnimation), findsNothing);
-    expect(r.actions.single.id, ActionId.sunStorm);
-    expect(game.progress.hasEvolved(ActionId.sunStorm), isTrue, reason: 'Kompendium vermerkt die Evolution');
+    expect(r.actions.single.id, ActionId.thunderstorm);
+    expect(game.progress.hasEvolved(ActionId.thunderstorm), isTrue, reason: 'Kompendium vermerkt die Evolution');
     game.overlays.remove('shop');
     game.toMenu();
     await t.pump(const Duration(seconds: 1));
@@ -75,6 +77,8 @@ void main() {
     for (final a in ActionConstellation.order) {
       expect(find.text(a.label), findsWidgets, reason: a.label);
     }
-    expect(ActionConstellation.order.toSet(), {for (final r in actionRecipes) ...[r.a, r.b]});
+    // Alle Grund-Aktionen sind Sterne, darunter alle Rezept-Zutaten
+    expect(ActionConstellation.order.toSet(), ActionId.values.where((a) => !a.evolved).toSet());
+    expect(ActionConstellation.order.toSet(), containsAll({for (final r in actionRecipes) ...[r.a, r.b]}));
   });
 }

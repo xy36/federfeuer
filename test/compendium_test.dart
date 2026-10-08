@@ -17,21 +17,23 @@ import 'helpers/fonts.dart';
 void main() {
   test('Gesehen wird, was im Shop liegt oder besessen wird; Rezepte über eigene Aktionen', () {
     final p = Progress();
-    final r = RunState(null)..rollOffers(Random(1));
+    final r = RunState(null)
+      ..addAction(ActionId.downpour)
+      ..rollOffers(Random(1));
     p.noteRun(r);
     expect(p.hasSeen('w:pistol'), isTrue, reason: 'Startwaffe');
     for (final o in r.offers) {
       expect(p.hasSeen(o.isWeapon ? 'w:${o.id}' : 'i:${o.id}'), isTrue);
     }
-    expect(p.hasSeen('a:dash'), isTrue);
-    expect(p.hasSeen('r:${ActionId.sonicBoom.name}'), isTrue, reason: 'Sturzflug steckt im Rezept');
-    expect(p.hasSeen('r:${ActionId.goldenHour.name}'), isFalse);
-    expect(p.hasEvolved(ActionId.sonicBoom), isFalse);
-    r.addAction(ActionId.horn);
+    expect(p.hasSeen('a:downpour'), isTrue);
+    expect(p.hasSeen('r:${ActionId.glacier.name}'), isTrue, reason: 'Platzregen steckt im Rezept');
+    expect(p.hasSeen('r:${ActionId.hellmaw.name}'), isFalse);
+    expect(p.hasEvolved(ActionId.glacier), isFalse);
+    r.addAction(ActionId.whirlwind);
     r.evolve();
     p.noteRun(r);
-    expect(p.hasEvolved(ActionId.sonicBoom), isTrue);
-    expect(p.hasSeen('a:sonicBoom'), isTrue);
+    expect(p.hasEvolved(ActionId.glacier), isTrue);
+    expect(p.hasSeen('a:glacier'), isTrue);
     p.seeEnemy(EnemyType.rock);
     expect(p.hasSeen('e:rock'), isTrue);
   });
@@ -40,12 +42,12 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     final a = Progress()
       ..see('w:rail')
-      ..evolved.add('torpedo');
+      ..evolved.add('glacier');
     await a.save();
     final b = Progress();
     await b.load();
     expect(b.hasSeen('w:rail'), isTrue);
-    expect(b.hasEvolved(ActionId.torpedo), isTrue);
+    expect(b.hasEvolved(ActionId.glacier), isTrue);
     expect(b.hasSeen('w:bowling'), isFalse);
   });
 

@@ -2,6 +2,7 @@ import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:federfeuer/game/config.dart' show ActionId;
 import 'package:federfeuer/game/federfeuer_game.dart';
 import 'package:federfeuer/game/input_bindings.dart';
 import 'package:federfeuer/main.dart' show buildOverlayMap;
@@ -62,7 +63,8 @@ void main() {
     await tester.sendKeyDownEvent(LogicalKeyboardKey.keyW);
     expect(game.keyFly, isFalse, reason: 'W ist nicht mehr belegt');
     await tester.sendKeyUpEvent(LogicalKeyboardKey.keyW);
-    // Aktion 1 auf neue Taste
+    // Aktion 1 auf neue Taste (Seifenblase löst ohne Gefahr nicht von selbst aus)
+    game.run!.addAction(ActionId.bubbleShield);
     game.settings.bindings.setKey(InputAction.action1, 0, LogicalKeyboardKey.keyK);
     await tester.sendKeyDownEvent(LogicalKeyboardKey.keyK);
     expect(game.actionCds[0], greaterThan(0));

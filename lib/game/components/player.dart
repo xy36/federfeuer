@@ -25,8 +25,8 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
 
   double get r => character.radius;
 
-  /// Sturzflug, Bauchrutscher, verbleibender Schub (Huhn).
-  double dashT = 0, slideT = 0, stamina = 1;
+  /// Verbleibender Schub (Huhn).
+  double stamina = 1;
 
   /// Im Spinnennetz: langsamer und weniger Schub.
   double webT = 0;
@@ -37,25 +37,9 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     vel.setZero();
     iframe = 1;
     face = 1;
-    dashT = slideT = webT = 0;
+    webT = 0;
     stamina = 1;
     _trail.clear();
-  }
-
-  /// Sturzflug-Feder: kurzer Sprint in Flugrichtung, unverwundbar.
-  void dash([double time = 0.22, double speed = 760]) {
-    dashT = time;
-    iframe = max(iframe, time + 0.08);
-    vel.setValues(face * speed, 0);
-    game.burst(position, character.glow, 10, 140);
-  }
-
-  /// Frack: Bauchrutscher am Boden.
-  void slide([double time = 0.7]) {
-    slideT = time;
-    iframe = max(iframe, 0.25);
-    vel.x = face * 640;
-    vel.y = max(vel.y, 500);
   }
 
   @override
@@ -99,11 +83,7 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     // Windfahne: Wind schiebt nur in die eigene Flugrichtung
     final windX = run.has(ItemEffect.windVane) && w.windX.sign != face ? 0.0 : w.windX;
 
-    if (dashT > 0 || slideT > 0) {
-      dashT = max(0.0, dashT - dt);
-      slideT = max(0.0, slideT - dt);
-      if (slideT > 0) vel.y += 1600 * dt;
-    } else {
+    {
       if (c.freeFlight) {
         // Kolibri: Stick analog – halber Ausschlag, halbes Tempo
         final h = game.inHorizontal * flip;
@@ -228,18 +208,17 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
   void render(Canvas c) {
     if (game.run == null && game.phase != Phase.menu) return;
     final ch = character, g = ch.glow;
-    final blink = iframe > 0 && dashT <= 0 && (iframe * 20).floor().isOdd;
+    final blink = iframe > 0 && (iframe * 20).floor().isOdd;
 
     // Licht auf dem Boden, schwächer je höher der Vogel fliegt
     final h = clampD(1 - (kGround - y) / 420, 0.15, 1);
     Glow.draw(c, 0, kGround - y + 4, 70 * h + 20, g.withValues(alpha: 0.45 * h));
 
-    // Lichtschweif (Glutkehlchen: Funken, Sturzflug: heller und länger)
-    final boost = dashT > 0 || slideT > 0;
+    // Lichtschweif (Glutkehlchen: Funken)
     for (var i = 1; i < _trail.length; i++) {
       final p = _trail[i], k = 1 - i / _trail.length;
       final col = ch.look == BirdLook.robin && i.isEven ? const Color(0xFFFF6A2A) : g;
-      Glow.draw(c, p.x - x, p.y - y, (6 + 14 * k) * (boost ? 1.6 : 1), col.withValues(alpha: (boost ? 0.8 : 0.5) * k));
+      Glow.draw(c, p.x - x, p.y - y, 6 + 14 * k, col.withValues(alpha: 0.5 * k));
     }
 
     // Aura
@@ -255,15 +234,15 @@ class Player extends PositionComponent with HasGameReference<FederfeuerGame> {
     c.save();
     c.scale(face * ch.scale, ch.scale);
     final webbed = webT > 0;
-    final upright = ch.look == BirdLook.penguin && slideT <= 0;
-    c.rotate(slideT > 0 ? pi / 2.4 : (upright ? 0 : clampD(vel.y / 1000, -0.35, 0.35)));
+    final upright = ch.look == BirdLook.penguin;
+    c.rotate(upright ? 0 : clampD(vel.y / 1000, -0.35, 0.35));
     final fl = sin(anim) * 0.9;
     drawBird(c, ch, _body, fl, upright, pose: BirdPose(
       flap: fl,
       upright: upright,
       blink: _blink,
       look: _look,
-      walk: grounded && vel.x.abs() > 20 && slideT <= 0 ? x * 0.12 : null,
+      walk: grounded && vel.x.abs() > 20 ? x * 0.12 : null,
       holding: (game.run?.weapons.isNotEmpty ?? false) && !grounded,
       sway: clampD(vel.x * face / 300, -1, 1),
       t: game.clock,

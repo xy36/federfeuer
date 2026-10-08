@@ -509,79 +509,38 @@ Aktions-Items stehen unter „Aktionstasten“.
  
 ## Aktionstasten
 
-Zwei Aktionsplätze tragen aktive Fähigkeiten; jede hat ihren eigenen Platz und ihre eigene Abklingzeit. Passend zu den Designpfeilern (eine Taste zum Fliegen, Waffen zielen selbst) **lösen Aktionen automatisch aus**, sobald sie bereit sind und es sich lohnt; Q/E bzw. X/Y lösen sie auf Wunsch sofort aus, auf Touch-Geräten gibt es dafür keine Knöpfe mehr.
+Zwei Aktionsplätze tragen **Signature-Moves**: wenige, klar verschiedene Kräfte mit großem, sichtbarem Effekt. Jede Waffenklasse hat eine eigene Kraft; ihre Treffer zählen als Treffer dieser Klasse und lösen damit Reaktionen aus (siehe „Elementar-Reaktionen“). Bewegungs- und Einsammel-Aktionen gibt es nicht mehr – seit die Aktionen automatisch auslösen, passten sie nicht mehr.
 
-| Art | Aktionen | löst aus, wenn … |
-| --- | --- | --- |
-| Reflex-Sprints | Sturzflug, Bauchrutscher und ihre Evolutionen (Überschallknall, Blasenrakete, Kometenschweif, Zeitsprung, Sprintstoß, Torpedo, Schlittenfahrt) | eine Gegnerkugel oder ein angreifender Gegner näher als 60 ist – der Sprint geht weg von der Gefahr |
-| Schilde | Seifenblasenschild, Zeitblase, Prallblase, Gewitterblase | Gefahr näher als 70, oder unter 35 % HP mit Gegnern im Umkreis 200 |
-| Nahbereich | Hupe, Fanfare, Trommelwirbel, Schlagzeugsolo, Staubwolke, Donnerhorn, Straußentritt | mindestens 2 Gegner im Umkreis 170 oder Gefahr näher als 78 (der Tritt dreht sich zum nächsten Gegner) |
-| Ganzes Bild | Lichtblitz, Sonnensturm, Stroboskop, Taschenuhr, Schnappschuss, Königsschrei | mindestens 5 Gegner im Bild, ein Boss bzw. Torwächter im Bild oder unter 35 % HP |
-| Gewitter | Gewitterwolke, Ewiges Gewitter | mindestens 3 Gegner im Umkreis 460 oder ein Boss im Bild |
-| Einsammeln | Magnetpfiff, Klauen, Goldene Stunde, Elsterschatz, Langfinger | mindestens 12 Material liegt im Bild oder die Welle endet in unter 4 s |
-| Heranziehen | Staubsauger, Blasenfang, Elektromagnet | mindestens 3 Gegner im Umkreis 260 oder 12 Material im Bild |
-| Eier | Ei legen, Gewitterei, Goldenes Ei | ein Gegner im Umkreis 260 – der Vogel dreht sich zu ihm |
+Passend zu den Designpfeilern (eine Taste zum Fliegen, Waffen zielen selbst) **lösen Aktionen automatisch aus**, sobald sie bereit sind und es sich lohnt; Q/E bzw. X/Y lösen sie auf Wunsch sofort aus, auf Touch-Geräten gibt es dafür keine Knöpfe. Kampf-Kräfte (alle außer der Seifenblase) lösen spätestens 6 s nach dem Bereitwerden aus, sobald irgendein Gegner im Bild ist.
 
-Kampf-Aktionen (alle außer Sprints, Schilden und Einsammeln) lösen spätestens 6 s nach dem Bereitwerden aus, sobald irgendein Gegner im Bild ist. Manche Vögel starten mit einer Fähigkeit in Platz 1. Die Abklingzeiten beginnen bei jedem Run bei 0 und laufen über Wellen hinweg weiter.
+**Ankündigung:** Eine automatisch ausgelöste Aktion lädt zuerst 0,6 s sichtbar auf (die Seifenblase nur 0,15 s, damit sie rechtzeitig schützt): oben in der Bildmitte erscheinen ihr Symbol mit einem sich füllenden Ring in ihrer Farbe und ihr Name. Gezielte Kräfte zeigen dabei im Spielfeld einen pulsierenden Zielkreis, der sich bis zum Auslösen zusammenzieht – am Einschlagsort der Glutbombe bzw. des Höllenschlunds, an der Stelle, an der der Wirbel- bzw. Gewittersturm entsteht, und beim Felsbeben am Boden um den Vogel. Das Ziel wird beim Ankündigen festgelegt. Beim Auslösen ploppt der Name groß mit Ausrufezeichen auf und verblasst in 1 s (wie der Countdown am Wellenende); per Taste ausgelöst entfällt das Aufladen, der Name erscheint trotzdem. Die Abklingzeiten beginnen bei jedem Run bei 0 und laufen über Wellen hinweg weiter.
+
+Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wetter-Faktor (× 1,5 in Stufe II).
+
+| Aktion | Klasse | Quelle | Wirkung (Stufe I) | löst automatisch aus, wenn … | Abklingzeit |
+| --- | --- | --- | --- | --- | --- |
+| Glutbombe | Glut | Item (Episch, 24), Rudi Rennfeder | Explosion auf der dichtesten Gegnergruppe im Bild (Radius 110): Schadensbasis × 2 als Glut-Treffer, alle darin brennen 3 s (Schadensbasis × 0,3 pro s) | mindestens 3 Gegner im Umkreis 110 eines Gegners | 12 s |
+| Platzregen | Wasser | Item (Episch, 24), Frack | Wolkenbruch über dem ganzen Bild: jeder Gegner im Bild bekommt einen Wasser-Treffer (Schadensbasis × 0,3), ist 4 s nass und 30 % langsamer | mindestens 4 Gegner im Bild oder ein Boss bzw. Torwächter | 14 s |
+| Wirbelsturm | Wind | Item (Episch, 26), Glitzer | Tornado (Radius 70) entsteht bei der dichtesten Gruppe und treibt 4 s zum nächsten Gegner; zieht Gegner (außer Boss und stationären) und Material im Umkreis 168 heran, alle 0,4 s Wind-Treffer (Schadensbasis × 0,45) | mindestens 3 Gegner im Umkreis 260 oder mindestens 12 Material im Bild | 14 s |
+| Lichtblitz | Licht | Item (Episch, 22), Professor Uhu | betäubt alle Gegner im Bild 1,5 s und trifft sie als Licht-Treffer (Schadensbasis × 0,3), Bildschirm blitzt weiß | mindestens 5 Gegner im Bild, ein Boss im Bild oder unter 35 % HP | 12 s |
+| Fluchschrei | Böse | Item (Episch, 22), Aurelius | alle Gegner im Bild 5 s verflucht, sie weichen 0,8 s zurück | wie Lichtblitz | 10 s |
+| Felsbeben | Stein | Item (Selten, 20), Hacki | Schockwelle im Umkreis 220: Bodengegner 1,5 s betäubt, Flieger (außer Boss) zu Boden geschleudert und 0,6 s betäubt; alle bekommen einen Stein-Treffer (Schadensbasis × 0,8) | mindestens 2 Gegner im Umkreis 220 oder Gefahr näher als 78 | 9 s |
+| Seifenblase | – | Item (Selten, 20) | Blase schluckt 1,5 s lang jeden Treffer | eine Gegnerkugel oder ein angreifender Gegner näher als 70, oder unter 35 % HP mit Gegnern im Umkreis 200 | 14 s |
+| Ei legen | – | Henriette | Ei rollt zum nächsten Gegner (der Vogel dreht sich zu ihm) und explodiert nach 1,6 s oder bei Gegnerkontakt (Radius 75, Schadensbasis × 1,6) | ein Gegner im Umkreis 260 | 2,5 s |
 
 **Aktions-Items kaufen:**
 
 - **Neu und ein Platz frei:** Die Aktion kommt in den freien Platz.
-- **Gleiche Aktion schon vorhanden:** Sie steigt auf Stufe II – Abklingzeit × 0,7, Wirkung × 1,5 (Dauer, Schaden; Radien × 1,3; Magnetpfiff und Klauen wirken in der ganzen Welt). Stufe II ist das Maximum; danach wird das Item nicht mehr angeboten.
+- **Gleiche Aktion schon vorhanden:** Sie steigt auf Stufe II – Abklingzeit × 0,7, Wirkung × 1,5 (Dauer, Schaden; Radien × 1,3). Stufe II ist das Maximum; danach wird das Item nicht mehr angeboten.
 - **Beide Plätze belegt:** Der Spieler wählt im Shop, welche Aktion ersetzt wird (oder bricht ab).
 
-**Evolution:** Liegen zwei passende Aktionen in den Plätzen, erscheint im Shop „Verschmelzen → …“. Ein Klick macht daraus die Evolution in Platz 1, Platz 2 wird frei. Dazu läuft eine kurze Verschmelz-Animation (2,3 s, mit Klick/Enter/A überspringbar): beide Aktions-Symbole kreisen aufeinander zu, ein Lichtblitz, dann wächst die Evolution mit rotierendem Goldring und Funken heraus, darunter „EVOLUTION“, der Name groß in Gold und die Wirkung. Die Stufe der Zutaten geht dabei verloren; Evolutionen haben keine Stufe II. Rezepte sind sofort sichtbar: im Shop unter den eigenen Aktionen (Zutaten, die es nur als Startaktion eines Vogels gibt, nur wenn man sie hat) und auf Aktions-Items („passt zu … → …“).
+**Evolution:** Liegen zwei passende Aktionen in den Plätzen, erscheint im Shop „Verschmelzen → …“. Ein Klick macht daraus die Evolution in Platz 1, Platz 2 wird frei. Dazu läuft eine kurze Verschmelz-Animation (2,3 s, mit Klick/Enter/A überspringbar): beide Aktions-Symbole kreisen aufeinander zu, ein Lichtblitz, dann wächst die Evolution mit rotierendem Goldring und Funken heraus, darunter „EVOLUTION“, der Name groß in Gold und die Wirkung. Die Stufe der Zutaten geht dabei verloren; Evolutionen haben keine Stufe II. Rezepte sind sofort sichtbar: im Shop unter den eigenen Aktionen und auf Aktions-Items („passt zu … → …“). Es gibt nur drei Evolutionen – jeweils aus zwei Klassen-Kräften, wie eine große Reaktion:
 
-Schadensbasis für Aktionen: (8 + 2,5 × Welle) × (1 + Schaden %) × Welt-/Wetter-Faktor (× 1,5 in Stufe II).
-
-| Aktion | Quelle | Wirkung (Stufe I) | Abklingzeit |
-| --- | --- | --- | --- |
-| Sturzflug | Item „Sturzflug-Feder“ (Selten, 18), Kampfspatz | 0,22 s Sprint (760) in Blickrichtung, dabei unverwundbar | 3 s |
-| Hupe | Item (Selten, 16) | Gegner im Umkreis 240 werden weggestoßen (außer Boss) und fliehen 2 s | 8 s |
-| Seifenblasenschild | Item (Episch, 22) | Blase schluckt 1,2 s lang jeden Treffer | 14 s |
-| Lichtblitz | Item (Episch, 22), Professor Uhu | betäubt alle Gegner im Bild 1,5 s, Bildschirm blitzt weiß | 12 s |
-| Gewitterwolke | Item (Episch, 26) | 3 s lang alle 0,25 s ein Blitz in einen Gegner im Umkreis 460: Schadensbasis × 1, betäubt 0,3 s | 15 s |
-| Magnetpfiff | Item (Selten, 18) | zieht alles Material im Bild heran | 20 s |
-| Taschenuhr | Item (Legendär, 30) | alle Gegner 3 s in Zeitlupe (× 0,3) | 25 s |
-| Bauchrutscher | Frack | 0,7 s Rutschen am Boden (640), Gegner auf dem Weg nehmen Schadensbasis × 0,8 und sind 0,8 s betäubt | 5 s |
-| Trommelwirbel | Hacki | Gegner im Umkreis 200 sind 1,6 s betäubt und nehmen Schadensbasis × 0,5 | 9 s |
-| Klauen | Glitzer | zieht Material, Herzen und Geschenke im Bild heran | 14 s |
-| Ei legen | Henriette | Ei rollt in Blickrichtung und explodiert nach 1,6 s oder bei Gegnerkontakt (Radius 75, Schadensbasis × 1,6) | 2,5 s |
-| Straußentritt | Rudi Rennfeder | Tritt nach vorn (Halbkreis, Reichweite 80): Schadensbasis × 1,8, Rückstoß 60, betäubt 0,5 s | 4 s |
-| Königsschrei | Aurelius | alle Gegner im Bild 4 s verflucht (Stufe II: 6 s), sie weichen 0,8 s zurück | 10 s |
-
-**Evolutionen:**
-
-| Zutaten | Evolution | Wirkung | Abklingzeit |
-| --- | --- | --- | --- |
-| Sturzflug + Hupe | Überschallknall | Sturzflug (0,26 s), am Ende Druckwelle: Umkreis 170, Schadensbasis × 1,2, Gegner fliehen 1,5 s | 4 s |
-| Sturzflug + Seifenblasenschild | Blasenrakete | Sturzflug (0,35 s, 820) mit Blase; berührte Gegner werden 2,5 s eingefangen | 6 s |
-| Lichtblitz + Gewitterwolke | Sonnensturm | blendet alle Gegner im Bild 1,5 s, jeder bekommt einen Blitz (Schadensbasis × 1,5) | 14 s |
-| Lichtblitz + Taschenuhr | Schnappschuss | betäubt alle Gegner im Bild 2 s, Gegnerkugeln stehen 2 s still | 18 s |
-| Taschenuhr + Seifenblasenschild | Zeitblase | 2,5 s unverwundbar, Gegner im Umkreis 150 stehen still | 22 s |
-| Magnetpfiff + Hupe | Staubsauger | zieht Drops im Bild und Gegner im Umkreis 340 (außer Boss) 0,7 s heran, dann Knall: Umkreis 190, Schadensbasis × 1,5, fliehen 1,5 s | 16 s |
-| Magnetpfiff + Taschenuhr | Goldene Stunde | zieht Material im Bild heran; 5 s lang zählt jedes Stück doppelt | 25 s |
-| Gewitterwolke + Hupe | Donnerhorn | Hupe plus Kettenblitz: springt bis zu 7-mal (je bis 170 weit), Schadensbasis × 1, betäubt 0,4 s | 10 s |
-| Ei legen + Gewitterwolke | Gewitterei | Ei wie oben, zerplatzt zusätzlich in bis zu 6 Blitze im Umkreis 180 (Schadensbasis × 1) | 4 s |
-| Bauchrutscher + Sturzflug | Torpedo | 0,8 s Rutschen (700) in der Luft und am Boden, unverwundbar, Treffer wie Bauchrutscher | 6 s |
-| Trommelwirbel + Hupe | Schlagzeugsolo | drei Schockwellen im Abstand von 0,4 s: Umkreis 210, betäubt 1,2 s, Schadensbasis × 0,5 | 10 s |
-| Klauen + Magnetpfiff | Elsterschatz | zieht alles im Bild heran; 5 s lang 20 % Chance auf doppeltes Material | 18 s |
-| Sturzflug + Lichtblitz | Kometenschweif | Sturzflug (0,3 s, 820); berührte Gegner nehmen Schadensbasis × 1 und sind 1,2 s geblendet | 5 s |
-| Sturzflug + Taschenuhr | Zeitsprung | Sturzflug (0,3 s, 820), Gegner 2,5 s in Zeitlupe | 8 s |
-| Hupe + Seifenblasenschild | Prallblase | 2 s Blase; Gegner, die sie berühren (Abstand Radius + 30), werden weggeschleudert, fliehen 0,6 s und nehmen Schadensbasis × 0,5 (je Gegner höchstens alle 0,6 s) | 14 s |
-| Hupe + Lichtblitz | Fanfare | betäubt alle Gegner im Bild 2 s, danach fliehen sie (insgesamt 5 s Furcht) | 12 s |
-| Seifenblasenschild + Gewitterwolke | Gewitterblase | 2 s Blase; alle 0,4 s ein Blitz in einen Gegner im Umkreis 260 (Schadensbasis × 1) | 16 s |
-| Seifenblasenschild + Magnetpfiff | Blasenfang | Gegner im Umkreis 260 werden 2,5 s eingefangen; Material im Bild kommt heran | 15 s |
-| Gewitterwolke + Magnetpfiff | Elektromagnet | 1,2 s: Gegner im Umkreis 340 (außer Boss) werden herangezogen (380/s), alle 0,25 s ein Blitz im Umkreis 220 (Schadensbasis × 0,8) | 16 s |
-| Gewitterwolke + Taschenuhr | Ewiges Gewitter | 6 s Gewitter wie Gewitterwolke, Gegner 3 s in Zeitlupe | 22 s |
-| Ei legen + Magnetpfiff | Goldenes Ei | Ei wie oben; die Explosion lässt 5 Material fallen | 5 s |
-| Bauchrutscher + Seifenblasenschild | Schlittenfahrt | 1,2 s Rutschen mit Blase (unverwundbar); berührte Gegner nehmen Schadensbasis × 0,8 und werden 2 s eingefangen | 8 s |
-| Trommelwirbel + Lichtblitz | Stroboskop | drei Lichtblitze im Abstand von 0,45 s: Gegner im Bild 0,8 s betäubt, Schadensbasis × 0,4 | 12 s |
-| Klauen + Taschenuhr | Langfinger | zieht Material, Herzen und Geschenke im Bild heran, Gegner 4 s in Zeitlupe | 18 s |
-| Straußentritt + Sturzflug | Sprintstoß | Sturzflug (0,32 s, 820); Gegner auf dem Weg nehmen Schadensbasis × 1,4, Rückstoß 50, betäubt 0,6 s | 6 s |
-| Straußentritt + Hupe | Staubwolke | Straußentritt, dazu Staubwirbel im Umkreis 210: betäubt 1,2 s, Schadensbasis × 0,8, Gegner fliehen 3 s | 10 s |
-| Königsschrei + Lichtblitz | Sonnenadler | Königsschrei, dazu alle Gegner im Bild 1,5 s geblendet und je ein Lichtstrahl (Schadensbasis × 1,2) | 14 s |
-| Königsschrei + Gewitterwolke | Donnervogel | ein Blitz in jeden Gegner im Bild: Schadensbasis × 1,6, betäubt 0,5 s | 16 s |
+| Zutaten | Evolution | Wirkung | löst aus, wenn … | Abklingzeit |
+| --- | --- | --- | --- | --- |
+| Platzregen + Wirbelsturm | Gletscher | alle Gegner im Bild frieren 2 s ein (Boss 0,6 s), Gegnerkugeln stehen 2 s still | wie Lichtblitz | 18 s |
+| Glutbombe + Fluchschrei | Höllenschlund | Glutbombe mit Schadensbasis × 2,6 und größerem Radius, danach alle Gegner im Bild 5 s verflucht – brennend verfluchte Gegner lösen beim Tod Höllenfeuer aus | wie Glutbombe, oder 5 Gegner bzw. ein Boss im Bild | 16 s |
+| Wirbelsturm + Lichtblitz | Gewittersturm | Wirbelsturm, der zusätzlich alle 0,3 s einen Blitz in einen Gegner im Umkreis 220 schleudert | wie Wirbelsturm | 18 s |
 
 ## Charaktere
 
@@ -589,18 +548,18 @@ Zwölf spielbare Vögel. Jeder hat eine Stärke, einen Nachteil und vor allem ei
 
 | Vogel | Rolle | Stärke | Nachteil | Fliegt … | Start |
 | --- | --- | --- | --- | --- | --- |
-| Kampfspatz (Spatz) | Allround | +10 % Material (jedes Stück hat 10 % Chance auf +1) | keine Spezialität | normal – das Maß aller Dinge | Lichtfeder / Böenschwarm / Funkenfächer + Sturzflug |
+| Kampfspatz (Spatz) | Allround | +10 % Material (jedes Stück hat 10 % Chance auf +1) | keine Spezialität | normal – das Maß aller Dinge | Lichtfeder / Böenschwarm / Funkenfächer (keine Startaktion) |
 | Glutkehlchen (Rotkehlchen) | Glut | Brand hält 50 % länger und schadet 25 % mehr | −30 Reichweite | normal, mit Funkenspur | Funkenfächer / Glutkern / Popcornmaschine |
 | Böe (Schwalbe) | Wind | +20 % Angriffstempo, schnellster Flieger | −5 Max-HP | sehr schnell, enge Kurven | Böenschwarm / Federwirbel / Pusteblume |
 | Schillerchen (Kolibri) | Licht | +15 % Krit, winzige Trefferfläche | −40 % Max-HP | fliegt frei in alle Richtungen, steht in der Luft | Diskokugel / Lichtfeder / Sonnenstrahl |
 | Ruß (Rabe, abtrünnige Fäulnis-Krähe) | Böse | Böse-Waffen +25 %, +3 % Lebensraub | Herzen heilen nur 2 statt 3 | schwer, gleitet lange | Dornenranke / Krähenruf / Paktlaterne |
-| Frack (Pinguin) | Wasser | +50 % Max-HP, +3 Rüstung; Material fällt auf jeder Stufe schnell zu Boden (70/s, wie auf Phönix), weil er schwebendes kaum erreicht | kann kaum fliegen | mühsam in der Luft, am Boden rasend schnell | Wasserpistole / Seifenblasen / Regenwolke + Bauchrutscher |
-| Hacki (Specht) | Stein | Stein-Waffen +25 %, +3 Rüstung | −15 % Angriffstempo | ruckartig, klammert sich an den Weltrand | Kieselschleuder / Gartenzwergwerfer / Bowlingkugel + Trommelwirbel |
+| Frack (Pinguin) | Wasser | +50 % Max-HP, +3 Rüstung; Material fällt auf jeder Stufe schnell zu Boden (70/s, wie auf Phönix), weil er schwebendes kaum erreicht | kann kaum fliegen | mühsam in der Luft, am Boden rasend schnell | Wasserpistole / Seifenblasen / Regenwolke + Platzregen |
+| Hacki (Specht) | Stein | Stein-Waffen +25 %, +3 Rüstung | −15 % Angriffstempo | ruckartig, klammert sich an den Weltrand | Kieselschleuder / Gartenzwergwerfer / Bowlingkugel + Felsbeben |
 | Professor Uhu (Eule) | Licht/Böse | +25 % Erfahrung; in Wald, Gebirge, Gipfel +20 % Schaden | in Feldern und Dorf −10 % Schaden | lautlos, sinkt sehr langsam | Lichtfeder / Sonnenstrahl / Krähenruf + Lichtblitz |
-| Glitzer (Elster) | Wirtschaft | Shop −15 %; 1 % je Kill ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item) | nur 4 Waffenslots | normal | Wasserpistole / Diskokugel / Kieselschleuder + Klauen |
+| Glitzer (Elster) | Wirtschaft | Shop −15 %; 1 % je Kill ein Geschenk (zufälliges gewöhnliches oder seltenes Werte-Item) | nur 4 Waffenslots | normal | Wasserpistole / Diskokugel / Kieselschleuder + Wirbelsturm |
 | Henriette (Huhn) | Glut/Stein | +40 % Max-HP, +2 Rüstung, Eier als Bomben | keine Startwaffe, fliegt nur kurze Hüpfer | flattert in Hüpfern, viel Bodenzeit | Ei legen; Waffen nur aus dem Shop |
-| Rudi Rennfeder (Strauß) | Boden/Stein | schnellster Läufer (am Boden × 2), +60 % Max-HP, +2 Rüstung; Material fällt auf jeder Stufe schnell zu Boden (70/s) | kann nicht fliegen – nur hohe Sprünge, sinkt schnell | rennt und springt | Kieselschleuder / Bowlingkugel / Federwirbel + Straußentritt |
-| Seine Hoheit Aurelius (Steinadler) | Licht/Stein | +20 % Schaden, kritische Treffer ×2,5 statt ×2, Adleraugen +80 Reichweite | groß (leichter zu treffen), träge in Kurven | majestätischer Gleiter, sinkt sehr langsam | Sonnenstrahl / Glutkern / Kieselschleuder + Königsschrei |
+| Rudi Rennfeder (Strauß) | Boden/Stein | schnellster Läufer (am Boden × 2), +60 % Max-HP, +2 Rüstung; Material fällt auf jeder Stufe schnell zu Boden (70/s) | kann nicht fliegen – nur hohe Sprünge, sinkt schnell | rennt und springt | Kieselschleuder / Bowlingkugel / Federwirbel + Glutbombe |
+| Seine Hoheit Aurelius (Steinadler) | Licht/Stein | +20 % Schaden, kritische Treffer ×2,5 statt ×2, Adleraugen +80 Reichweite | groß (leichter zu treffen), träge in Kurven | majestätischer Gleiter, sinkt sehr langsam | Sonnenstrahl / Glutkern / Kieselschleuder + Fluchschrei |
 
 **Startwaffe:** Jeder Vogel außer Henriette hat drei Startwaffen zur Auswahl (Spalte „Start“, die erste ist voreingestellt). Gewählt wird unter „Run vorbereiten“; die Wahl wird je Vogel gespeichert.
 
@@ -615,7 +574,7 @@ Max-HP: Start 20, dann Änderungen des Vogels, dann × Max-HP-Faktor (gerundet).
 | Böe | 1,3 | 1,5 | 1 | 1 | 1 | 16 | 1 | – |
 | Schillerchen | 1 | 1 | – | – | 1 | 11 | 0,75 | freier Flug ohne Schwerkraft: Stick analog in alle Richtungen (halber Ausschlag = halbes Tempo), Tastatur hoch mit Leertaste/W/↑, runter mit S/↓; Touch „▲“ und „▼“; Gleiten-Werte wirken nicht |
 | Ruß | 1 | 0,8 | 1 | 0,6 | 1 | 16 | 1 | – |
-| Frack | 1 | 1 | 0,62 | 1,4 | 1,7 | 17 | 1,1 | aufrechter Körper, rutscht beim Bauchrutscher |
+| Frack | 1 | 1 | 0,62 | 1,4 | 1,7 | 17 | 1,1 | aufrechter Körper |
 | Hacki | 1 | 1,3 | 1 | 1 | 1 | 16 | 1 | hält sich am linken/rechten Weltrand fest, solange er dagegen drückt und nicht fliegt |
 | Professor Uhu | 1 | 1 | 1 | 0,35 | 1 | 17 | 1,1 | – |
 | Glitzer | 1 | 1 | 1 | 1 | 1 | 16 | 1 | – |
@@ -682,7 +641,7 @@ Gebaut wird mit Flutter 3.47.6 (lokal und in GitHub Actions). Unter Windows rend
 | `game/federfeuer_game.dart` | `FlameGame`: Phasen, Wellen, Spawns, Kamera, Kampf, Tastatur |
 | `game/config.dart` | Alle Daten: Waffenklassen und Set-Boni, Waffen, Stufen, Aktionen, Items mit Seltenheit, Charaktere mit Freischaltaufgaben, Level-ups, Gegner, Farben, Welten (`biomeDefs`), Wetter (`WeatherConfig`) |
 | `game/run_state.dart` | Zustand eines Runs: Vogel, Werte inkl. Set-Boni, Waffenwerte (`WeaponStats`), Inventar, Aktion, Shop- und Level-Logik |
-| `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Sturzflug/Bauchrutscher, Blinzeln und Blick, Aura und Schweif |
+| `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Chaos-Zustände, Blinzeln und Blick, Aura und Schweif |
 | `components/bird_art.dart` | Haltung der Vögel (`BirdPose`: Flügelschlag, Blick, Blinzeln, Laufen, Halten, Zeit) und Einstieg fürs Zeichnen, auch für Menü-Vorschauen |
 | `components/boss_art.dart` | Ausführliche Zeichnungen der Bosse: Geierkönig, Strohkönig, Glocke, Spinnenmutter (`BossLook`: Zeit, Puls, Warnung, Treffer, Phase) |
 | `components/enemy_art.dart` | Ausgearbeitete Formen der übrigen Gegner (`EnemyLook`) |
@@ -758,11 +717,12 @@ Phase 2 – Inhalte:
 - [x] Verschmelzen mit Gaben: verschiedene Waffen verschmelzen (Grundwaffe erbt die Gabe der Spenderwaffe, zählt für beide Klassen), gleiche Waffen mit Wahl einer Eigenschaft
 - [x] Chaos: Wirrling mit Chaos-Wolken (verwirrt, kopfüber, Spiegelwelt, verklebt) und verrückte Items (Wirrkraut, Hühnerzauber, Gummiflügel)
 - [ ] Wellen-Ereignisse (z. B. Glutregen, Lava-Boden, Elitennacht, Nebel, Chaos-Welle), Schwierigkeitsstufen mit verändertem Gegnerverhalten
-- [ ] Auslöser-Items („wenn …, dann …“, z. B. nach Ausweichen, beim Sturzflug, je Flughöhe) und verfluchte Items mit spürbarem Nachteil
+- [ ] Auslöser-Items („wenn …, dann …“, z. B. nach Ausweichen, beim Sinkflug, je Flughöhe) und verfluchte Items mit spürbarem Nachteil
 - [ ] Gegner mit neuen Angriffen in späteren Wellen, Angriffsmuster, die die Flugsteuerung fordern (Strahlen, Bodenwellen, Decke), Trupps mit Anführer
 - [x] Items: Seltenheitsstufen, Flug-Items (Schub, Gleiten), Spezial-Items
 - [x] Zwei Aktionstasten mit aktiven Fähigkeiten aus Items und Charakteren, Stufe II und Evolutionen
 - [x] Aktionen lösen automatisch aus (Regeln je Art), Tasten nur noch optional; keine Touch-Aktionsknöpfe
+- [x] Aktionen überarbeitet: acht Signature-Moves (eine Kraft je Waffenklasse plus Seifenblase und Ei), drei Evolutionen; keine Bewegungs- und Einsammel-Aktionen mehr
 - [x] Tastenbelegung frei einstellbar (Tastatur und Controller)
 - [ ] Balancing der neuen Waffen, Items und Vögel nach Spieltests
 - [ ] Weitere Wetter: Nebel, Gewitter, Hitze, Schnee (z. B. Schnee für Gebirge und Gipfel)

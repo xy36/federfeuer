@@ -24,8 +24,11 @@ void main() {
       await t.pump(const Duration(milliseconds: 50));
     }
     game.startRun('pistol');
-    final r = game.run!..addAction(ActionId.magnet); // Sturzflug + Magnetpfiff: Blase passt zu beiden
-    r.offers = [Offer.item('a_shield', 20)];
+    // Platzregen + Lichtblitz: Wirbelsturm passt zu beiden (Gletscher, Gewittersturm)
+    final r = game.run!
+      ..addAction(ActionId.downpour)
+      ..addAction(ActionId.flash);
+    r.offers = [Offer.item('a_whirlwind', 26)];
     game.phase = Phase.shop;
     game.overlays.add('shop');
     for (var i = 0; i < 4; i++) {

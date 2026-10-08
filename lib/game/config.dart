@@ -355,8 +355,19 @@ const double kTraitBlast = 0.4, kTraitArc = 0.5, kTraitWide = 0.4;
 /// sofort aus). Schwellen: Gefahr (Abstand einer Kugel bzw. eines Gegners zum Vogel),
 /// Gegner in der Nähe, Gegner im Bild, wenig HP, herumliegendes Material.
 const double kAutoThreat = 60, kAutoShieldThreat = 70, kAutoLowHp = 0.35;
-const double kAutoNearRadius = 170, kAutoStormRadius = 460, kAutoPullRadius = 260, kAutoEggRadius = 260;
-const int kAutoNearCount = 2, kAutoViewCount = 5, kAutoStormCount = 3, kAutoPullCount = 3, kAutoMaterial = 12;
+const double kAutoPullRadius = 260, kAutoEggRadius = 260;
+const int kAutoNearCount = 2, kAutoViewCount = 5, kAutoPullCount = 3, kAutoMaterial = 12;
+
+/// Glutbombe und Platzregen: Radius der Explosion, Gegner in einer Gruppe bzw. im Bild.
+const double kFireBombRadius = 110, kQuakeRadius = 220;
+const int kAutoClusterCount = 3, kAutoRainCount = 4;
+
+/// Ankündigung: so lange lädt eine automatisch ausgelöste Aktion sichtbar auf, danach
+/// bleibt ihr Name noch so lange eingeblendet.
+const double kActionWindup = 0.6, kActionShoutTime = 1.0;
+
+/// Die Seifenblase schützt vor Treffern – ihre Ankündigung muss kurz sein.
+const double kShieldWindup = 0.15;
 
 /// Spätestens so lange nach dem Bereitwerden lösen Kampf-Aktionen aus, sobald irgendein
 /// Gegner im Bild ist (damit nichts ungenutzt herumliegt).
@@ -662,51 +673,29 @@ const tiers = [
 // ---------------- Aktionen (Aktionstaste) ----------------
 
 enum ActionId {
-  dash('Sturzflug', 3, '💨', 'Kurzer Sprint in Flugrichtung, dabei unverwundbar.'),
-  horn('Hupe', 8, '📯', 'Stößt nahe Gegner weg, sie fliehen 2 s.'),
-  bubbleShield('Seifenblasenschild', 14, '🫧', 'Blase schluckt 1,2 s lang jeden Treffer.'),
-  flash('Lichtblitz', 12, '⚡', 'Blendet alle Gegner im Bild 1,5 s.'),
-  storm('Gewitterwolke', 15, '⛈️', 'Blitze schlagen 3 s lang in Gegner rundherum ein.'),
-  magnet('Magnetpfiff', 20, '📣', 'Zieht alles Material im Bild heran.'),
-  clock('Taschenuhr', 25, '⏱️', 'Gegner 3 s in Zeitlupe.'),
-  bellySlide('Bauchrutscher', 5, '🛷', 'Sprint am Boden, wirft Gegner um.'),
-  drumroll('Trommelwirbel', 9, '🥁', 'Betäubt nahe Gegner.'),
-  steal('Klauen', 14, '🫳', 'Zieht Material und Herzen im Bild heran.'),
-  egg('Ei legen', 2.5, '🥚', 'Ei rollt los und explodiert.'),
-  kick('Straußentritt', 4, '🦶', 'Kräftiger Tritt nach vorn: viel Schaden, starker Rückstoß.'),
-  screech('Königsschrei', 10, '🦅', 'Alle Gegner im Bild sind 4 s verflucht und weichen zurück.'),
+  fireBomb('Glutbombe', 12, '💣', 'Große Explosion auf der dichtesten Gegnergruppe (Radius 110), setzt alle in Brand.',
+      cls: WeaponClass.ember),
+  downpour('Platzregen', 14, '🌧️', 'Wolkenbruch über dem ganzen Bild: alle Gegner 4 s nass und 30 % langsamer.',
+      cls: WeaponClass.water),
+  whirlwind('Wirbelsturm', 14, '🌪️', 'Ein Tornado zieht 4 s durchs Bild, saugt Gegner und Material ein und schadet ihnen.',
+      cls: WeaponClass.wind),
+  flash('Lichtblitz', 12, '⚡', 'Blendet alle Gegner im Bild 1,5 s.', cls: WeaponClass.light),
+  screech('Fluchschrei', 10, '🦅', 'Alle Gegner im Bild sind 5 s verflucht und weichen kurz zurück.', cls: WeaponClass.dark),
+  quake('Felsbeben', 9, '🪨', 'Schockwelle am Boden: Bodengegner betäubt, Flieger werden zu Boden geschleudert.',
+      cls: WeaponClass.stone),
+  bubbleShield('Seifenblase', 14, '🫧', 'Blase schluckt 1,5 s lang jeden Treffer.'),
+  egg('Ei legen', 2.5, '🥚', 'Ei rollt zum nächsten Gegner und explodiert.'),
   // ---- Evolutionen (aus zwei Aktionen verschmolzen)
-  sonicBoom('Überschallknall', 4, '💥', 'Sturzflug, am Ende eine Druckwelle mit Schaden und Rückstoß.', evolved: true),
-  bubbleRocket('Blasenrakete', 6, '🚀', 'Sturzflug in der Blase – Gegner auf dem Weg werden eingefangen.', evolved: true),
-  sunStorm('Sonnensturm', 14, '🌞', 'Blendet alle Gegner im Bild, dann trifft jeden ein Blitz.', evolved: true),
-  snapshot('Schnappschuss', 18, '📸', 'Friert alles im Bild 2 s ein – Gegner und Gegnerkugeln.', evolved: true),
-  timeBubble('Zeitblase', 22, '🔮', 'Große Blase um dich: 2,5 s unverwundbar, Gegner darin stehen still.', evolved: true),
-  vacuum('Staubsauger', 16, '🌀', 'Saugt Material und Gegner heran, dann ein Rückstoß-Knall.', evolved: true),
-  goldenHour('Goldene Stunde', 25, '🌅', 'Zieht Material heran; 5 s lang zählt jedes Stück doppelt.', evolved: true),
-  thunderHorn('Donnerhorn', 10, '🎺', 'Hupe mit Kettenblitz, der zwischen nahen Gegnern springt.', evolved: true),
-  stormEgg('Gewitterei', 4, '🌩️', 'Ei, das in einen Blitzregen zerplatzt.', evolved: true),
-  torpedo('Torpedo', 6, '🐧', 'Rutscht durch Luft und Boden und durchschlägt alles.', evolved: true),
-  drumSolo('Schlagzeugsolo', 10, '🪘', 'Drei Schockwellen nacheinander, betäuben und schaden.', evolved: true),
-  magpieHoard('Elsterschatz', 18, '💎', 'Zieht alles im Bild heran; 5 s lang 20 % Chance auf doppeltes Material.', evolved: true),
-  comet('Kometenschweif', 5, '☄️', 'Sturzflug mit Lichtschweif: berührte Gegner nehmen Schaden und sind 1,2 s geblendet.', evolved: true),
-  timeJump('Zeitsprung', 8, '⌛', 'Sturzflug, danach laufen alle Gegner 2,5 s in Zeitlupe.', evolved: true),
-  bounceBubble('Prallblase', 14, '🏐', '2 s Blase: schluckt Treffer und schleudert Gegner bei Berührung weg.', evolved: true),
-  fanfare('Fanfare', 12, '🎉', 'Blendet alle Gegner im Bild 2 s, danach fliehen sie 3 s.', evolved: true),
-  stormBubble('Gewitterblase', 16, '🔵', '2 s Blase; alle 0,4 s schlägt ein Blitz in einen Gegner in der Nähe.', evolved: true),
-  bubbleTrap('Blasenfang', 15, '🎈', 'Fängt alle Gegner im Umkreis 260 in Blasen und zieht Material heran.', evolved: true),
-  electroMagnet('Elektromagnet', 16, '🧲', 'Zieht Gegner heran und schockt sie dabei mit Blitzen.', evolved: true),
-  endlessStorm('Ewiges Gewitter', 22, '🌪️', '6 s Gewitter, Gegner dabei 3 s in Zeitlupe.', evolved: true),
-  goldenEgg('Goldenes Ei', 5, '🪺', 'Ei wie gewohnt – die Explosion lässt 5 Material regnen.', evolved: true),
-  sledRide('Schlittenfahrt', 8, '❄️', 'Rutscht 1,2 s in einer Blase; berührte Gegner werden eingefangen.', evolved: true),
-  strobe('Stroboskop', 12, '🔦', 'Drei Lichtblitze nacheinander betäuben Gegner im Bild und schaden ihnen.', evolved: true),
-  pickpocket('Langfinger', 18, '🧤', 'Zieht alles im Bild heran, Gegner 4 s in Zeitlupe.', evolved: true),
-  sprintKick('Sprintstoß', 6, '💨', 'Sprint nach vorn, der alles auf dem Weg umtritt.', evolved: true),
-  dustCloud('Staubwolke', 10, '🌪️', 'Wirbelt Staub auf: Gegner rundum sind betäubt, nehmen Schaden und fliehen.', evolved: true),
-  sunEagle('Sonnenadler', 14, '🌞', 'Blendet und verflucht alle Gegner im Bild, Lichtstrahlen schaden ihnen.', evolved: true),
-  thunderbird('Donnervogel', 16, '⚡', 'Ein Blitz schlägt in jeden Gegner im Bild ein.', evolved: true);
+  glacier('Gletscher', 18, '🧊', 'Alles im Bild friert 2 s ein – Gegner und Gegnerkugeln.', evolved: true),
+  hellmaw('Höllenschlund', 16, '🌋', 'Riesige Glutbombe, danach sind alle Gegner im Bild verflucht – Brand und Fluch springen weiter.',
+      evolved: true),
+  thunderstorm('Gewittersturm', 18, '⛈️', 'Ein Tornado zieht durchs Bild und schleudert Blitze in Gegner.', evolved: true);
 
-  const ActionId(this.label, this.cooldown, this.icon, this.desc, {this.evolved = false});
+  const ActionId(this.label, this.cooldown, this.icon, this.desc, {this.evolved = false, this.cls});
   final String label, icon, desc;
+
+  /// Klasse der Kraft: ihre Treffer lösen Reaktionen wie Waffen dieser Klasse aus.
+  final WeaponClass? cls;
 
   /// Abklingzeit in Sekunden (Stufe I).
   final double cooldown;
@@ -729,36 +718,9 @@ class ActionRecipe {
 }
 
 const actionRecipes = [
-  ActionRecipe(ActionId.dash, ActionId.horn, ActionId.sonicBoom),
-  ActionRecipe(ActionId.dash, ActionId.bubbleShield, ActionId.bubbleRocket),
-  ActionRecipe(ActionId.flash, ActionId.storm, ActionId.sunStorm),
-  ActionRecipe(ActionId.flash, ActionId.clock, ActionId.snapshot),
-  ActionRecipe(ActionId.clock, ActionId.bubbleShield, ActionId.timeBubble),
-  ActionRecipe(ActionId.magnet, ActionId.horn, ActionId.vacuum),
-  ActionRecipe(ActionId.magnet, ActionId.clock, ActionId.goldenHour),
-  ActionRecipe(ActionId.storm, ActionId.horn, ActionId.thunderHorn),
-  // Vogel-Aktionen
-  ActionRecipe(ActionId.egg, ActionId.storm, ActionId.stormEgg),
-  ActionRecipe(ActionId.bellySlide, ActionId.dash, ActionId.torpedo),
-  ActionRecipe(ActionId.drumroll, ActionId.horn, ActionId.drumSolo),
-  ActionRecipe(ActionId.steal, ActionId.magnet, ActionId.magpieHoard),
-  // Erweiterung
-  ActionRecipe(ActionId.dash, ActionId.flash, ActionId.comet),
-  ActionRecipe(ActionId.dash, ActionId.clock, ActionId.timeJump),
-  ActionRecipe(ActionId.horn, ActionId.bubbleShield, ActionId.bounceBubble),
-  ActionRecipe(ActionId.horn, ActionId.flash, ActionId.fanfare),
-  ActionRecipe(ActionId.bubbleShield, ActionId.storm, ActionId.stormBubble),
-  ActionRecipe(ActionId.bubbleShield, ActionId.magnet, ActionId.bubbleTrap),
-  ActionRecipe(ActionId.storm, ActionId.magnet, ActionId.electroMagnet),
-  ActionRecipe(ActionId.storm, ActionId.clock, ActionId.endlessStorm),
-  ActionRecipe(ActionId.egg, ActionId.magnet, ActionId.goldenEgg),
-  ActionRecipe(ActionId.bellySlide, ActionId.bubbleShield, ActionId.sledRide),
-  ActionRecipe(ActionId.drumroll, ActionId.flash, ActionId.strobe),
-  ActionRecipe(ActionId.steal, ActionId.clock, ActionId.pickpocket),
-  ActionRecipe(ActionId.kick, ActionId.dash, ActionId.sprintKick),
-  ActionRecipe(ActionId.kick, ActionId.horn, ActionId.dustCloud),
-  ActionRecipe(ActionId.screech, ActionId.flash, ActionId.sunEagle),
-  ActionRecipe(ActionId.screech, ActionId.storm, ActionId.thunderbird),
+  ActionRecipe(ActionId.downpour, ActionId.whirlwind, ActionId.glacier),
+  ActionRecipe(ActionId.fireBomb, ActionId.screech, ActionId.hellmaw),
+  ActionRecipe(ActionId.whirlwind, ActionId.flash, ActionId.thunderstorm),
 ];
 
 ActionRecipe? recipeFor(ActionId x, ActionId y) {
@@ -882,20 +844,20 @@ const itemDefs = [
   ItemDef('phoenix', 'Phönixasche', '🔥', 45, {}, rarity: Rarity.legendary, effect: ItemEffect.phoenix,
       desc: 'Einmal pro Run: bei 0 HP mit 30 % HP weiter', unique: true),
   // ---- Aktions-Items (ersetzen die aktuelle Aktion)
-  ItemDef('a_dash', 'Sturzflug-Feder', '💨', 18, {}, rarity: Rarity.rare, effect: ItemEffect.action,
-      action: ActionId.dash, desc: 'Sprint in Flugrichtung, dabei unverwundbar', unique: true),
-  ItemDef('a_horn', 'Hupe', '📯', 16, {}, rarity: Rarity.rare, effect: ItemEffect.action,
-      action: ActionId.horn, desc: 'Stößt nahe Gegner weg, sie fliehen 2 s', unique: true),
-  ItemDef('a_shield', 'Seifenblasenschild', '🫧', 22, {}, rarity: Rarity.epic, effect: ItemEffect.action,
-      action: ActionId.bubbleShield, desc: 'Blase schluckt 1,2 s lang jeden Treffer', unique: true),
+  ItemDef('a_firebomb', 'Glutbombe', '💣', 24, {}, rarity: Rarity.epic, effect: ItemEffect.action,
+      action: ActionId.fireBomb, desc: 'Explosion auf der dichtesten Gegnergruppe, setzt in Brand', unique: true),
+  ItemDef('a_downpour', 'Platzregen', '🌧️', 24, {}, rarity: Rarity.epic, effect: ItemEffect.action,
+      action: ActionId.downpour, desc: 'Alle Gegner im Bild 4 s nass und langsamer', unique: true),
+  ItemDef('a_whirlwind', 'Wirbelsturm', '🌪️', 26, {}, rarity: Rarity.epic, effect: ItemEffect.action,
+      action: ActionId.whirlwind, desc: 'Tornado saugt Gegner und Material ein', unique: true),
   ItemDef('a_flash', 'Lichtblitz', '⚡', 22, {}, rarity: Rarity.epic, effect: ItemEffect.action,
       action: ActionId.flash, desc: 'Blendet alle Gegner im Bild für 1,5 s', unique: true),
-  ItemDef('a_storm', 'Gewitterwolke', '⛈️', 26, {}, rarity: Rarity.epic, effect: ItemEffect.action,
-      action: ActionId.storm, desc: 'Blitze schlagen 3 s lang in Gegner ein', unique: true),
-  ItemDef('a_magnet', 'Magnetpfiff', '📣', 18, {}, rarity: Rarity.rare, effect: ItemEffect.action,
-      action: ActionId.magnet, desc: 'Zieht alles Material im Bild heran', unique: true),
-  ItemDef('a_clock', 'Taschenuhr', '⏱️', 30, {}, rarity: Rarity.legendary, effect: ItemEffect.action,
-      action: ActionId.clock, desc: 'Gegner 3 s in Zeitlupe', unique: true),
+  ItemDef('a_screech', 'Fluchschrei', '🦅', 22, {}, rarity: Rarity.epic, effect: ItemEffect.action,
+      action: ActionId.screech, desc: 'Alle Gegner im Bild 5 s verflucht', unique: true),
+  ItemDef('a_quake', 'Felsbeben', '🪨', 20, {}, rarity: Rarity.rare, effect: ItemEffect.action,
+      action: ActionId.quake, desc: 'Schockwelle: Bodengegner betäubt, Flieger zu Boden', unique: true),
+  ItemDef('a_shield', 'Seifenblase', '🫧', 20, {}, rarity: Rarity.rare, effect: ItemEffect.action,
+      action: ActionId.bubbleShield, desc: 'Blase schluckt 1,5 s lang jeden Treffer', unique: true),
 ];
 
 final Map<String, ItemDef> itemById = {for (final i in itemDefs) i.id: i};
@@ -1010,7 +972,7 @@ const characterDefs = [
     id: 'spatz', name: 'Kampfspatz', species: 'Spatz', icon: '🐦', role: 'Allround',
     strength: '+10 % Material', weakness: 'keine Spezialität', flight: 'normal – das Maß aller Dinge',
     look: BirdLook.sparrow, glow: Color(0xFFFFC86E), body: Color(0xFFFFD23F), belly: Color(0xFFFFF3C4),
-    startWeapons: ['pistol', 'smg', 'shotgun'], startAction: ActionId.dash, materialChance: 0.1,
+    startWeapons: ['pistol', 'smg', 'shotgun'], materialChance: 0.1,
     unlock: UnlockDef(UnlockKind.start, 'Von Anfang an verfügbar'),
   ),
   CharacterDef(
@@ -1046,7 +1008,7 @@ const characterDefs = [
     id: 'frack', name: 'Frack', species: 'Pinguin', icon: '🐧', role: 'Wasser',
     strength: '+50 % Max-HP, +3 Rüstung; Material fällt immer zu Boden', weakness: 'kann kaum fliegen', flight: 'mühsam in der Luft, am Boden rasend schnell',
     look: BirdLook.penguin, glow: Color(0xFF9FE4FF), body: Color(0xFF26304A), belly: Color(0xFFF4FAFF),
-    startWeapons: ['water', 'bubbles', 'raincloud'], startAction: ActionId.bellySlide, mods: {Stat.armor: 3}, maxHpMul: 1.5,
+    startWeapons: ['water', 'bubbles', 'raincloud'], startAction: ActionId.downpour, mods: {Stat.armor: 3}, maxHpMul: 1.5,
     thrustMul: 0.62, glideMul: 1.4, groundMul: 1.7, minDropFall: 70, scale: 1.1, radius: 17,
     unlock: UnlockDef(UnlockKind.classWave, 'Welle 10 mit mindestens 3 Wasser-Waffen erreichen',
         cls: WeaponClass.water, amount: 3, wave: 10),
@@ -1055,7 +1017,7 @@ const characterDefs = [
     id: 'hacki', name: 'Hacki', species: 'Specht', icon: '🐦', role: 'Stein',
     strength: 'Stein-Waffen +25 %, +3 Rüstung', weakness: '−15 % Angriffstempo', flight: 'ruckartig, klammert sich an den Weltrand',
     look: BirdLook.woodpecker, glow: Color(0xFFFFB37A), body: Color(0xFF3A3A3A), belly: Color(0xFFF2EEE6),
-    startWeapons: ['pebble', 'gnome', 'bowling'], startAction: ActionId.drumroll, classBonus: WeaponClass.stone,
+    startWeapons: ['pebble', 'gnome', 'bowling'], startAction: ActionId.quake, classBonus: WeaponClass.stone,
     mods: {Stat.armor: 3, Stat.atk: -15}, accelMul: 1.3, wallCling: true,
     unlock: UnlockDef(UnlockKind.classWave, 'Welle 10 mit mindestens 3 Stein-Waffen erreichen',
         cls: WeaponClass.stone, amount: 3, wave: 10),
@@ -1072,7 +1034,7 @@ const characterDefs = [
     id: 'glitzer', name: 'Glitzer', species: 'Elster', icon: '🐦', role: 'Wirtschaft',
     strength: 'Shop −15 %, manchmal Geschenk beim Kill', weakness: 'nur 4 Waffenslots', flight: 'normal',
     look: BirdLook.magpie, glow: Color(0xFF9FD4FF), body: Color(0xFF20242E), belly: Color(0xFFF6F6F6),
-    startWeapons: ['water', 'disco', 'pebble'], startAction: ActionId.steal, shopMul: 0.85, giftChance: 0.01, maxWeapons: 4,
+    startWeapons: ['water', 'disco', 'pebble'], startAction: ActionId.whirlwind, shopMul: 0.85, giftChance: 0.01, maxWeapons: 4,
     unlock: UnlockDef(UnlockKind.totalMaterial, '3000 Material sammeln', amount: 3000),
   ),
   CharacterDef(
@@ -1088,7 +1050,7 @@ const characterDefs = [
     strength: 'schnellster Läufer (+100 % am Boden), +60 % Max-HP, +2 Rüstung; Material fällt immer zu Boden',
     weakness: 'kann nicht fliegen – nur hohe Sprünge, sinkt schnell', flight: 'rennt und springt, keine Flügel zum Fliegen',
     look: BirdLook.ostrich, glow: Color(0xFFFFC2D6), body: Color(0xFF2A2430), belly: Color(0xFFF4EEF4),
-    startWeapons: ['pebble', 'bowling', 'feather'], startAction: ActionId.kick,
+    startWeapons: ['pebble', 'bowling', 'feather'], startAction: ActionId.fireBomb,
     mods: {Stat.armor: 2}, maxHpMul: 1.6, groundMul: 2.0, thrustMul: 1.25, glideMul: 2.6, stamina: 0.4,
     minDropFall: 70, scale: 1.2, radius: 18,
     unlock: UnlockDef(UnlockKind.waveWith, 'Mit Frack Welle 10 erreichen', character: 'frack', wave: 10),
