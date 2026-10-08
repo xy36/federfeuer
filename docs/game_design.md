@@ -4,7 +4,7 @@ Sep 30, 2026 · @Chris
  
 ## Überblick
  
-Federfeuer ist ein 2D-Arena-Shooter im Stil von Brotato, bei dem der Spieler fliegt statt läuft: In 15 Wellen fliegt er jeweils von links nach rechts zum Ziel, am Ende besiegt er den Geierkönig. Dieses Dokument beschreibt den Stand des Prototyps (Web-Version und Flutter/Flame-Port) und dient als Vorlage für die Weiterentwicklung.
+Federfeuer ist ein 2D-Arena-Shooter im Stil von Brotato, bei dem der Spieler fliegt statt läuft: In 15 Wellen fliegt er jeweils von links nach rechts zum Ziel, am Ende besiegt er einen von zwei Endbossen (Geierkönig oder Aschephönix). Dieses Dokument beschreibt den Stand des Prototyps (Web-Version und Flutter/Flame-Port) und dient als Vorlage für die Weiterentwicklung.
  
 | Aspekt | Festlegung |
 | --- | --- |
@@ -26,7 +26,7 @@ Ein Run besteht aus 15 Wellen; zwischen den Wellen trifft der Spieler Build-Ents
  
 &#91;embedded content: Kernloop · Welle, Level-up, Shop, Boss\]
  
-Wellen 1–14 enden, sobald der Spieler das Ziel am rechten Weltende erreicht oder der Timer abläuft; danach folgen Level-ups (nur wenn XP gereicht hat) und der Shop. Jede Welle dauert länger und ist schwerer als die vorige. Nach Welle 14 führt der Shop in die Bosswelle, die erst mit dem Tod des Geierkönigs endet. HP auf 0 beendet den Run in jeder Welle.
+Wellen 1–14 enden, sobald der Spieler das Ziel am rechten Weltende erreicht oder der Timer abläuft; danach folgen Level-ups (nur wenn XP gereicht hat) und der Shop. Jede Welle dauert länger und ist schwerer als die vorige. Nach Welle 14 führt der Shop in die Bosswelle, die erst mit dem Tod des Endbosses endet. HP auf 0 beendet den Run in jeder Welle.
  
 ## Steuerung & Bewegung
  
@@ -252,7 +252,8 @@ Fäulnis-Kreaturen mit klar unterscheidbarem Verhalten, gern mit Augenzwinkern. 
 | Irrlicht | Wald / 10 | 9 | – | 5 | 12 | 1 | Springt alle 2,2 s neben den Spieler; nach drei Sprüngen oder in seiner Nähe 0,8 s Warnung, dann Explosion (Radius 75, ohne Material) |
 | Felsadler | Gebirge / 13 | 30 | 120 | 5 | 20 | 2 | Kreist oben über dem Spieler, hält alle 2,5–3,5 s inne (0,7 s Warnung) und stürzt sich auf dessen Position (560) |
 | Lawinenkäfer | Gebirge / 13 | 40 | 70 | 6 | 18 | 2 | Läuft heran, rollt sich in Reichweite (380) ein (0,6 s Warnung) und rast 1,6 s über den Boden (430) |
-| Geierkönig (Boss) | Gipfel / 15 | 4500 | 55 | 6 | 52 | – | siehe „Geierkönig“ |
+| Geierkönig (Endboss) | Gipfel / 15 | 4500 | 55 | 6 | 52 | – | siehe „Endbosse“ |
+| Aschephönix (Endboss) | Gipfel / 15 | 4300 | 60 | 6 | 48 | – | siehe „Endbosse“ |
 
 Stationäre Gegner (Vogelscheuche, Wetterhahn) lassen sich nicht verschieben und nicht einfangen; der Wind treibt sie nicht ab.
 
@@ -313,23 +314,36 @@ Ab Welle 5 kann ein regulär erscheinender Gegner (nicht Boss oder Torwächter) 
 
 ### Torwächter
 
-Am Ende jeder Welt außer dem Gipfel (Welle 4, 8, 12) bewacht ein Torwächter das Ziel. Er erscheint, sobald der Spieler 1000 vor dem Ziel ist, 260 davor (mit Beben, Funken und großem Namen „TORWÄCHTER …“ nach dem Wellenbanner). Solange er lebt, ist das Ziel versperrt (violette Gitterstäbe, „VERSPERRT“): Der Spieler wird zurückgeschoben und bekommt den Hinweis „Besiege zuerst …“. Läuft die Zeit ab, endet die Welle wie gewohnt. Das HUD zeigt seinen Namen und eine HP-Kapsel unter der Zielstrecke. Besiegt lässt er 15 Material und ein Geschenk fallen („DAS TOR IST OFFEN“) und schaltet einen Waffenplatz frei („NEUER WAFFENPLATZ!“), solange noch einer fehlt. Torwächter sind wie der Boss immun gegen Einfangen und Rückstoß, Betäubung wirkt nur 30 %; sie skalieren mit der Welle wie normale Gegner und bleiben im Umkreis von 220 um ihren Platz.
+Am Ende jeder Welt außer dem Gipfel (Welle 4, 8, 12) bewacht ein Torwächter das Ziel. **Torwächter-Pool:** Zu Beginn jedes Runs werden aus sechs Torwächtern drei verschiedene ausgelost und den Wellen 4, 8 und 12 zugeteilt – jeder kann in jeder dieser Wellen kommen. Darum haben alle ähnliche Grund-HP und wachsen gemeinsam mit der Welle: HP = Grund-HP × (1 + 0,42 · (w − 1)) × Stufe (z. B. 240 Grund-HP: rund 540 in Welle 4, 950 in Welle 8, 1350 in Welle 12); Schaden wie bei normalen Gegnern. Er erscheint, sobald der Spieler 1000 vor dem Ziel ist, 260 davor (mit Beben, Funken und großem Namen „TORWÄCHTER …“ nach dem Wellenbanner). Solange er lebt, ist das Ziel versperrt (violette Gitterstäbe, „VERSPERRT“): Der Spieler wird zurückgeschoben und bekommt den Hinweis „Besiege zuerst …“. **Torwächter-Wellen haben kein Zeitlimit:** Die Welle endet nur durch den Sieg über ihn – nicht durch Zeitablauf und nicht durch das Ziel. Statt des Timers zeigt das HUD „KEIN ZEITLIMIT“ und „Besiege …“, sobald er erscheint darunter seinen Namen und eine HP-Kapsel unter der Zielstrecke. Damit sich die Welle nicht endlos zum Farmen nutzen lässt, läuft die Zeit einer normalen Welle unsichtbar mit: Nur so lange kommen normale Gegner (bis 3 s vor ihrem Ende, wie in jeder Welle), danach nur noch der Torwächter. Besiegt („TORWÄCHTER BESIEGT!“) lässt er 15 Material und ein Geschenk fallen und schaltet einen Waffenplatz frei („NEUER WAFFENPLATZ!“), solange noch einer fehlt. Danach läuft die Welle noch 3 s aus (HUD „BESIEGT“ mit Countdown in der Bildmitte, keine neuen Gegner): Alles Material und das Geschenk fliegen von selbst zum Spieler und zählen auch, wenn sie bis zum Ende noch unterwegs sind. Ein Zeitbonus fällt nicht an; die Einblendung am Ende lautet „Torwächter besiegt“. Torwächter sind wie der Boss immun gegen Einfangen und Rückstoß, Betäubung wirkt nur 30 %; sie skalieren mit der Welle wie normale Gegner und bleiben im Umkreis von 220 um ihren Platz.
 
-| Torwächter | Welle | HP | Tempo | Schaden | Radius | Angriffe |
-| --- | --- | --- | --- | --- | --- | --- |
-| Der Strohkönig | 4 | 220 | 25 | 5 | 40 | Riesige Vogelscheuche mit Kürbiskopf: Fächer aus drei brennenden Strohbündeln alle 2,6 s (0,6 s Warnung), ruft alle 8 s zwei Krähen |
-| Die Glocke | 8 | 260 | 40 | 5 | 36 | Hängt an einer Kette: Ring aus 10 Kugeln alle 2,2 s (jedes Mal gedreht); alle 6 s Glockenschlag – 1 s wachsender Warnkreis (Radius 230), dann Schaden × 1,5 im ganzen Kreis |
-| Die Spinnenmutter | 12 | 300 | 70 | 6 | 40 | Hängt oben: Fächer aus drei Netzen alle 2,6 s, ruft alle 7 s zwei Spinnen; alle 9 s 0,8 s Warnung, dann lässt sie sich bis zum Boden fallen und klettert zurück |
+| Torwächter | Grund-HP | Tempo | Schaden | Radius | Angriffe |
+| --- | --- | --- | --- | --- | --- |
+| Der Strohkönig | 230 | 25 | 5 | 40 | Riesige Vogelscheuche mit Kürbiskopf: Fächer aus drei brennenden Strohbündeln alle 2,6 s (0,6 s Warnung), ruft alle 8 s zwei Krähen |
+| Die Glocke | 250 | 40 | 5 | 36 | Hängt an einer Kette: Ring aus 10 Kugeln alle 2,2 s (jedes Mal gedreht); alle 6 s Glockenschlag – 1 s wachsender Warnkreis (Radius 230), dann Schaden × 1,5 im ganzen Kreis |
+| Die Spinnenmutter | 260 | 70 | 6 | 40 | Hängt oben: Fächer aus drei Netzen alle 2,6 s, ruft alle 7 s zwei Spinnen; alle 9 s 0,8 s Warnung, dann lässt sie sich bis zum Boden fallen und klettert zurück |
+| Der Moorgolem | 270 | 22 | 5 | 44 | Schwerer Golem aus Moorstein mit Glutrissen: wirft alle 2,8 s einen Felsbrocken im Bogen; alle 5,5 s Stampfer – 0,9 s Warnung (hebt die glühenden Fäuste), dann laufen zwei Bodenwellen nach links und rechts am Boden entlang (Tempo 340, Höhe 46, Reichweite 900, Schaden × 1,2) – drüberfliegen |
+| Der Laternenmann | 220 | 45 | 5 | 32 | Schwebende Kapuzengestalt mit Laterne: drei langsame Irrlicht-Kugeln alle 2,4 s, ruft alle 10 s zwei Irrlichter; alle 7 s Lichtstrahl – 1 s feine Warnlinie, dann brennt er 1,6 s und dreht langsam (0,45 rad/s) zum Spieler (Treffer höchstens alle 0,5 s); alle 9 s verblasst er (0,6 s) und taucht 120–220 entfernt wieder auf, mit einem Ring aus 6 Kugeln |
+| Der Dornenwurm | 240 | 210 | 5 | 36 | Gräbt sich als Erdhügel zum Spieler (in seinem Revier; Treffer prallen ab, kein Berührungsschaden); 0,8 s Risse im Boden, dann bricht er hervor: Schaden × 1,5 für alles nah am Boden (bis 170 hoch, ± Radius + 34), Fächer aus 7 Dornen; 2,6 s oben (verwundbar) mit gezielten Dornen alle 0,9 s, taucht ab und gräbt erneut |
 
-### Geierkönig
+### Endbosse
 
-Der Boss der Welle 15 hat drei Phasen (Wechsel bei 66 % und 33 % HP, jeweils mit Beben, Funken und Text „DER GEIERKÖNIG TOBT!“ bzw. „LETZTE KRAFT!“). Die Boss-Leiste zeigt die Phasengrenzen und „PHASE n“.
+In Welle 15 wartet einer von zwei Endbossen, je Run ausgelost. Beide haben drei Phasen (Wechsel bei 66 % und 33 % HP, jeweils mit Beben, Funken und Text), skalieren nicht mit der Welle (nur mit der Stufe) und sind immun gegen Elite, Einfangen und Rückstoß. HUD, Wellenbanner („… KOMMT“) und Siegesbildschirm („… ist gefallen.“) nennen den ausgelosten Boss; die Boss-Leiste zeigt die Phasengrenzen und „PHASE n“.
+
+**Der Geierkönig** (4500 HP, Tempo 55, Schaden 6, Radius 52; „DER GEIERKÖNIG TOBT!“ / „LETZTE KRAFT!“):
 
 | Phase | Angriffe |
 | --- | --- |
 | 1 | Schwebt, Fächer aus 7 Kugeln alle 1,5 s, ruft alle 6 s drei Krähen |
 | 2 | dazu Federregen alle 5 s: 6 rosa Warnlinien über das Bild verteilt, nach 0,8 s fallen dort Federn von der Decke (Tempo 330) |
 | 3 | Fächer aus 9 Kugeln alle 1,1 s, Krähen alle 4 s, Federregen alle 4 s mit 8 Linien; dazu alle 7 s Sturzflug: 0,9 s Warnung (helles Leuchten), dann quer durchs Bild auf Höhe des Spielers (680) |
+
+**Der Aschephönix** (4300 HP, Tempo 60, Schaden 6, Radius 48; „DER PHÖNIX LODERT!“ / „AUS DER ASCHE!“) – Phönix aus Asche und Glut mit Federfächer-Schwingen, Flammenschweif und Flammenkamm, der in späteren Phasen heller brennt:
+
+| Phase | Angriffe |
+| --- | --- |
+| 1 | Schwebt, Glutbögen alle 1,9 s: 4 brennende Kugeln im Bogen, um den Spieler verteilt (0,4 s Aufleuchten vorher); ruft alle 7 s zwei Glutkäfer |
+| 2 | 5 Kugeln je Glutbogen; dazu alle 6,5 s Flammensäulen: 3 Glutflecken am Boden (einer beim Spieler), nach 1 s lodern dort 0,9 s lang Säulen über die ganze Höhe (Breite 68) |
+| 3 | Glutbögen alle 1,4 s, Käfer alle 5 s, 4 Säulen alle 5,5 s; dazu alle 7 s Feuerwand: Am Bildrand zeigt eine Linie die Wand mit hell markierter Lücke (150 hoch), nach 1,1 s rast eine Wand aus Glutkugeln quer durchs Bild (Tempo 280) – nur durch die Lücke |
  
 ## Wellen & Spawns
  
@@ -337,7 +351,7 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
  
 - **Dauer:** 20 s + 4 s pro Welle ohne Obergrenze (Welle 1 = 20 s, Welle 9 = 52 s, Welle 14 = 72 s).
 - **Schlussphase:** Damit das Ende nicht abrupt kommt, warnt der Timer oben ab 10 s Restzeit (orange, pulsiert) und ab 5 s rot und stärker pulsierend; die letzten 5 s laufen zusätzlich als großer, halbtransparenter Countdown „5 … 1“ in der Bildmitte (jede Zahl ploppt kurz auf und verblasst, ab 3 rot, darunter „WELLE ENDET“). In den letzten 3 s erscheinen keine neuen Gegner mehr (gilt nicht in der Bosswelle).
-- **Ende:** Erreicht der Spieler das Ziel, ist die Welle sofort bestanden und er bekommt ⌊Restzeit / 2⌋ Material als Zeitbonus. Läuft vorher der Timer ab, ist die Welle ebenfalls bestanden, aber ohne Bonus.
+- **Ende:** Erreicht der Spieler das Ziel, ist die Welle sofort bestanden und er bekommt ⌊Restzeit / 2⌋ Material als Zeitbonus. Läuft vorher der Timer ab, ist die Welle ebenfalls bestanden, aber ohne Bonus. Ausnahme Torwächter-Wellen (4, 8, 12): kein Zeitlimit, sie enden 3 s nach dem Sieg über den Torwächter (siehe „Torwächter“).
 - **Steigende Schwierigkeit:** Gegnerwerte (siehe Skalierung und Zähigkeit), Gruppengröße und der Anteil von Spuckern und Brocken wachsen mit jeder Welle weiter. Das Spawn-Intervall erreicht ab Welle 14 seine Untergrenze von 1,6 s.
 - **Spawn-Intervall:** max(1,6; 3,0 − 0,1 · w) s, zufällig ±30 %; in der Bosswelle × 1,7.
 - **Gruppengröße:** 1 + ⌊w / 5⌋, mit 40 % Chance einer mehr; in den Wellen 1–4 je Gruppe 1 Gegner zusätzlich (sonst reicht das Material früh für keine Käufe). Die Gruppe erscheint gebündelt an einer Stelle im sichtbaren Bild: mindestens 280 vom Spieler entfernt, höchstens bis 40 vor den Bildrand (und nie weiter als 700), mit 65 % Chance vor ihm (in Richtung Ziel). Ist der Bildschirm auf der Seite zu schmal, erscheint sie im Mindestabstand knapp außerhalb; fehlt am Weltrand der Platz, kommt sie von der anderen Seite. In der Bosswelle erscheint sie irgendwo in der Arena, mindestens 280 entfernt.
@@ -346,7 +360,7 @@ Wellen 1–14 laufen auf Zeit, Welle 15 endet erst mit dem Tod des Bosses. Zu Be
 - **Nachzügler:** Gegner, die mehr als 1400 hinter dem Spieler zurückliegen, verschwinden ohne Drop (nicht in der Bosswelle, nie Boss oder Torwächter).
 - **Gewichtung:** siehe „Gegner“; dazu ab Welle 5 Elitegegner und in Welle 4, 8, 12 ein Torwächter am Ziel.
  
-Am Wellenende verpuffen alle Gegner und Projektile. Material, das schon zum Spieler fliegt, wird noch gutgeschrieben; alles, was noch am Boden liegt, verfällt. Die Szene steht dann 1,2 s still mit der Einblendung „WELLE X GESCHAFFT“ und darunter „Ziel erreicht! +N Zeitbonus“ bzw. „Zeit abgelaufen“; erst danach erscheinen Level-up oder Shop. Wer zum Ziel eilt, tauscht also zurückgelassene Beute gegen den Zeitbonus.
+Am Wellenende verpuffen alle Gegner und Projektile. Material, das schon zum Spieler fliegt, wird noch gutgeschrieben; alles, was noch am Boden liegt, verfällt. Die Szene steht dann 1,2 s still mit der Einblendung „WELLE X GESCHAFFT“ und darunter „Ziel erreicht! +N Zeitbonus“ bzw. „Zeit abgelaufen“ (Torwächter-Wellen: „Torwächter besiegt“); erst danach erscheinen Level-up oder Shop. Wer zum Ziel eilt, tauscht also zurückgelassene Beute gegen den Zeitbonus.
  
 ## Schwierigkeitsstufen
 
@@ -394,7 +408,7 @@ Wind addiert sich zur Bewegung, ohne die Höchstgeschwindigkeit zu ändern: Gege
 | Spucker | 0,8 |
 | Käfer | 0,5 |
 | Brocken | 0,35 |
-| Geierkönig | 0,2 |
+| Endbosse (Geierkönig, Aschephönix) | 0,2 |
 
 Darstellung: Regenschleier mit Pfützen am Boden, die sich füllen und danach wieder trocknen; bei Wind Windlinien und Blätter. Das Wetter wird beim Wechsel in 1,2 s weich ein- und ausgeblendet. Im Debug-Build schalten die Tasten 1 / 2 / 3 direkt auf Klar / Wind / Regen.
 
@@ -623,7 +637,7 @@ Max-HP: Start 20, dann Änderungen des Vogels, dann × Max-HP-Faktor (gerundet).
 Im Spiel zeigt ein schlankes HUD nur das Nötigste; alle Menüs sind Overlays über der angehaltenen Szene.
  
 - **HUD oben links:** Level als leuchtender Orb, die XP laufen als Lichtbogen um ihn herum; daneben die HP als leuchtende Glaskapsel mit Zahl darunter und der Materialzähler mit Mint-Kristall.
-- **HUD oben Mitte:** „WELLE X“ klein, darunter der Countdown (rosarot unter 5 s) und eine feine Lichtlinie bis zum Ziel mit leuchtendem Punkt für den Spieler und kleiner Lichtsäule am Ende; in Welle 15 stattdessen „DER GEIERKÖNIG“ mit magentafarbener HP-Kapsel.
+- **HUD oben Mitte:** „WELLE X“ klein, darunter der Countdown (rosarot unter 5 s; in Torwächter-Wellen stattdessen „KEIN ZEITLIMIT“ und „Besiege …“, nach dem Sieg „BESIEGT“) und eine feine Lichtlinie bis zum Ziel mit leuchtendem Punkt für den Spieler und kleiner Lichtsäule am Ende; in Welle 15 stattdessen „DER GEIERKÖNIG“ mit magentafarbener HP-Kapsel.
 - **Aktionen unten links:** je Platz ein Glaskreis mit dem Symbol der Aktion (Evolutionen in kräftigerem Gold, Stufe II mit Punkt); während der Abklingzeit läuft ein Lichtbogen und daneben die Restsekunden, bereit leuchtet er golden mit dem Namen der Aktion; darunter die erste belegte Taste (mit Controller der Knopf). Wird eine Aktion wieder bereit, springt ihr Kreis 0,8 s lang kurz auf, ein Lichtring läuft nach außen, darüber steht „BEREIT!“, und um den Vogel leuchtet ein kleiner Ring mit Funken in der Farbe der Aktion; solange sie bereit ist, pulsiert der Kreis sanft. Mit Touch-Steuerung sitzen sie über den Bewegungsknöpfen. Der Lichtblitz lässt das Bild kurz weiß aufblitzen.
 - **Wetteranzeige:** Unter Timer bzw. Boss-Leiste steht das aktuelle Wetter (bei Wind mit Richtungszeichen, z. B. „Wind ›“); das Wellenbanner nennt es ebenfalls.
 - **Einblendungen:** Wellenbanner zu Beginn (Weltname in der Kantenfarbe der Welt darüber), schwebende Schadenszahlen (weiß, Krit gelb, Spieler rot, Heilung mint; höchstens 40 gleichzeitig, mit scharfem Schatten statt Schein), „LEVEL UP“ am Spieler. Texte im Spiel haben einen weichen Schein in ihrer Farbe statt einer Kontur.
@@ -664,7 +678,7 @@ Gebaut wird mit Flutter 3.47.6 (lokal und in GitHub Actions). Unter Windows rend
 | `game/run_state.dart` | Zustand eines Runs: Vogel, Werte inkl. Set-Boni, Waffenwerte (`WeaponStats`), Inventar, Aktion, Shop- und Level-Logik |
 | `components/player.dart` | Flugphysik mit Flugprofil des Vogels, Chaos-Zustände, Blinzeln und Blick, Aura und Schweif |
 | `components/bird_art.dart` | Haltung der Vögel (`BirdPose`: Flügelschlag, Blick, Blinzeln, Laufen, Halten, Zeit) und Einstieg fürs Zeichnen, auch für Menü-Vorschauen |
-| `components/boss_art.dart` | Ausführliche Zeichnungen der Bosse: Geierkönig, Strohkönig, Glocke, Spinnenmutter (`BossLook`: Zeit, Puls, Warnung, Treffer, Phase) |
+| `components/boss_art.dart` | Ausführliche Zeichnungen der Bosse: Geierkönig, Aschephönix und die sechs Torwächter (`BossLook`: Zeit, Puls, Warnung, Treffer, Phase, Auftauchen des Dornenwurms) |
 | `components/enemy_art.dart` | Ausgearbeitete Formen der übrigen Gegner (`EnemyLook`) |
 | `components/glyph_art.dart` | Leuchtende Symbole für UI und HUD (`GlyphRef`: Waffe, Item, Aktion, Wert, Gegner, Vogel, Bedien-Symbol), das `Glyph`-Widget und `GlyphText` (ersetzt Symbolzeichen im Text) |
 | `components/glyph_objects.dart` | Zeichnungen der Item-, Aktions-, Evolutions-, Wert- und Bedien-Symbole samt wiederverwendbarer Motive (Blitz, Blase, Ei, Horn, Uhr, Sonne …) |
@@ -673,7 +687,7 @@ Gebaut wird mit Flutter 3.47.6 (lokal und in GitHub Actions). Unter Windows rend
 | `components/weapon_art.dart` | Modelle aller 18 Waffen und die Krallen der gehaltenen Waffe |
 | `components/weapon_mount.dart` | Waffe in den Krallen bzw. im Ring um den Spieler, Zielsuche, Verhalten je Waffenart (Schuss, Wurf, Kreis, Hieb, Begleiter, Wolke, Rollen, rundum) |
 | `components/weapon_fx.dart` | Geisterkrähen, Regenwolke, Peitschenbogen, Henriettes Ei (auch Gewitterei), Blitz (Mixin `CombatEffect`) |
-| `components/enemy.dart` | KI und Zeichnung der Grundgegner, Statuseffekte, Elitegegner; Teil-Dateien `enemy_world.dart` (Welt-Gegner, Giftwolke, Sprengsatz), `enemy_gate.dart` (Torwächter), `enemy_boss.dart` (Phasen des Geierkönigs, Federregen), `enemy_sprites.dart` (vorgerenderte Gegner: je Typ ein Atlas mit den Phasen der Hauptbewegung, Pulsstufen und Varianten in Bildschirmauflösung; alle Körper werden gebündelt per drawAtlas gezeichnet, Treffer-Blitz über die Atlas-Farbe; live bleiben Rauch, Fäden, Zeiger, Statusanzeigen sowie Boss, Torwächter, Irrlicht, Riss und Ei) |
+| `components/enemy.dart` | KI und Zeichnung der Grundgegner, Statuseffekte, Elitegegner; Teil-Dateien `enemy_world.dart` (Welt-Gegner, Giftwolke, Sprengsatz), `enemy_gate.dart` (Torwächter, Bodenwelle, Lichtstrahl), `enemy_boss.dart` (Phasen der Endbosse, Federregen, Flammensäulen, Feuerwand), `enemy_sprites.dart` (vorgerenderte Gegner: je Typ ein Atlas mit den Phasen der Hauptbewegung, Pulsstufen und Varianten in Bildschirmauflösung; alle Körper werden gebündelt per drawAtlas gezeichnet, Treffer-Blitz über die Atlas-Farbe; live bleiben Rauch, Fäden, Zeiger, Statusanzeigen sowie Boss, Torwächter, Irrlicht, Riss und Ei) |
 | `components/projectiles.dart` | Spielerkugeln (Durchschlag, Explosion, Bogenwurf, Zünder, Rollen, Treffereffekte) und Gegnerkugeln |
 | `components/pickups.dart` | Material-, Herz- und Geschenk-Drops und Spawn-Warnungen |
 | `components/effects.dart` | Partikel, Explosionsring, schwebende Zahlen |
@@ -749,6 +763,8 @@ Phase 2 – Inhalte:
 - [x] Nur noch 4 Waffenplätze (Glitzer 3), Set-Boni bei 2/3/4, Grundschaden × 1,35
 - [x] Waffenplätze im Run erspielen: Start mit 2, Waffengurt (Shop) und Torwächter je +1; 2 Reserveplätze; Waffen nur für ihre Gabe kaufen
 - [x] Kreismenü für Waffen im Shop (Segmente je Wahl)
+- [x] Torwächter-Wellen ohne Zeitlimit: enden erst nach dem Sieg über den Torwächter (normale Gegner nur für die Dauer einer normalen Welle)
+- [x] Torwächter-Pool (6, je Run 3 ausgelost; neu: Moorgolem, Laternenmann, Dornenwurm) und zweiter Endboss (Aschephönix, je Run ausgelost)
 - [x] Kreismenü auch für Angebote (kaufen, als Gabe, zurückhalten; Knopfzeile unter den Karten entfällt)
 - [ ] Kreismenü auch für Aktionen und Items nutzen
 - [x] Werte-Seite im Shop (Gruppen, Herkunft, Wirkung); im Shop nur noch die wichtigsten Werte

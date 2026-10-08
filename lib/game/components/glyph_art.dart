@@ -172,8 +172,12 @@ class GlyphArt {
         // Sichtbare Ausdehnung der Zeichnung (Bosse ragen weit über ihren Radius hinaus)
         final extent = switch (type) {
           EnemyType.boss => 120.0,
+          EnemyType.ashPhoenix => r * 2.9,
           EnemyType.strawKing || EnemyType.spiderMother => r * 2.5,
           EnemyType.bell => r * 2.7,
+          EnemyType.moorGolem => r * 2.5,
+          EnemyType.lanternMan => r * 3.0,
+          EnemyType.thornWorm => r * 2.6,
           EnemyType.eagle || EnemyType.bat => r * 3.4,
           _ => r * 2.4,
         };

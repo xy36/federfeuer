@@ -1223,11 +1223,16 @@ enum EnemyType {
   beetleQueen,
   beetleEgg,
   rift,
-  // Torwächter am Ende der Welten
+  // Torwächter (Pool für Welle 4, 8, 12)
   strawKing,
   bell,
   spiderMother,
+  moorGolem,
+  lanternMan,
+  thornWorm,
+  // Endbosse (einer je Run)
   boss,
+  ashPhoenix,
 }
 
 class EnemyDef {
@@ -1282,7 +1287,11 @@ extension EnemyInfo on EnemyType {
         EnemyType.strawKing => 'Der Strohkönig',
         EnemyType.bell => 'Die Glocke',
         EnemyType.spiderMother => 'Die Spinnenmutter',
+        EnemyType.moorGolem => 'Der Moorgolem',
+        EnemyType.lanternMan => 'Der Laternenmann',
+        EnemyType.thornWorm => 'Der Dornenwurm',
         EnemyType.boss => 'Der Geierkönig',
+        EnemyType.ashPhoenix => 'Der Aschephönix',
       };
 
   String get icon => switch (this) {
@@ -1310,7 +1319,11 @@ extension EnemyInfo on EnemyType {
         EnemyType.strawKing => '🎃',
         EnemyType.bell => '🔔',
         EnemyType.spiderMother => '🕸️',
+        EnemyType.moorGolem => '🗿',
+        EnemyType.lanternMan => '🏮',
+        EnemyType.thornWorm => '🪱',
         EnemyType.boss => '👑',
+        EnemyType.ashPhoenix => '🔥',
       };
 
   String get desc => switch (this) {
@@ -1336,11 +1349,19 @@ extension EnemyInfo on EnemyType {
         EnemyType.beetleEgg => 'Schlüpft nach 2,5 s – vorher zerstören!',
         EnemyType.rift => 'Ein Fäulnisriss, der offen bleibt: 12 s lang alle 3 s ein Gegner. Beschießen schließt ihn früher.',
         EnemyType.strawKing =>
-          'Torwächter der Felder (Welle 4). Riesige Vogelscheuche: wirft Strohbündel im Fächer und ruft Krähen.',
-        EnemyType.bell => 'Torwächter des Dorfs (Welle 8). Schießt Kugelringe; vor dem Glockenschlag rechtzeitig raus aus dem Kreis!',
+          'Torwächter. Riesige Vogelscheuche: wirft Strohbündel im Fächer und ruft Krähen.',
+        EnemyType.bell => 'Torwächter. Schießt Kugelringe; vor dem Glockenschlag rechtzeitig raus aus dem Kreis!',
         EnemyType.spiderMother =>
-          'Torwächterin des Waldes (Welle 12). Schießt Netzfächer, ruft Spinnen und lässt sich blitzschnell fallen.',
-        EnemyType.boss => 'Herrscher der Fäulnis auf dem Gipfel. Erscheint in Welle 15.',
+          'Torwächterin. Schießt Netzfächer, ruft Spinnen und lässt sich blitzschnell fallen.',
+        EnemyType.moorGolem =>
+          'Torwächter. Wirft Felsbrocken und stampft – die Bodenwellen laufen am Boden entlang: drüberfliegen!',
+        EnemyType.lanternMan =>
+          'Torwächter. Sein Lichtstrahl zeigt sich erst als feine Linie, dann brennt er und folgt dir langsam; verschwindet und taucht woanders auf.',
+        EnemyType.thornWorm =>
+          'Torwächter. Gräbt sich als Erdhügel heran (Treffer prallen ab), bricht nach Rissen im Boden unter dir hervor und schießt Dornen.',
+        EnemyType.boss => 'Endboss der Fäulnis auf dem Gipfel (Welle 15). Federfächer, Krähen, Federregen, Sturzflüge.',
+        EnemyType.ashPhoenix =>
+          'Endboss auf dem Gipfel (Welle 15). Glutbögen und Glutkäfer, dann Flammensäulen, zuletzt Feuerwände mit nur einer Lücke.',
       };
 }
 
@@ -1384,13 +1405,19 @@ const Map<EnemyType, EnemyDef> enemyDefs = {
   EnemyType.beetleEgg: EnemyDef(hp: 8, speed: 0, dmg: 0, radius: 9, flying: false, drop: 0, wind: 0, stationary: true),
   EnemyType.rift: EnemyDef(
       hp: 50, speed: 0, dmg: 0, radius: 22, flying: true, drop: 3, wind: 0, stationary: true, spawner: true),
-  // Torwächter
+  // Torwächter: ähnliche Grund-HP, da jeder in Welle 4, 8 oder 12 kommen kann (Wachstum: kGateHpGrowth)
   EnemyType.strawKing: EnemyDef(
-      hp: 220, speed: 25, dmg: 5, radius: 40, flying: false, drop: 0, wind: 0),
-  EnemyType.bell: EnemyDef(hp: 260, speed: 40, dmg: 5, radius: 36, flying: true, drop: 0, wind: 0),
-  EnemyType.spiderMother: EnemyDef(hp: 300, speed: 70, dmg: 6, radius: 40, flying: true, drop: 0, wind: 0),
+      hp: 230, speed: 25, dmg: 5, radius: 40, flying: false, drop: 0, wind: 0),
+  EnemyType.bell: EnemyDef(hp: 250, speed: 40, dmg: 5, radius: 36, flying: true, drop: 0, wind: 0),
+  EnemyType.spiderMother: EnemyDef(hp: 260, speed: 70, dmg: 6, radius: 40, flying: true, drop: 0, wind: 0),
+  EnemyType.moorGolem: EnemyDef(hp: 270, speed: 22, dmg: 5, radius: 44, flying: false, drop: 0, wind: 0),
+  EnemyType.lanternMan: EnemyDef(hp: 220, speed: 45, dmg: 5, radius: 32, flying: true, drop: 0, wind: 0),
+  EnemyType.thornWorm: EnemyDef(hp: 240, speed: 210, dmg: 5, radius: 36, flying: false, drop: 0, wind: 0),
+  // Endbosse: keine Wellenskalierung
   EnemyType.boss: EnemyDef(
       hp: 4500, speed: 55, dmg: 6, radius: 52, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
+  EnemyType.ashPhoenix: EnemyDef(
+      hp: 4300, speed: 60, dmg: 6, radius: 48, flying: true, drop: 0, wind: WeatherConfig.windFactorBoss),
 };
 
 /// Elitegegner: Modifikator mit Farbe und Zeichen über dem Kopf.
@@ -1447,19 +1474,35 @@ List<(EnemyType, double)> spawnPool(int wave) {
 /// Höchstzahl gleichzeitig lebender Spawner; darüber kommt stattdessen eine Krähe.
 const int kMaxSpawners = 3;
 
-/// Torwächter einer Welle (Ende der Felder, des Dorfs, des Waldes), sonst null.
-EnemyType? gatekeeperForWave(int wave) => switch (wave) {
-      4 => EnemyType.strawKing,
-      8 => EnemyType.bell,
-      12 => EnemyType.spiderMother,
-      _ => null,
-    };
+/// Wellen mit Torwächter (Ende der Felder, des Dorfs, des Waldes).
+const kGateWaves = [4, 8, 12];
+bool isGateWave(int wave) => kGateWaves.contains(wave);
+
+/// Torwächter-Pool: Jeder Run zieht für die Torwächter-Wellen zufällig einen, ohne Wiederholung.
+const kGatekeepers = [
+  EnemyType.strawKing,
+  EnemyType.bell,
+  EnemyType.spiderMother,
+  EnemyType.moorGolem,
+  EnemyType.lanternMan,
+  EnemyType.thornWorm,
+];
+
+/// Endbosse: Jeder Run zieht zufällig einen.
+const kFinalBosses = [EnemyType.boss, EnemyType.ashPhoenix];
+
+/// HP-Wachstum der Torwächter je Welle (Grund-HP × (1 + Wachstum × (w − 1))).
+const double kGateHpGrowth = 0.42;
 
 /// Torwächter erscheint, sobald der Spieler so nah am Ziel ist; er steht so weit davor.
 const double kGateTriggerDist = 1000, kGateOffset = 260;
 
 /// Belohnung für einen Torwächter: Material plus ein Geschenk.
 const int kGateDrops = 15;
+
+/// Torwächter-Wellen haben kein Zeitlimit: Sie enden so viele Sekunden nach seinem Tod
+/// (Material und Geschenk fliegen dabei von selbst zum Spieler).
+const double kGateWaveEndDelay = 3;
 
 // ---------------- Schwierigkeitsstufen ----------------
 

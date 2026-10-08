@@ -80,10 +80,19 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   Enemy? gate;
   double gateBanner = 0, _gateHintT = 0;
 
+  /// Torwächter-Welle (4, 8, 12): kein Zeitlimit, sie endet erst nach dem Sieg über ihn.
+  bool get gateWave {
+    final r = run;
+    return r != null && !isBossWave(r.wave) && r.gatekeeperFor(r.wave) != null;
+  }
+
+  /// Läuft nach dem Sieg über den Torwächter bis zum Wellenende herunter (0 = noch nicht besiegt).
+  double gateEndT = 0;
+
   /// Das Ziel ist versperrt, solange der Torwächter dieser Welle lebt (oder noch nicht da war).
   bool get goalLocked {
     final r = run;
-    if (r == null || gatekeeperForWave(r.wave) == null) return false;
+    if (r == null || r.gatekeeperFor(r.wave) == null) return false;
     return !(gate?.dead ?? false);
   }
 
@@ -328,7 +337,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void startWave() {
     final r = run!;
     _clearChaos();
-    _bodyPass.prewarm([for (final (t, _) in spawnPool(r.wave)) t]);
+    _bodyPass.prewarm([
+      for (final (t, _) in spawnPool(r.wave)) t,
+      ?r.gatekeeperFor(r.wave),
+      if (isBossWave(r.wave)) r.finalBoss,
+    ]);
     phase = Phase.play;
     _setOverlays(['controls']);
     _clearArena();
@@ -346,6 +359,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     goalX = boss ? null : worldW - kGoalInset;
     gate = null;
     gateBanner = 0;
+    gateEndT = 0;
     if (goalX != null) world.add(Goal(goalX!, locked: () => goalLocked));
     // Timer-Wellen starten links, die Bosswelle in der Arenamitte.
     player.reset(Vector2(boss ? worldW / 2 : kStartX, kGround - 140));
@@ -371,7 +385,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       final side = rng.nextBool() ? -500.0 : 500.0;
       world.add(
         SpawnMarker(
-          EnemyType.boss,
+          r.finalBoss,
           Vector2(clampD(player.x + side, 100, worldW - 100), 170),
           2,
         ),
@@ -403,6 +417,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     // Nur Material, das schon zum Spieler fliegt, zählt noch; der Rest verfällt.
     for (final d in world.children.whereType<Drop>()) {
       if (d.material && !d.taken && d.pulled) r.gain(d.value);
+      // Geschenk unterwegs (Torwächter): zählt noch
+      if (d.gift && !d.taken && d.pulled) {
+        d.taken = true;
+        giveGift();
+      }
     }
     // Sparschwein: Zinsen
     final interest = r.interest();
@@ -678,10 +697,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
       return;
     }
     if (!isBossWave(r.wave)) {
+      // Läuft auch in Torwächter-Wellen (begrenzt dort die normalen Gegner), beendet sie aber nicht
       waveTime -= dt;
       final g = goalX;
       // Torwächter erscheint vor dem Ziel, sobald der Spieler sich nähert
-      final gk = gatekeeperForWave(r.wave);
+      final gk = r.gatekeeperFor(r.wave);
       if (gk != null && gate == null && g != null && player.x > g - kGateTriggerDist) _spawnGate(gk, g);
       // Name des Torwächters erst nach dem Wellenbanner zeigen
       if (banner <= 0) gateBanner = max(0.0, gateBanner - dt);
@@ -695,12 +715,24 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
             _gateHintT = 1.5;
             floatText(player.position - Vector2(0, 34), 'Besiege zuerst ${gk!.label}!', Palette.coral, 15);
           }
-        } else {
+        } else if (!gateWave) {
           reachGoal();
           return;
         }
       }
-      if (waveTime <= 0) {
+      if (gateWave) {
+        // Torwächter besiegt: alles Material fliegt herbei, dann endet die Welle
+        if (gateEndT > 0) {
+          for (final d in world.children.whereType<Drop>()) {
+            if (!d.pulled) d.pull();
+          }
+          gateEndT -= dt;
+          if (gateEndT <= 0) {
+            endWave();
+            return;
+          }
+        }
+      } else if (waveTime <= 0) {
         endWave();
         return;
       }
@@ -708,7 +740,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
 
     _spawnT -= dt;
     // Schlussphase: keine neuen Gegner mehr, die Welle läuft aus
-    final winding = !isBossWave(r.wave) && waveTime <= kWaveSpawnStop;
+    // Torwächter-Wellen: normale Gegner nur so lange wie in einer normalen Welle (kein Endlos-Farmen)
+    final winding = !isBossWave(r.wave) && (waveTime <= kWaveSpawnStop || gateEndT > 0);
     if (_spawnT <= 0 && !winding) {
       _spawnBatch();
       _spawnT =
@@ -822,6 +855,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     final y = switch (type) {
       EnemyType.spiderMother => kCeil + d.radius + 30,
       EnemyType.bell => 190.0,
+      EnemyType.lanternMan => 200.0,
       _ => kGround - d.radius,
     };
     addEnemy(type, Vector2(goal - kGateOffset, y));
@@ -853,7 +887,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (enemyDefs[type]!.spawner && enemies.where((e) => !e.dead && enemyDefs[e.type]!.spawner).length >= kMaxSpawners) {
       type = EnemyType.crow;
     }
-    final elite = type != EnemyType.boss && rng.nextDouble() < eliteChance(w) * (run!.has(ItemEffect.curseMagnet) ? 2 : 1)
+    final elite = !kFinalBosses.contains(type) && rng.nextDouble() < eliteChance(w) * (run!.has(ItemEffect.curseMagnet) ? 2 : 1)
         ? EliteMod.values[rng.nextInt(EliteMod.values.length)]
         : null;
     // Stationäre Gegner können sich nicht teilen
@@ -989,6 +1023,11 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
   void hurtEnemy(Enemy e, double dmg, bool crit, double knock,
       {bool dot = false, WeaponStats? fx, List<WeaponClass> classes = const []}) {
     if (e.dead) return;
+    // Dornenwurm unter der Erde: Treffer prallen am Erdhügel ab
+    if (e.burrowed) {
+      if (!dot && rng.nextDouble() < 0.3) burst(e.position + Vector2(0, e.r * 0.6), const Color(0xFF8A6A4A), 3, 90);
+      return;
+    }
     final r = run!;
     if (e.cursed) dmg *= 1 + r.curseBonus;
     // Elementar-Reaktion aus dem Zustand vor dem Treffer, mit Wahrscheinlichkeit
@@ -1213,7 +1252,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     r.kills++;
     if (e.burnT > 0) r.burnKills++;
     // Höllenfeuer: verflucht und brennend gestorben – Brand und Fluch springen über
-    if (e.burnT > 0 && e.cursed && e.type != EnemyType.boss &&
+    if (e.burnT > 0 && e.cursed && !e.finalBoss &&
         (debugAlwaysReact || rng.nextDouble() < kReactionChance[Reaction.hellfire]!)) {
       final near = [
         for (final o in enemies)
@@ -1228,7 +1267,7 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
         }
       }
     }
-    if (e.type == EnemyType.boss) {
+    if (e.finalBoss) {
       burst(e.position, Palette.sun, 60, 320);
       shake = 20;
       winT = 1.6;
@@ -1248,7 +1287,8 @@ class FederfeuerGame extends FlameGame<ArenaWorld> with KeyboardEvents {
     if (e.gatekeeper) {
       shake = max(shake, 14);
       burst(e.position, const Color(0xFFFFC94A), 40, 300);
-      floatText(e.position - Vector2(0, e.r + 20), 'DAS TOR IST OFFEN', Palette.sun, 20);
+      floatText(e.position - Vector2(0, e.r + 20), gateWave ? 'TORWÄCHTER BESIEGT!' : 'DAS TOR IST OFFEN', Palette.sun, 20);
+      if (gateWave) gateEndT = kGateWaveEndDelay;
       if (r.unlockSlot()) floatText(e.position - Vector2(0, e.r + 46), 'NEUER WAFFENPLATZ!', Palette.mint, 17);
       final fall = r.dropFallSpeed;
       dropMaterial(e.position, kGateDrops, spread: 30);

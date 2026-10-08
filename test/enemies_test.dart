@@ -163,7 +163,49 @@ void main() {
     expect(eliteChance(60), kEliteChanceMax);
   });
 
-  testWidgets('Torwächter erscheint vor dem Ziel, versperrt es und gibt es nach dem Sieg frei', (t) async {
+  testWidgets('Torwächter-Welle: kein Zeitlimit, endet erst nach dem Sieg über den Torwächter', (t) async {
+    final game = await _game(t);
+    game.startRun('pistol');
+    game.run!
+      ..weapons.clear()
+      ..wave = 4
+      ..gatekeepers[4] = EnemyType.strawKing;
+    game.startWave();
+    game.godMode = true;
+    expect(game.gateWave, isTrue);
+    final goal = game.goalX!;
+    expect(game.goalLocked, isTrue);
+    game.player.position.x = goal - kGateTriggerDist + 50;
+    await t.pump(const Duration(milliseconds: 50));
+    final gate = game.gate!;
+    expect(gate.type, EnemyType.strawKing);
+    // Am Ziel: wird zurückgeschoben; abgelaufene Zeit beendet die Welle nicht
+    for (var i = 0; i < 10; i++) {
+      game.player.position.x = goal + 5;
+      game.waveTime = -5;
+      await t.pump(const Duration(milliseconds: 50));
+    }
+    expect(game.phase, Phase.play, reason: 'kein Zeitlimit');
+    expect(game.player.x, lessThan(goal));
+    // Sieg: Welle läuft noch kurz aus, Material und Geschenk fliegen herbei
+    final money = game.run!.money;
+    final items = game.run!.items.values.fold(0, (a, b) => a + b);
+    game.hurtEnemy(gate, 1e9, false, 0);
+    expect(game.gateEndT, kGateWaveEndDelay);
+    await t.pump(const Duration(milliseconds: 50));
+    expect(game.phase, Phase.play, reason: 'Auslaufzeit');
+    for (var i = 0; i < (kGateWaveEndDelay / 0.05).ceil() + 4 && game.phase == Phase.play; i++) {
+      await t.pump(const Duration(milliseconds: 50));
+    }
+    expect(game.phase, isNot(Phase.play), reason: 'Welle nach dem Sieg vorbei');
+    expect(game.run!.money, greaterThanOrEqualTo(money + kGateDrops), reason: 'Material des Torwächters');
+    expect(game.run!.items.values.fold(0, (a, b) => a + b), items + 1, reason: 'Geschenk');
+    expect(game.run!.goalBonus, isNull);
+    game.toMenu();
+    await t.pump(const Duration(seconds: 1));
+  });
+
+  testWidgets('Torwächter-Welle: normale Gegner nur so lange wie in einer normalen Welle', (t) async {
     final game = await _game(t);
     game.startRun('pistol');
     game.run!
@@ -171,33 +213,31 @@ void main() {
       ..wave = 4;
     game.startWave();
     game.godMode = true;
-    final goal = game.goalX!;
-    expect(game.goalLocked, isTrue);
-    game.player.position.x = goal - kGateTriggerDist + 50;
-    await t.pump(const Duration(milliseconds: 50));
-    final gate = game.gate!;
-    expect(gate.type, EnemyType.strawKing);
-    // Am Ziel: wird zurückgeschoben, Welle läuft weiter
-    for (var i = 0; i < 10; i++) {
-      game.player.position.x = goal + 5;
-      game.waveTime = 99;
+    game.waveTime = kWaveSpawnStop - 1; // Zeit einer normalen Welle fast um
+    game.enemies.clear();
+    for (var i = 0; i < 60; i++) {
       await t.pump(const Duration(milliseconds: 50));
     }
     expect(game.phase, Phase.play);
-    expect(game.player.x, lessThan(goal));
-    game.hurtEnemy(gate, 1e9, false, 0);
-    expect(game.goalLocked, isFalse);
-    game.player.position.x = goal + 5;
-    await t.pump(const Duration(milliseconds: 50));
-    expect(game.phase, isNot(Phase.play), reason: 'Ziel erreicht');
+    expect(game.enemies.where((e) => !e.gatekeeper), isEmpty, reason: 'keine neuen Gegner mehr');
     game.toMenu();
     await t.pump(const Duration(seconds: 1));
   });
 
-  test('Torwächter nur am Ende von Felder, Dorf und Wald', () {
-    expect([for (var w = 1; w <= kMaxWave; w++) gatekeeperForWave(w)].whereType<EnemyType>().toList(),
-        [EnemyType.strawKing, EnemyType.bell, EnemyType.spiderMother]);
-    expect(gatekeeperForWave(4), isNotNull);
+  test('Torwächter am Ende von Felder, Dorf und Wald: je Run drei verschiedene aus dem Pool', () {
+    expect([for (var w = 1; w <= kMaxWave; w++) if (isGateWave(w)) w], [4, 8, 12]);
+    final seen = <EnemyType>{}, bosses = <EnemyType>{};
+    for (var seed = 0; seed < 60; seed++) {
+      final r = RunState('pistol', rng: Random(seed));
+      final gates = [for (final w in kGateWaves) r.gatekeeperFor(w)!];
+      expect(gates.toSet().length, 3, reason: 'keine Wiederholung im Run');
+      expect(kGatekeepers, containsAll(gates));
+      expect(r.gatekeeperFor(5), isNull);
+      seen.addAll(gates);
+      bosses.add(r.finalBoss);
+    }
+    expect(seen, kGatekeepers.toSet(), reason: 'alle Torwächter kommen vor');
+    expect(bosses, kFinalBosses.toSet(), reason: 'beide Endbosse kommen vor');
     expect(biomeForWave(4), Biome.fields);
     expect(biomeForWave(8), Biome.village);
     expect(biomeForWave(12), Biome.forest);
@@ -208,7 +248,8 @@ void main() {
     game.startRun('pistol');
     game.run!
       ..weapons.clear()
-      ..wave = kMaxWave;
+      ..wave = kMaxWave
+      ..finalBoss = EnemyType.boss;
     game.startWave();
     game.godMode = true;
     for (var i = 0; i < 50 && !game.enemies.any((e) => e.type == EnemyType.boss); i++) {

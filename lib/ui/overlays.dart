@@ -115,7 +115,7 @@ class GameOverOverlay extends StatelessWidget {
           OutlinedLabel(game.won ? 'SIEG!' : 'ABGESTÜRZT', size: 44, color: game.won ? Palette.sun : Palette.coral, align: TextAlign.center),
           const SizedBox(height: 8),
           Text(
-            game.won ? 'Der Geierkönig ist gefallen.' : '${r.character.name} ist abgestürzt.',
+            game.won ? '${r.finalBoss.label} ist gefallen.' : '${r.character.name} ist abgestürzt.',
             style: bodyText(14, color: Ui.muted),
           ),
           const SizedBox(height: 16),
@@ -152,8 +152,10 @@ class GameOverOverlay extends StatelessWidget {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 BirdPreview(character: c, size: 40),
                 const SizedBox(width: 8),
-                Text('Neuer Vogel: ${c.name}',
-                    style: displayStyle(16, Color.lerp(c.glow, Colors.white, 0.5)!).copyWith(shadows: glowShadows(c.glow))),
+                Flexible(
+                  child: Text('Neuer Vogel: ${c.name}',
+                      style: displayStyle(16, Color.lerp(c.glow, Colors.white, 0.5)!).copyWith(shadows: glowShadows(c.glow))),
+                ),
               ]),
             ),
           const SizedBox(height: 16),
